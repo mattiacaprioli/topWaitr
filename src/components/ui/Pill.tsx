@@ -17,13 +17,13 @@ type Props = {
 };
 
 const STYLES: Record<Variant, { bg: string; text: string }> = {
-  pending: { bg: "rgba(245,158,11,0.15)", text: "#F59E0B" },
-  accepted: { bg: "rgba(34,197,94,0.15)", text: "#22C55E" },
-  rejected: { bg: "rgba(239,68,68,0.15)", text: "#EF4444" },
-  cancelled: { bg: "rgba(96,100,108,0.2)", text: "#B0B4BA" },
-  open: { bg: "rgba(34,197,94,0.15)", text: "#22C55E" },
-  closed: { bg: "rgba(96,100,108,0.2)", text: "#B0B4BA" },
-  neutral: { bg: "rgba(255,255,255,0.06)", text: "#B0B4BA" },
+  pending: { bg: "rgba(226,146,47,0.15)", text: "#E2922F" },
+  accepted: { bg: "rgba(79,201,125,0.15)", text: "#4FC97D" },
+  rejected: { bg: "rgba(229,91,69,0.15)", text: "#E55B45" },
+  cancelled: { bg: "rgba(140,133,122,0.2)", text: "#C2BBB0" },
+  open: { bg: "rgba(79,201,125,0.15)", text: "#4FC97D" },
+  closed: { bg: "rgba(140,133,122,0.2)", text: "#C2BBB0" },
+  neutral: { bg: "rgba(255,240,220,0.06)", text: "#C2BBB0" },
 };
 
 export function Pill({ label, variant = "neutral", className }: Props) {

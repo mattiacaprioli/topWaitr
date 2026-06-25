@@ -3,24 +3,52 @@ import "@/global.css";
 import { Stack, SplashScreen } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import * as SystemUI from "expo-system-ui";
+import { useFonts } from "expo-font";
+import { Fraunces_400Regular } from "@expo-google-fonts/fraunces/400Regular";
+import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
+import { Fraunces_400Regular_Italic } from "@expo-google-fonts/fraunces/400Regular_Italic";
+import { Inter_400Regular } from "@expo-google-fonts/inter/400Regular";
+import { Inter_500Medium } from "@expo-google-fonts/inter/500Medium";
+import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
+import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
+import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regular";
+import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { AuthProvider, useAuth } from "@/lib/auth";
 
 SplashScreen.preventAutoHideAsync();
+SystemUI.setBackgroundColorAsync("#0C0907");
+
+const BG = "#0C0907";
 
 const screenOptions = {
-  headerStyle: { backgroundColor: "#0A0A0F" },
-  headerTintColor: "#FFFFFF",
-  contentStyle: { backgroundColor: "#0A0A0F" },
+  headerStyle: { backgroundColor: BG },
+  headerTintColor: "#F8F4ED",
+  contentStyle: { backgroundColor: BG },
 } as const;
 
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
 
-  useEffect(() => {
-    if (!loading) SplashScreen.hideAsync();
-  }, [loading]);
+  const [fontsLoaded] = useFonts({
+    Fraunces_400Regular,
+    Fraunces_600SemiBold,
+    Fraunces_400Regular_Italic,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_500Medium,
+  });
 
-  if (loading) return null;
+  const ready = !loading && fontsLoaded;
+
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync();
+  }, [ready]);
+
+  if (!ready) return null;
 
   const isManager = !!session && profile?.role === "manager";
   const isWaiter = !!session && profile?.role === "waiter";

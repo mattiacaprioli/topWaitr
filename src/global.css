@@ -3,48 +3,43 @@
 @import "tailwindcss/utilities.css";
 
 @theme {
-  /* Brand — Gold */
-  --color-gold: #d4a843;
-  --color-gold-light: #f5d076;
-  --color-gold-dark: #b8892e;
+  /* Brand — warm Gold */
+  --color-gold: #eab54c;
+  --color-gold-light: #f5c765;
+  --color-gold-dark: #c68a34;
+  --color-gold-ink: #1a1206; /* text on gold */
 
-  /* Backgrounds (dark theme) */
-  --color-bg-1: #0a0a0f;
-  --color-bg-2: #141419;
-  --color-bg-3: #1e1e26;
-  --color-bg-card: #26262e;
+  /* Backgrounds — warm near-black */
+  --color-bg-0: #0c0907;
+  --color-bg-1: #1f1a13;
+  --color-bg-2: #2a241b;
+  --color-bg-3: #362e24;
+  --color-bg-card: #1f1a13;
 
-  /* Text */
-  --color-t1: #ffffff;
-  --color-t2: #b0b4ba;
-  --color-t3: #60646c;
+  /* Text — warm */
+  --color-t1: #f8f4ed;
+  --color-t2: #c2bbb0;
+  --color-t3: #8c857a;
+  --color-t4: #6a6358;
 
   /* Semantic */
-  --color-success: #22c55e;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
+  --color-success: #4fc97d;
+  --color-warning: #e2922f;
+  --color-error: #e55b45;
   --color-info: #208aef;
 
-  /* Border */
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-gold: rgba(212, 168, 67, 0.3);
-}
+  /* Border — warm hairlines */
+  --color-border: rgba(255, 240, 220, 0.07);
+  --color-border-2: rgba(255, 240, 220, 0.12);
+  --color-border-gold: rgba(234, 181, 76, 0.4);
 
-/* Platform-specific font families */
-@media android {
-  :root {
-    --font-mono: monospace;
-    --font-rounded: normal;
-    --font-serif: serif;
-    --font-sans: normal;
-  }
-}
-
-@media ios {
-  :root {
-    --font-mono: ui-monospace;
-    --font-serif: ui-serif;
-    --font-sans: system-ui;
-    --font-rounded: ui-rounded;
-  }
+  /* Font families — weight is part of the family name in RN */
+  --font-sans: "Inter_400Regular";
+  --font-sans-medium: "Inter_500Medium";
+  --font-sans-semibold: "Inter_600SemiBold";
+  --font-sans-bold: "Inter_700Bold";
+  --font-serif: "Fraunces_400Regular";
+  --font-serif-semibold: "Fraunces_600SemiBold";
+  --font-serif-italic: "Fraunces_400Regular_Italic";
+  --font-mono: "IBMPlexMono_500Medium";
 }

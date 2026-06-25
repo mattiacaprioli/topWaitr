@@ -7,26 +7,36 @@ import {
 import { Pressable, Text } from "@/tw";
 import { Animated } from "@/tw/animated";
 import { cn } from "@/lib/cn";
+import { FontFamily } from "@/constants/fonts";
 
 type Props = {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
+  size?: "md" | "lg";
   className?: string;
 };
 
-export function GoldButton({ label, onPress, disabled, className }: Props) {
+export function GoldButton({
+  label,
+  onPress,
+  disabled,
+  size = "md",
+  className,
+}: Props) {
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  const pad = size === "lg" ? 18 : 14;
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       onPressIn={() => {
-        scale.value = withTiming(0.97, { duration: 100 });
+        scale.value = withTiming(0.98, { duration: 100 });
       }}
       onPressOut={() => {
         scale.value = withTiming(1, { duration: 100 });
@@ -35,19 +45,24 @@ export function GoldButton({ label, onPress, disabled, className }: Props) {
     >
       <Animated.View
         style={animStyle}
-        className={cn("overflow-hidden rounded-2xl", disabled && "opacity-50")}
+        className={cn("overflow-hidden rounded-full", disabled && "opacity-50")}
       >
         <LinearGradient
-          colors={["#F5D076", "#D4A843", "#B8892E"]}
+          colors={["#F5C765", "#D9A23F"]}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 1 }}
           style={{
-            paddingVertical: 16,
+            paddingVertical: pad,
             paddingHorizontal: 24,
             alignItems: "center",
           }}
         >
-          <Text className="text-base font-bold text-bg-1">{label}</Text>
+          <Text
+            className="text-base text-gold-ink"
+            style={{ fontFamily: FontFamily.sansSemibold }}
+          >
+            {label}
+          </Text>
         </LinearGradient>
       </Animated.View>
     </Pressable>
