@@ -1,15 +1,54 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import "@/global.css";
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { Stack, SplashScreen } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { AuthProvider, useAuth } from "@/lib/auth";
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+SplashScreen.preventAutoHideAsync();
+
+const screenOptions = {
+  headerStyle: { backgroundColor: "#0A0A0F" },
+  headerTintColor: "#FFFFFF",
+  contentStyle: { backgroundColor: "#0A0A0F" },
+} as const;
+
+function RootNavigator() {
+  const { session, profile, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading) SplashScreen.hideAsync();
+  }, [loading]);
+
+  if (loading) return null;
+
+  const isManager = !!session && profile?.role === "manager";
+  const isWaiter = !!session && profile?.role === "waiter";
+
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <Stack screenOptions={screenOptions}>
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={isManager}>
+        <Stack.Screen name="(manager)" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={isWaiter}>
+        <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <StatusBar style="light" />
+      <RootNavigator />
+    </AuthProvider>
   );
 }

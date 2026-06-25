@@ -1,0 +1,160 @@
+import { useCallback, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { ActivityIndicator, RefreshControl } from "react-native";
+import { Pressable, ScrollView, Text, View } from "@/tw";
+import { Avatar } from "@/components/ui/Avatar";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { GoldButton } from "@/components/ui/GoldButton";
+import { Pill } from "@/components/ui/Pill";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { useAuth } from "@/lib/auth";
+import { formatDate, formatRate, formatTime } from "@/lib/format";
+import {
+  getMyShifts,
+  getMyVenue,
+  type ShiftWithCount,
+  type Venue,
+} from "@/lib/manager";
+import type { Enums } from "@/types/database";
+
+const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
+  open: "Aperto",
+  closed: "Chiuso",
+  cancelled: "Annullato",
+};
+
+export default function ManagerHome() {
+  const { profile, session, signOut } = useAuth();
+  const router = useRouter();
+  const userId = session!.user.id;
+
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [shifts, setShifts] = useState<ShiftWithCount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const load = useCallback(async () => {
+    const v = await getMyVenue(userId);
+    setVenue(v);
+    setShifts(v ? await getMyShifts(v.id) : []);
+    setLoading(false);
+    setRefreshing(false);
+  }, [userId]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  return (
+    <ScrollView
+      className="flex-1 bg-bg-1"
+      contentContainerClassName="p-6"
+      refreshControl={
+        <RefreshControl
+          tintColor="#D4A843"
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            load();
+          }}
+        />
+      }
+    >
+      <View className="flex-row items-center gap-3">
+        <Avatar name={profile?.full_name ?? "Ristoratore"} size={56} />
+        <View className="flex-1">
+          <Text className="text-lg font-bold text-t1">
+            {profile?.full_name ?? "Ristoratore"}
+          </Text>
+          <Pill label="Ristoratore" variant="open" />
+        </View>
+        <Pressable onPress={signOut} hitSlop={8}>
+          <Text className="text-sm font-semibold text-t3">Esci</Text>
+        </Pressable>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color="#D4A843" className="mt-16" />
+      ) : !venue ? (
+        <View className="mt-10">
+          <EmptyState
+            title="Configura il tuo locale"
+            subtitle="Aggiungi le informazioni del tuo ristorante per iniziare a pubblicare turni."
+          />
+          <GoldButton
+            className="mt-2"
+            label="Configura locale"
+            onPress={() => router.push("/(manager)/venue")}
+          />
+        </View>
+      ) : (
+        <View className="mt-8">
+          <Card className="mb-6 flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-base font-bold text-t1">{venue.name}</Text>
+              {venue.city ? (
+                <Text className="text-sm text-t3">{venue.city}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              onPress={() => router.push("/(manager)/venue")}
+              hitSlop={8}
+            >
+              <Text className="text-sm font-semibold text-gold">Modifica</Text>
+            </Pressable>
+          </Card>
+
+          <SectionHeader
+            title="I tuoi turni"
+            actionLabel="Pubblica"
+            onAction={() => router.push("/(manager)/shift/new")}
+          />
+
+          {shifts.length === 0 ? (
+            <EmptyState
+              title="Nessun turno pubblicato"
+              subtitle="Tocca «Pubblica» per creare il tuo primo turno."
+            />
+          ) : (
+            <View className="gap-3">
+              {shifts.map((shift) => {
+                const count = shift.applications[0]?.count ?? 0;
+                return (
+                  <Card
+                    key={shift.id}
+                    onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
+                  >
+                    <View className="flex-row items-start justify-between">
+                      <Text className="flex-1 text-base font-bold text-t1">
+                        {shift.title}
+                      </Text>
+                      <Pill
+                        label={STATUS_LABEL[shift.status]}
+                        variant={shift.status}
+                      />
+                    </View>
+                    <Text className="mt-1 text-sm text-t2">
+                      {formatDate(shift.date)} · {formatTime(shift.start_time)}–
+                      {formatTime(shift.end_time)}
+                    </Text>
+                    <View className="mt-3 flex-row items-center justify-between">
+                      <Text className="text-sm text-t3">
+                        {formatRate(shift.hourly_rate)}
+                      </Text>
+                      <Text className="text-sm font-semibold text-gold">
+                        {count} candidatur{count === 1 ? "a" : "e"}
+                      </Text>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
+    </ScrollView>
+  );
+}
