@@ -4,9 +4,9 @@ export default function WaiterLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: "#0A0A0F" },
-        headerTintColor: "#FFFFFF",
-        contentStyle: { backgroundColor: "#0A0A0F" },
+        headerStyle: { backgroundColor: "#0C0907" },
+        headerTintColor: "#F8F4ED",
+        contentStyle: { backgroundColor: "#0C0907" },
       }}
     >
       <Stack.Screen name="index" options={{ title: "topWaitr" }} />

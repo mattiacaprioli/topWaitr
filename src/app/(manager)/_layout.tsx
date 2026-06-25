@@ -4,10 +4,10 @@ export default function ManagerLayout() {
   return (
     <Stack
       screenOptions={{
-        headerStyle: { backgroundColor: "#0A0A0F" },
-        headerTintColor: "#FFFFFF",
-        headerTitleStyle: { color: "#FFFFFF" },
-        contentStyle: { backgroundColor: "#0A0A0F" },
+        headerStyle: { backgroundColor: "#0C0907" },
+        headerTintColor: "#F8F4ED",
+        headerTitleStyle: { color: "#F8F4ED" },
+        contentStyle: { backgroundColor: "#0C0907" },
       }}
     >
       <Stack.Screen name="index" options={{ title: "topWaitr" }} />

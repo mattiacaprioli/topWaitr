@@ -4,6 +4,8 @@ import { Stack, SplashScreen } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import * as SystemUI from "expo-system-ui";
+import { Text, View } from "@/tw";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { useFonts } from "expo-font";
 import { Fraunces_400Regular } from "@expo-google-fonts/fraunces/400Regular";
 import { Fraunces_600SemiBold } from "@expo-google-fonts/fraunces/600SemiBold";
@@ -27,10 +29,23 @@ const screenOptions = {
   contentStyle: { backgroundColor: BG },
 } as const;
 
+function ProfileError() {
+  const { signOut } = useAuth();
+  return (
+    <View className="flex-1 items-center justify-center gap-4 bg-bg-0 px-8">
+      <Text className="text-center font-sans text-base text-t2">
+        Non siamo riusciti a caricare il tuo profilo. Controlla la connessione e
+        riprova.
+      </Text>
+      <GhostButton label="Esci" onPress={signOut} />
+    </View>
+  );
+}
+
 function RootNavigator() {
   const { session, profile, loading } = useAuth();
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Fraunces_400Regular,
     Fraunces_600SemiBold,
     Fraunces_400Regular_Italic,
@@ -42,13 +57,19 @@ function RootNavigator() {
     IBMPlexMono_500Medium,
   });
 
-  const ready = !loading && fontsLoaded;
+  // Don't let a font asset failure trap the app on the splash screen.
+  const fontsReady = fontsLoaded || !!fontError;
+  const ready = !loading && fontsReady;
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
 
   if (!ready) return null;
+
+  // Session restored but the profile couldn't be resolved (after retries):
+  // render a recoverable screen instead of a blank Stack with no matching guard.
+  if (session && !profile) return <ProfileError />;
 
   const isManager = !!session && profile?.role === "manager";
   const isWaiter = !!session && profile?.role === "waiter";

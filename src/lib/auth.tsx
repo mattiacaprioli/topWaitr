@@ -61,6 +61,23 @@ async function ensureProfile(user: User): Promise<Profile | null> {
   return created ?? null;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Resolve the profile for a restored/just-authed user, retrying a few times.
+ * On a cold start the access token may still be refreshing, so the first RLS
+ * read can come back empty; retrying rides that out instead of leaving the app
+ * with a session but no profile (which renders no matching route → black screen).
+ */
+async function resolveProfile(user: User): Promise<Profile | null> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const profile = await ensureProfile(user);
+    if (profile) return profile;
+    await sleep(500);
+  }
+  return null;
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -69,17 +86,38 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
 
-    async function handleSession(next: Session | null) {
+    async function loadProfile(next: Session | null) {
       if (!active) return;
-      setSession(next);
-      setProfile(next?.user ? await ensureProfile(next.user) : null);
-      if (active) setLoading(false);
+      const nextProfile = next?.user ? await resolveProfile(next.user) : null;
+      if (!active) return;
+      setProfile(nextProfile);
+      setLoading(false);
     }
 
-    supabase.auth.getSession().then(({ data }) => handleSession(data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) =>
-      handleSession(next)
-    );
+    // Initial load runs outside the auth lock, so DB reads are safe to await.
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      loadProfile(data.session);
+    });
+
+    // Subsequent changes arrive inside the auth lock: setting state is fine, but
+    // Supabase queries (resolveProfile) MUST be deferred out of the callback or
+    // they deadlock against the same lock. INITIAL_SESSION is handled above.
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
+      if (!active) return;
+      setSession(next);
+      // INITIAL_SESSION → handled by getSession(); TOKEN_REFRESHED → just refresh
+      // the session token, no need to re-fetch the profile or blank the UI.
+      if (
+        event === "SIGNED_IN" ||
+        event === "SIGNED_OUT" ||
+        event === "USER_UPDATED"
+      ) {
+        setLoading(true);
+        setTimeout(() => loadProfile(next), 0);
+      }
+    });
 
     return () => {
       active = false;
