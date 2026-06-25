@@ -10,11 +10,10 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth, authErrorMessage } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { supabase } from "@/lib/supabase";
 import { loginSchema, type LoginForm } from "@/features/auth/schema";
 
 export default function Login() {
-  const { signIn } = useAuth();
+  const { signIn, resetPassword } = useAuth();
   const router = useRouter();
   const toast = useToast();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -41,8 +40,8 @@ export default function Login() {
       toast.show("Inserisci la tua email per recuperare la password.", "error");
       return;
     }
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
-    if (error) toast.show(authErrorMessage(error.message), "error");
+    const { error } = await resetPassword(email);
+    if (error) toast.show(authErrorMessage(error), "error");
     else toast.show("Email di recupero inviata. Controlla la posta.");
   }
 

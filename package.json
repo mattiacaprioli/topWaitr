@@ -51,6 +51,8 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "eslint": "^9",
+    "eslint-config-expo": "^56.0.4",
     "supabase": "^2.108.0",
     "typescript": "~6.0.3"
   },

@@ -20,6 +20,8 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
 }
 
 export default function ComponentsScreen() {
+  // Dev-only demo route: never render in a production build, even via deep link.
+  if (!__DEV__) return null;
   return (
     <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-5">
       <Block title="ShimmerText">

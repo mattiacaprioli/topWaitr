@@ -96,7 +96,9 @@ function RootNavigator() {
         <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
+      {__DEV__ ? (
+        <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
+      ) : null}
     </Stack>
   );
 }

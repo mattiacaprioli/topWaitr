@@ -18,15 +18,16 @@ Marketplace di turni per la ristorazione (mercato italiano). I **camerieri** tro
 | UI | Componenti React Native + primitive in `src/components/ui/` |
 | Lint | `expo lint` (eslint) — nessun Biome/Prettier |
 | Lingua | Stringhe utente in **italiano inline** (no lib i18n) |
-| Package manager | **npm** (`package-lock.json`) |
+| Package manager | **yarn** (`yarn.lock`) — niente npm |
 
 ## Comandi
 ```bash
-npm start                 # Expo dev server
-npm run ios               # iOS simulator
-npm run android           # Android emulator
-npm run web               # web
-npm run lint              # expo lint (eslint)
+yarn start                # Expo dev server
+yarn ios                  # iOS simulator
+yarn android              # Android emulator
+yarn web                  # web
+yarn lint                 # expo lint (eslint) — bloccante in CI
+yarn add <pkg>            # dipendenze (oppure `npx expo install <pkg>`)
 npx tsc --noEmit          # type-check
 npx expo export --platform ios   # verifica bundle
 ```

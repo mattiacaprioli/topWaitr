@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { queryClient } from "@/lib/queryClient";
 import type { Enums, Tables } from "@/types/database";
 
 type Profile = Tables<"profiles">;
@@ -27,6 +28,7 @@ type AuthState = {
   signUp: (
     params: SignUpParams
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  resetPassword: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -107,6 +109,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       if (!active) return;
       setSession(next);
+      // Drop the previous account's cached data so a new sign-in starts clean.
+      if (event === "SIGNED_OUT") queryClient.clear();
       // INITIAL_SESSION → handled by getSession(); TOKEN_REFRESHED → just refresh
       // the session token, no need to re-fetch the profile or blank the UI.
       if (
@@ -143,13 +147,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: null, needsConfirmation: !data.session };
   }
 
+  async function resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error?.message ?? null };
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
   }
 
   return (
     <AuthContext.Provider
-      value={{ session, profile, loading, signIn, signUp, signOut }}
+      value={{ session, profile, loading, signIn, signUp, resetPassword, signOut }}
     >
       {children}
     </AuthContext.Provider>

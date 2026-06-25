@@ -2,7 +2,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
-import { ScrollView, Text } from "@/tw";
+import { ScrollView } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { ControlledPicker } from "@/components/form/ControlledPicker";
 import { GoldButton } from "@/components/ui/GoldButton";

@@ -101,7 +101,9 @@ export default function ManagerHome() {
             onAction={() => router.push("/(manager)/shift/new")}
           />
 
-          {shiftsQuery.isError ? (
+          {shiftsQuery.isLoading ? (
+            <ActivityIndicator color="#EAB54C" className="mt-6" />
+          ) : shiftsQuery.isError ? (
             <QueryError
               onRetry={() => shiftsQuery.refetch()}
               subtitle="Non siamo riusciti a caricare i turni. Riprova."
