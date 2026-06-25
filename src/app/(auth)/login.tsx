@@ -1,46 +1,49 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { LogoBadge } from "@/components/ui/LogoBadge";
 import { Display } from "@/components/ui/Display";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Input } from "@/components/ui/Input";
+import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth, authErrorMessage } from "@/lib/auth";
+import { useToast } from "@/providers/Toast";
 import { supabase } from "@/lib/supabase";
+import { loginSchema, type LoginForm } from "@/features/auth/schema";
 
 export default function Login() {
   const { signIn } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const toast = useToast();
+  const [apiError, setApiError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit() {
+  const { control, handleSubmit, getValues } = useForm<LoginForm>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const onSubmit = handleSubmit(async (values) => {
     if (loading) return;
-    setError(null);
-    setInfo(null);
+    setApiError(null);
     setLoading(true);
-    const res = await signIn(email.trim(), password);
+    const res = await signIn(values.email.trim(), values.password);
     setLoading(false);
-    if (res.error) setError(authErrorMessage(res.error));
+    if (res.error) setApiError(authErrorMessage(res.error));
     // in caso di successo la navigazione è gestita dai guard nel root layout
-  }
+  });
 
   async function onForgot() {
-    setError(null);
-    setInfo(null);
+    const email = getValues("email").trim();
     if (!email.includes("@")) {
-      setError("Inserisci la tua email per recuperare la password.");
+      toast.show("Inserisci la tua email per recuperare la password.", "error");
       return;
     }
-    const { error: err } = await supabase.auth.resetPasswordForEmail(
-      email.trim()
-    );
-    if (err) setError(authErrorMessage(err));
-    else setInfo("Email di recupero inviata. Controlla la posta.");
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) toast.show(authErrorMessage(error.message), "error");
+    else toast.show("Email di recupero inviata. Controlla la posta.");
   }
 
   return (
@@ -62,20 +65,20 @@ export default function Login() {
         </View>
 
         <View className="mt-9 gap-4">
-          <Input
+          <ControlledInput
+            control={control}
+            name="email"
             label="Email"
-            value={email}
-            onChangeText={setEmail}
             placeholder="nome@email.com"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
             inputMode="email"
           />
-          <Input
+          <ControlledInput
+            control={control}
+            name="password"
             label="Password"
-            value={password}
-            onChangeText={setPassword}
             placeholder="••••••••"
             secureTextEntry
             autoCapitalize="none"
@@ -87,11 +90,8 @@ export default function Login() {
             </Text>
           </Pressable>
 
-          {error ? (
-            <Text className="font-sans text-sm text-error">{error}</Text>
-          ) : null}
-          {info ? (
-            <Text className="font-sans text-sm text-success">{info}</Text>
+          {apiError ? (
+            <Text className="font-sans text-sm text-error">{apiError}</Text>
           ) : null}
 
           <GoldButton
@@ -108,9 +108,7 @@ export default function Login() {
           onPress={() => router.push("/(auth)/signup")}
         >
           <Text className="font-sans text-sm text-t2">Non hai un account?</Text>
-          <Text className="font-sans-semibold text-sm text-gold">
-            Registrati
-          </Text>
+          <Text className="font-sans-semibold text-sm text-gold">Registrati</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

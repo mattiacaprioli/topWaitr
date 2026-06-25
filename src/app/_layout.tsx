@@ -3,6 +3,7 @@ import "@/global.css";
 import { Stack, SplashScreen } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import * as Sentry from "@sentry/react-native";
 import * as SystemUI from "expo-system-ui";
 import { Text, View } from "@/tw";
 import { GhostButton } from "@/components/ui/GhostButton";
@@ -16,10 +17,17 @@ import { Inter_600SemiBold } from "@expo-google-fonts/inter/600SemiBold";
 import { Inter_700Bold } from "@expo-google-fonts/inter/700Bold";
 import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regular";
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
+import { AppProviders } from "@/providers/AppProviders";
 
 SplashScreen.preventAutoHideAsync();
 SystemUI.setBackgroundColorAsync("#0C0907");
+
+// No-op until EXPO_PUBLIC_SENTRY_DSN is set (e.g. in a dev/production build).
+const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({ dsn: SENTRY_DSN, sendDefaultPii: false });
+}
 
 const BG = "#0C0907";
 
@@ -93,11 +101,13 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
-    <AuthProvider>
+    <AppProviders>
       <StatusBar style="light" />
       <RootNavigator />
-    </AuthProvider>
+    </AppProviders>
   );
 }
+
+export default Sentry.wrap(RootLayout);

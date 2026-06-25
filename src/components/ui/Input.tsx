@@ -14,7 +14,7 @@ export function Input({ label, className, ...props }: Props) {
       <TextInput
         placeholderTextColor="#6A6358"
         className={cn(
-          "rounded-[14px] border border-border bg-bg-1 px-4 py-3.5 font-sans text-base text-t1",
+          "rounded-[14px] border border-border bg-bg-1 px-4 py-3.5 font-sans text-[16px] text-t1",
           className
         )}
         {...props}

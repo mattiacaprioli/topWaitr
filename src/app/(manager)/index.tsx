@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl } from "react-native";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -10,12 +9,8 @@ import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
-import {
-  getMyShifts,
-  getMyVenue,
-  type ShiftWithCount,
-  type Venue,
-} from "@/lib/manager";
+import { useMyVenue } from "@/features/venues/hooks";
+import { useMyShifts } from "@/features/shifts/hooks";
 import type { Enums } from "@/types/database";
 
 const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
@@ -29,24 +24,17 @@ export default function ManagerHome() {
   const router = useRouter();
   const userId = session!.user.id;
 
-  const [venue, setVenue] = useState<Venue | null>(null);
-  const [shifts, setShifts] = useState<ShiftWithCount[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const venueQuery = useMyVenue(userId);
+  const venue = venueQuery.data ?? null;
+  const shiftsQuery = useMyShifts(venue?.id);
+  const shifts = shiftsQuery.data ?? [];
 
-  const load = useCallback(async () => {
-    const v = await getMyVenue(userId);
-    setVenue(v);
-    setShifts(v ? await getMyShifts(v.id) : []);
-    setLoading(false);
-    setRefreshing(false);
-  }, [userId]);
-
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
+  const loading = venueQuery.isLoading;
+  const refreshing = venueQuery.isRefetching || shiftsQuery.isRefetching;
+  const onRefresh = () => {
+    venueQuery.refetch();
+    shiftsQuery.refetch();
+  };
 
   return (
     <ScrollView
@@ -54,12 +42,9 @@ export default function ManagerHome() {
       contentContainerClassName="p-6"
       refreshControl={
         <RefreshControl
-          tintColor="#D4A843"
+          tintColor="#EAB54C"
           refreshing={refreshing}
-          onRefresh={() => {
-            setRefreshing(true);
-            load();
-          }}
+          onRefresh={onRefresh}
         />
       }
     >
@@ -77,7 +62,7 @@ export default function ManagerHome() {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#D4A843" className="mt-16" />
+        <ActivityIndicator color="#EAB54C" className="mt-16" />
       ) : !venue ? (
         <View className="mt-10">
           <EmptyState

@@ -1,5 +1,4 @@
-import { useCallback, useState } from "react";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -7,16 +6,10 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { useToast } from "@/providers/Toast";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
-import {
-  getApplications,
-  getShift,
-  updateApplicationStatus,
-  updateShiftPositions,
-  updateShiftStatus,
-  type ApplicationWithWaiter,
-  type Shift,
-} from "@/lib/manager";
+import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
+import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
 import type { Enums } from "@/types/database";
 
 const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
@@ -34,61 +27,43 @@ const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
 
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const toast = useToast();
 
-  const [shift, setShift] = useState<Shift | null>(null);
-  const [applications, setApplications] = useState<ApplicationWithWaiter[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
+  const shiftQuery = useShift(id);
+  const shift = shiftQuery.data ?? null;
+  const appsQuery = useApplications(id);
+  const applications = appsQuery.data ?? [];
 
-  const load = useCallback(async () => {
-    const [s, apps] = await Promise.all([getShift(id), getApplications(id)]);
-    setShift(s);
-    setApplications(apps);
-    setLoading(false);
-  }, [id]);
+  const decision = useApplicationDecision(id);
+  const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
+  const busy = decision.isPending || statusMutation.isPending;
 
-  useFocusEffect(
-    useCallback(() => {
-      load();
-    }, [load])
-  );
-
-  async function syncFilled(apps: ApplicationWithWaiter[]) {
-    if (!shift) return;
-    const accepted = apps.filter((a) => a.status === "accepted").length;
-    if (accepted !== shift.positions_filled) {
-      await updateShiftPositions(shift.id, accepted);
-    }
+  function onDecision(appId: string, status: Enums<"application_status">) {
+    decision.mutate(
+      { appId, status },
+      {
+        onSuccess: () =>
+          toast.show(
+            status === "accepted"
+              ? "Candidatura accettata"
+              : "Candidatura rifiutata"
+          ),
+        onError: () => toast.show("Operazione non riuscita.", "error"),
+      }
+    );
   }
 
-  async function onDecision(
-    appId: string,
-    status: Enums<"application_status">
-  ) {
-    if (busy) return;
-    setBusy(true);
-    await updateApplicationStatus(appId, status);
-    const apps = await getApplications(id);
-    setApplications(apps);
-    await syncFilled(apps);
-    const s = await getShift(id);
-    setShift(s);
-    setBusy(false);
+  function onChangeShiftStatus(status: Enums<"shift_status">) {
+    statusMutation.mutate(status, {
+      onSuccess: () => toast.show("Turno aggiornato"),
+      onError: () => toast.show("Operazione non riuscita.", "error"),
+    });
   }
 
-  async function onChangeShiftStatus(status: Enums<"shift_status">) {
-    if (busy || !shift) return;
-    setBusy(true);
-    await updateShiftStatus(shift.id, status);
-    setShift(await getShift(id));
-    setBusy(false);
-  }
-
-  if (loading) {
+  if (shiftQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-1">
-        <ActivityIndicator color="#D4A843" />
+        <ActivityIndicator color="#EAB54C" />
       </View>
     );
   }
@@ -105,19 +80,11 @@ export default function ShiftDetailScreen() {
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-1"
-      contentContainerClassName="p-6"
-    >
+    <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-6">
       <Card>
         <View className="flex-row items-start justify-between">
-          <Text className="flex-1 text-xl font-bold text-t1">
-            {shift.title}
-          </Text>
-          <Pill
-            label={SHIFT_STATUS_LABEL[shift.status]}
-            variant={shift.status}
-          />
+          <Text className="flex-1 text-xl font-bold text-t1">{shift.title}</Text>
+          <Pill label={SHIFT_STATUS_LABEL[shift.status]} variant={shift.status} />
         </View>
         <Text className="mt-2 text-sm text-t2">
           {formatDate(shift.date)} · {formatTime(shift.start_time)}–
@@ -195,10 +162,7 @@ export default function ShiftDetailScreen() {
                   <Text className="text-base font-bold text-t1">
                     {app.waiter?.full_name ?? "Cameriere"}
                   </Text>
-                  <Pill
-                    label={APP_STATUS_LABEL[app.status]}
-                    variant={app.status}
-                  />
+                  <Pill label={APP_STATUS_LABEL[app.status]} variant={app.status} />
                 </View>
               </View>
 
@@ -213,18 +177,14 @@ export default function ShiftDetailScreen() {
                     onPress={() => onDecision(app.id, "accepted")}
                     className="flex-1 items-center rounded-xl bg-success py-2.5"
                   >
-                    <Text className="text-sm font-semibold text-bg-1">
-                      Accetta
-                    </Text>
+                    <Text className="text-sm font-semibold text-bg-1">Accetta</Text>
                   </Pressable>
                   <Pressable
                     disabled={busy}
                     onPress={() => onDecision(app.id, "rejected")}
                     className="flex-1 items-center rounded-xl border border-border py-2.5"
                   >
-                    <Text className="text-sm font-semibold text-error">
-                      Rifiuta
-                    </Text>
+                    <Text className="text-sm font-semibold text-error">Rifiuta</Text>
                   </Pressable>
                 </View>
               ) : null}

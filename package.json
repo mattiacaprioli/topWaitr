@@ -10,6 +10,7 @@
     "@hookform/resolvers": "^5.4.0",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-masked-view/masked-view": "0.3.2",
+    "@sentry/react-native": "~7.11.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tailwindcss/postcss": "^4.3.1",
     "@tanstack/react-query": "^5.101.1",
@@ -50,6 +51,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "supabase": "^2.108.0",
     "typescript": "~6.0.3"
   },
   "resolutions": {
@@ -61,7 +63,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "db:pull": "supabase db pull",
+    "db:types": "supabase gen types typescript --project-id rmlobxjlqlpixkvrzmfg > src/types/database.ts"
   },
   "private": true
 }

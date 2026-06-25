@@ -1,69 +1,63 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
-import { Input } from "@/components/ui/Input";
+import { ControlledInput } from "@/components/form/ControlledInput";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { useAuth } from "@/lib/auth";
-import { getMyVenue, saveVenue, type Venue } from "@/lib/manager";
+import { useToast } from "@/providers/Toast";
+import { useMyVenue, useSaveVenue } from "@/features/venues/hooks";
+import { venueSchema, type VenueForm } from "@/features/venues/schema";
 
 export default function VenueScreen() {
   const { session } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const userId = session!.user.id;
 
-  const [venue, setVenue] = useState<Venue | null>(null);
-  const [name, setName] = useState("");
-  const [city, setCity] = useState("");
-  const [address, setAddress] = useState("");
-  const [cuisine, setCuisine] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const venueQuery = useMyVenue(userId);
+  const venue = venueQuery.data ?? null;
+  const save = useSaveVenue(userId);
+
+  const { control, handleSubmit, reset } = useForm<VenueForm>({
+    resolver: zodResolver(venueSchema),
+    defaultValues: { name: "", city: "", address: "", cuisine_type: "", description: "" },
+  });
 
   useEffect(() => {
-    getMyVenue(userId).then((v) => {
-      if (v) {
-        setVenue(v);
-        setName(v.name);
-        setCity(v.city ?? "");
-        setAddress(v.address ?? "");
-        setCuisine(v.cuisine_type ?? "");
-        setDescription(v.description ?? "");
-      }
-      setLoading(false);
-    });
-  }, [userId]);
-
-  async function onSave() {
-    if (saving) return;
-    if (!name.trim()) {
-      setError("Inserisci il nome del locale.");
-      return;
+    if (venue) {
+      reset({
+        name: venue.name,
+        city: venue.city ?? "",
+        address: venue.address ?? "",
+        cuisine_type: venue.cuisine_type ?? "",
+        description: venue.description ?? "",
+      });
     }
-    setError(null);
-    setSaving(true);
-    const { error: err } = await saveVenue(
-      userId,
-      {
-        name: name.trim(),
-        city: city.trim() || null,
-        address: address.trim() || null,
-        cuisine_type: cuisine.trim() || null,
-        description: description.trim() || null,
-      },
-      venue?.id
-    );
-    setSaving(false);
-    if (err) {
-      setError("Impossibile salvare. Riprova.");
-      return;
-    }
-    router.back();
-  }
+  }, [venue, reset]);
 
-  if (loading) return <View className="flex-1 bg-bg-1" />;
+  const onSubmit = handleSubmit(async (values) => {
+    try {
+      await save.mutateAsync({
+        input: {
+          name: values.name,
+          city: values.city || null,
+          address: values.address || null,
+          cuisine_type: values.cuisine_type || null,
+          description: values.description || null,
+        },
+        venueId: venue?.id,
+      });
+      toast.show("Locale salvato");
+      router.back();
+    } catch {
+      toast.show("Impossibile salvare. Riprova.", "error");
+    }
+  });
+
+  if (venueQuery.isLoading) return <View className="flex-1 bg-bg-1" />;
 
   return (
     <KeyboardAvoidingView
@@ -79,34 +73,34 @@ export default function VenueScreen() {
           Queste informazioni saranno visibili ai camerieri sui tuoi turni.
         </Text>
 
-        <Input
+        <ControlledInput
+          control={control}
+          name="name"
           label="Nome del locale"
-          value={name}
-          onChangeText={setName}
           placeholder="Trattoria da Mario"
         />
-        <Input
+        <ControlledInput
+          control={control}
+          name="city"
           label="Città"
-          value={city}
-          onChangeText={setCity}
           placeholder="Milano"
         />
-        <Input
+        <ControlledInput
+          control={control}
+          name="address"
           label="Indirizzo"
-          value={address}
-          onChangeText={setAddress}
           placeholder="Via Roma 1"
         />
-        <Input
+        <ControlledInput
+          control={control}
+          name="cuisine_type"
           label="Tipo di cucina"
-          value={cuisine}
-          onChangeText={setCuisine}
           placeholder="Italiana, pizzeria…"
         />
-        <Input
+        <ControlledInput
+          control={control}
+          name="description"
           label="Descrizione"
-          value={description}
-          onChangeText={setDescription}
           placeholder="Racconta il tuo locale"
           multiline
           numberOfLines={4}
@@ -114,13 +108,11 @@ export default function VenueScreen() {
           textAlignVertical="top"
         />
 
-        {error ? <Text className="text-sm text-error">{error}</Text> : null}
-
         <GoldButton
           className="mt-2"
-          label={saving ? "Salvataggio…" : "Salva locale"}
-          disabled={saving}
-          onPress={onSave}
+          label={save.isPending ? "Salvataggio…" : "Salva locale"}
+          disabled={save.isPending}
+          onPress={onSubmit}
         />
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,9 +10,11 @@ import { Display } from "@/components/ui/Display";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Input } from "@/components/ui/Input";
+import { ControlledInput } from "@/components/form/ControlledInput";
 import { cn } from "@/lib/cn";
 import { useAuth, authErrorMessage } from "@/lib/auth";
+import { useToast } from "@/providers/Toast";
+import { signupSchema, type SignupForm } from "@/features/auth/schema";
 import type { Enums } from "@/types/database";
 
 type Role = Enums<"user_role">;
@@ -41,40 +45,40 @@ const ROLES: {
 export default function Signup() {
   const { signUp } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const insets = useSafeAreaInsets();
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("waiter");
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit() {
+  const { control, handleSubmit, watch, setValue } = useForm<SignupForm>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { fullName: "", email: "", password: "", role: "waiter" },
+  });
+  const role = watch("role");
+
+  const onSubmit = handleSubmit(async (values) => {
     if (loading) return;
-    setError(null);
+    setApiError(null);
     setInfo(null);
-    if (!fullName.trim()) {
-      setError("Inserisci il tuo nome.");
-      return;
-    }
     setLoading(true);
     const res = await signUp({
-      email: email.trim(),
-      password,
-      fullName: fullName.trim(),
-      role,
+      email: values.email.trim(),
+      password: values.password,
+      fullName: values.fullName.trim(),
+      role: values.role,
     });
     setLoading(false);
     if (res.error) {
-      setError(authErrorMessage(res.error));
+      setApiError(authErrorMessage(res.error));
       return;
     }
     if (res.needsConfirmation) {
       setInfo("Ti abbiamo inviato un'email di conferma. Controlla la posta.");
+      toast.show("Controlla la posta per confermare.");
     }
     // in caso di sessione attiva, i guard nel root layout reindirizzano
-  }
+  });
 
   return (
     <KeyboardAvoidingView
@@ -98,7 +102,7 @@ export default function Signup() {
             return (
               <Pressable
                 key={r.value}
-                onPress={() => setRole(r.value)}
+                onPress={() => setValue("role", r.value)}
                 className={cn(
                   "gap-3.5 rounded-[22px] border bg-bg-1 p-5",
                   active ? "border-gold" : "border-border"
@@ -142,36 +146,36 @@ export default function Signup() {
           })}
         </View>
 
-        <View className="mt-7 gap-4">
-          <Input
+        <View className="mt-6 gap-4">
+          <ControlledInput
+            control={control}
+            name="fullName"
             label="Nome e cognome"
-            value={fullName}
-            onChangeText={setFullName}
             placeholder="Mario Rossi"
             autoCapitalize="words"
             autoComplete="name"
           />
-          <Input
+          <ControlledInput
+            control={control}
+            name="email"
             label="Email"
-            value={email}
-            onChangeText={setEmail}
             placeholder="nome@email.com"
             autoCapitalize="none"
             autoComplete="email"
             keyboardType="email-address"
             inputMode="email"
           />
-          <Input
+          <ControlledInput
+            control={control}
+            name="password"
             label="Password"
-            value={password}
-            onChangeText={setPassword}
             placeholder="Almeno 6 caratteri"
             secureTextEntry
             autoCapitalize="none"
           />
 
-          {error ? (
-            <Text className="font-sans text-sm text-error">{error}</Text>
+          {apiError ? (
+            <Text className="font-sans text-sm text-error">{apiError}</Text>
           ) : null}
           {info ? (
             <Text className="font-sans text-sm text-success">{info}</Text>
