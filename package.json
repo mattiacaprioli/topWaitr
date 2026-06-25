@@ -65,7 +65,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "db:pull": "supabase db pull",
+    "db:dump": "supabase db dump --schema public -f supabase/schema.sql",
     "db:types": "supabase gen types typescript --project-id rmlobxjlqlpixkvrzmfg > src/types/database.ts"
   },
   "private": true
