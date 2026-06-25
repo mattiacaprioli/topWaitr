@@ -12,13 +12,14 @@ export type VenueInput = {
 };
 
 export async function getMyVenue(ownerId: string): Promise<Venue | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("venues")
     .select("*")
     .eq("owner_id", ownerId)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   return data ?? null;
 }
 

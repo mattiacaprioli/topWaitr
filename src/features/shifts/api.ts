@@ -5,21 +5,23 @@ import type { Shift, ShiftWithCount } from "./types";
 export type { Shift, ShiftWithCount };
 
 export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("shifts")
     .select("*, applications(count)")
     .eq("venue_id", venueId)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
+  if (error) throw new Error(error.message);
   return (data as ShiftWithCount[] | null) ?? [];
 }
 
 export async function getShift(id: string): Promise<Shift | null> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("shifts")
     .select("*")
     .eq("id", id)
     .maybeSingle();
+  if (error) throw new Error(error.message);
   return data ?? null;
 }
 

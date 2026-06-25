@@ -33,7 +33,7 @@ export function Pill({ label, variant = "neutral", className }: Props) {
       style={{ backgroundColor: s.bg }}
       className={cn("self-start rounded-full px-3 py-1", className)}
     >
-      <Text style={{ color: s.text }} className="text-xs font-semibold">
+      <Text style={{ color: s.text }} className="text-xs font-sans-semibold">
         {label}
       </Text>
     </View>

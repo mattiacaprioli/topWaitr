@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { QueryError } from "@/components/ui/QueryError";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -51,18 +52,20 @@ export default function ManagerHome() {
       <View className="flex-row items-center gap-3">
         <Avatar name={profile?.full_name ?? "Ristoratore"} size={56} />
         <View className="flex-1">
-          <Text className="text-lg font-bold text-t1">
+          <Text className="text-lg font-sans-bold text-t1">
             {profile?.full_name ?? "Ristoratore"}
           </Text>
           <Pill label="Ristoratore" variant="open" />
         </View>
         <Pressable onPress={signOut} hitSlop={8}>
-          <Text className="text-sm font-semibold text-t3">Esci</Text>
+          <Text className="text-sm font-sans-semibold text-t3">Esci</Text>
         </Pressable>
       </View>
 
       {loading ? (
         <ActivityIndicator color="#EAB54C" className="mt-16" />
+      ) : venueQuery.isError ? (
+        <QueryError className="mt-10" onRetry={() => venueQuery.refetch()} />
       ) : !venue ? (
         <View className="mt-10">
           <EmptyState
@@ -79,7 +82,7 @@ export default function ManagerHome() {
         <View className="mt-8">
           <Card className="mb-6 flex-row items-center justify-between">
             <View className="flex-1">
-              <Text className="text-base font-bold text-t1">{venue.name}</Text>
+              <Text className="text-base font-sans-bold text-t1">{venue.name}</Text>
               {venue.city ? (
                 <Text className="text-sm text-t3">{venue.city}</Text>
               ) : null}
@@ -88,7 +91,7 @@ export default function ManagerHome() {
               onPress={() => router.push("/(manager)/venue")}
               hitSlop={8}
             >
-              <Text className="text-sm font-semibold text-gold">Modifica</Text>
+              <Text className="text-sm font-sans-semibold text-gold">Modifica</Text>
             </Pressable>
           </Card>
 
@@ -98,7 +101,12 @@ export default function ManagerHome() {
             onAction={() => router.push("/(manager)/shift/new")}
           />
 
-          {shifts.length === 0 ? (
+          {shiftsQuery.isError ? (
+            <QueryError
+              onRetry={() => shiftsQuery.refetch()}
+              subtitle="Non siamo riusciti a caricare i turni. Riprova."
+            />
+          ) : shifts.length === 0 ? (
             <EmptyState
               title="Nessun turno pubblicato"
               subtitle="Tocca «Pubblica» per creare il tuo primo turno."
@@ -113,7 +121,7 @@ export default function ManagerHome() {
                     onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
                   >
                     <View className="flex-row items-start justify-between">
-                      <Text className="flex-1 text-base font-bold text-t1">
+                      <Text className="flex-1 text-base font-sans-bold text-t1">
                         {shift.title}
                       </Text>
                       <Pill
@@ -129,7 +137,7 @@ export default function ManagerHome() {
                       <Text className="text-sm text-t3">
                         {formatRate(shift.hourly_rate)}
                       </Text>
-                      <Text className="text-sm font-semibold text-gold">
+                      <Text className="text-sm font-sans-semibold text-gold">
                         {count} candidatur{count === 1 ? "a" : "e"}
                       </Text>
                     </View>

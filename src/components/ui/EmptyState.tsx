@@ -13,7 +13,7 @@ export function EmptyState({ icon, title, subtitle, className }: Props) {
   return (
     <View className={cn("items-center justify-center px-6 py-12", className)}>
       {icon}
-      <Text className="mt-4 text-center text-base font-semibold text-t1">
+      <Text className="mt-4 text-center text-base font-sans-semibold text-t1">
         {title}
       </Text>
       {subtitle ? (

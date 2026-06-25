@@ -11,11 +11,12 @@ export type ApplicationWithWaiter = Application & {
 export async function getApplications(
   shiftId: string
 ): Promise<ApplicationWithWaiter[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("applications")
     .select("*, waiter:profiles!applications_waiter_id_fkey(*)")
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
   return (data as ApplicationWithWaiter[] | null) ?? [];
 }
 

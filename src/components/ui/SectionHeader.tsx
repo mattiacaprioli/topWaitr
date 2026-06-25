@@ -18,10 +18,10 @@ export function SectionHeader({
     <View
       className={cn("mb-3 flex-row items-center justify-between", className)}
     >
-      <Text className="text-lg font-bold text-t1">{title}</Text>
+      <Text className="text-lg font-sans-bold text-t1">{title}</Text>
       {actionLabel ? (
         <Pressable onPress={onAction}>
-          <Text className="text-sm font-semibold text-gold">{actionLabel}</Text>
+          <Text className="text-sm font-sans-semibold text-gold">{actionLabel}</Text>
         </Pressable>
       ) : null}
     </View>

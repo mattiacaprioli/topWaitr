@@ -11,7 +11,7 @@ export default function WaiterHome() {
       <View className="flex-row items-center gap-3">
         <Avatar name={profile?.full_name ?? "Cameriere"} size={56} />
         <View>
-          <Text className="text-lg font-bold text-t1">
+          <Text className="text-lg font-sans-bold text-t1">
             {profile?.full_name ?? "Cameriere"}
           </Text>
           <Pill label="Cameriere" variant="accepted" />

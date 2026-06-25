@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { useMyVenue, useSaveVenue } from "@/features/venues/hooks";
@@ -58,6 +59,14 @@ export default function VenueScreen() {
   });
 
   if (venueQuery.isLoading) return <View className="flex-1 bg-bg-1" />;
+
+  if (venueQuery.isError) {
+    return (
+      <View className="flex-1 justify-center bg-bg-1 px-6">
+        <QueryError onRetry={() => venueQuery.refetch()} />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView

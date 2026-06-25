@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { QueryError } from "@/components/ui/QueryError";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useToast } from "@/providers/Toast";
@@ -68,6 +69,14 @@ export default function ShiftDetailScreen() {
     );
   }
 
+  if (shiftQuery.isError) {
+    return (
+      <View className="flex-1 justify-center bg-bg-1 px-6">
+        <QueryError onRetry={() => shiftQuery.refetch()} />
+      </View>
+    );
+  }
+
   if (!shift) {
     return (
       <View className="flex-1 bg-bg-1">
@@ -83,7 +92,7 @@ export default function ShiftDetailScreen() {
     <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-6">
       <Card>
         <View className="flex-row items-start justify-between">
-          <Text className="flex-1 text-xl font-bold text-t1">{shift.title}</Text>
+          <Text className="flex-1 text-xl font-sans-bold text-t1">{shift.title}</Text>
           <Pill label={SHIFT_STATUS_LABEL[shift.status]} variant={shift.status} />
         </View>
         <Text className="mt-2 text-sm text-t2">
@@ -120,14 +129,14 @@ export default function ShiftDetailScreen() {
               onPress={() => onChangeShiftStatus("closed")}
               className="flex-1 items-center rounded-xl border border-border bg-bg-2 py-3"
             >
-              <Text className="text-sm font-semibold text-t1">Chiudi turno</Text>
+              <Text className="text-sm font-sans-semibold text-t1">Chiudi turno</Text>
             </Pressable>
             <Pressable
               disabled={busy}
               onPress={() => onChangeShiftStatus("cancelled")}
               className="flex-1 items-center rounded-xl border border-border py-3"
             >
-              <Text className="text-sm font-semibold text-error">Annulla</Text>
+              <Text className="text-sm font-sans-semibold text-error">Annulla</Text>
             </Pressable>
           </>
         ) : shift.status === "closed" ? (
@@ -136,14 +145,19 @@ export default function ShiftDetailScreen() {
             onPress={() => onChangeShiftStatus("open")}
             className="flex-1 items-center rounded-xl border border-border bg-bg-2 py-3"
           >
-            <Text className="text-sm font-semibold text-t1">Riapri turno</Text>
+            <Text className="text-sm font-sans-semibold text-t1">Riapri turno</Text>
           </Pressable>
         ) : null}
       </View>
 
       <SectionHeader title="Candidature" className="mt-8" />
 
-      {applications.length === 0 ? (
+      {appsQuery.isError ? (
+        <QueryError
+          onRetry={() => appsQuery.refetch()}
+          subtitle="Non siamo riusciti a caricare le candidature. Riprova."
+        />
+      ) : applications.length === 0 ? (
         <EmptyState
           title="Nessuna candidatura"
           subtitle="Quando un cameriere si candida lo vedrai qui."
@@ -159,7 +173,7 @@ export default function ShiftDetailScreen() {
                   size={44}
                 />
                 <View className="flex-1">
-                  <Text className="text-base font-bold text-t1">
+                  <Text className="text-base font-sans-bold text-t1">
                     {app.waiter?.full_name ?? "Cameriere"}
                   </Text>
                   <Pill label={APP_STATUS_LABEL[app.status]} variant={app.status} />
@@ -177,14 +191,14 @@ export default function ShiftDetailScreen() {
                     onPress={() => onDecision(app.id, "accepted")}
                     className="flex-1 items-center rounded-xl bg-success py-2.5"
                   >
-                    <Text className="text-sm font-semibold text-bg-1">Accetta</Text>
+                    <Text className="text-sm font-sans-semibold text-bg-1">Accetta</Text>
                   </Pressable>
                   <Pressable
                     disabled={busy}
                     onPress={() => onDecision(app.id, "rejected")}
                     className="flex-1 items-center rounded-xl border border-border py-2.5"
                   >
-                    <Text className="text-sm font-semibold text-error">Rifiuta</Text>
+                    <Text className="text-sm font-sans-semibold text-error">Rifiuta</Text>
                   </Pressable>
                 </View>
               ) : null}

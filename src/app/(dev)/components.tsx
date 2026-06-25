@@ -11,7 +11,7 @@ import { ShimmerText } from "@/components/ui/ShimmerText";
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View className="mb-8">
-      <Text className="mb-3 text-xs font-bold uppercase tracking-wide text-t3">
+      <Text className="mb-3 text-xs font-sans-bold uppercase tracking-wide text-t3">
         {title}
       </Text>
       {children}
@@ -55,18 +55,18 @@ export default function ComponentsScreen() {
 
       <Block title="Card">
         <Card>
-          <Text className="text-base font-semibold text-t1">Trattoria da Gino</Text>
+          <Text className="text-base font-sans-semibold text-t1">Trattoria da Gino</Text>
           <Text className="mt-1 text-sm text-t2">Cameriere — Sabato sera</Text>
           <View className="mt-3 flex-row items-center justify-between">
             <Pill label="Aperto" variant="open" />
-            <Text className="text-sm font-semibold text-gold">12€/h</Text>
+            <Text className="text-sm font-sans-semibold text-gold">12€/h</Text>
           </View>
         </Card>
       </Block>
 
       <Block title="BlurCard">
         <BlurCard>
-          <Text className="text-base font-semibold text-t1">Turno premium</Text>
+          <Text className="text-base font-sans-semibold text-t1">Turno premium</Text>
           <Text className="mt-1 text-sm text-t2">
             Effetto blur su sfondo scuro
           </Text>

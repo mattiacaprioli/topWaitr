@@ -47,7 +47,7 @@ export function Avatar({ uri, name, size = 48, className }: Props) {
       }}
       className={cn("items-center justify-center", className)}
     >
-      <Text className="font-bold text-white" style={{ fontSize: size * 0.4 }}>
+      <Text className="font-sans-bold text-white" style={{ fontSize: size * 0.4 }}>
         {initials(name).toUpperCase()}
       </Text>
     </View>

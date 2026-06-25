@@ -20,6 +20,7 @@ import {
 export const Link = (
   props: React.ComponentProps<typeof RouterLink> & { className?: string }
 ) => {
+  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
   return useCssElement(RouterLink, props, { className: "style" });
 };
 
@@ -59,6 +60,7 @@ export const ScrollView = (
     contentContainerClassName?: string;
   }
 ) => {
+  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
   return useCssElement(RNScrollView, props, {
     className: "style",
     contentContainerClassName: "contentContainerStyle",
@@ -90,6 +92,7 @@ export const AnimatedScrollView = (
     contentContainerClassName?: string;
   }
 ) => {
+  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
   return useCssElement(Animated.ScrollView, props, {
     className: "style",
     contentClassName: "contentContainerStyle",
@@ -101,6 +104,7 @@ export const AnimatedScrollView = (
 function XXTouchableHighlight(
   props: React.ComponentProps<typeof RNTouchableHighlight>
 ) {
+  // @ts-expect-error underlayColor isn't on ViewStyle but RN TouchableHighlight accepts it. Verbatim wrapper code.
   const { underlayColor, ...style } = StyleSheet.flatten(props.style) || {};
   return (
     <RNTouchableHighlight
