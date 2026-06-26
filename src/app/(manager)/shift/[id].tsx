@@ -11,6 +11,7 @@ import { useToast } from "@/providers/Toast";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
+import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { Enums } from "@/types/database";
 
 const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
@@ -25,6 +26,42 @@ const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
   rejected: "Rifiutata",
   cancelled: "Ritirata",
 };
+
+/** Read-only summary of the applicant's profile data (manager view). */
+function ApplicantProfile({
+  waiter,
+}: {
+  waiter: ApplicationWithWaiter["waiter"];
+}) {
+  const wp = waiter?.waiter_profile ?? null;
+  const bio = waiter?.bio ?? null;
+  const city = waiter?.city ?? null;
+  const experience = wp?.experience ?? null;
+  const languages = wp?.languages ?? null;
+  const specializations = wp?.specializations ?? null;
+
+  if (!bio && !city && !experience && !languages && !specializations) {
+    return null;
+  }
+
+  return (
+    <View className="mt-3 gap-1.5 border-t border-border pt-3">
+      {bio ? <Text className="text-sm text-t2">{bio}</Text> : null}
+      {experience ? (
+        <Text className="text-sm text-t3">Esperienza: {experience}</Text>
+      ) : null}
+      {specializations ? (
+        <Text className="text-sm text-t3">
+          Specializzazioni: {specializations}
+        </Text>
+      ) : null}
+      {languages ? (
+        <Text className="text-sm text-t3">Lingue: {languages}</Text>
+      ) : null}
+      {city ? <Text className="text-sm text-t3">Città: {city}</Text> : null}
+    </View>
+  );
+}
 
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -176,6 +213,11 @@ export default function ShiftDetailScreen() {
                   <Text className="text-base font-sans-bold text-t1">
                     {app.waiter?.full_name ?? "Cameriere"}
                   </Text>
+                  {app.waiter?.waiter_profile?.primary_role ? (
+                    <Text className="text-xs text-t3">
+                      {app.waiter.waiter_profile.primary_role}
+                    </Text>
+                  ) : null}
                   <Pill label={APP_STATUS_LABEL[app.status]} variant={app.status} />
                 </View>
               </View>
@@ -183,6 +225,8 @@ export default function ShiftDetailScreen() {
               {app.message ? (
                 <Text className="mt-3 text-sm text-t2">{app.message}</Text>
               ) : null}
+
+              <ApplicantProfile waiter={app.waiter} />
 
               {app.status === "pending" ? (
                 <View className="mt-3 flex-row gap-3">

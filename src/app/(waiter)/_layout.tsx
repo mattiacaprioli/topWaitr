@@ -15,6 +15,7 @@ export default function WaiterLayout() {
         options={{ title: "Dettaglio turno", headerBackTitle: "Turni" }}
       />
       <Stack.Screen name="candidature" options={{ headerShown: false }} />
+      <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
     </Stack>
   );
 }

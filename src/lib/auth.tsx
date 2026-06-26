@@ -30,6 +30,8 @@ type AuthState = {
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
+  /** Re-fetch the profile row after an edit, without blanking the UI. */
+  refreshProfile: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -156,9 +158,25 @@ export function AuthProvider({ children }: PropsWithChildren) {
     await supabase.auth.signOut();
   }
 
+  // Re-read the profile after the user edits it. Deliberately does NOT touch `loading`
+  // (that would make RootNavigator blank the app); just swaps in the fresh row.
+  async function refreshProfile() {
+    if (!session?.user) return;
+    setProfile(await resolveProfile(session.user));
+  }
+
   return (
     <AuthContext.Provider
-      value={{ session, profile, loading, signIn, signUp, resetPassword, signOut }}
+      value={{
+        session,
+        profile,
+        loading,
+        signIn,
+        signUp,
+        resetPassword,
+        signOut,
+        refreshProfile,
+      }}
     >
       {children}
     </AuthContext.Provider>

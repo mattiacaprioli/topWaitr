@@ -14,7 +14,10 @@ export type IconName =
   | "home"
   | "search"
   | "message"
-  | "sparkle";
+  | "sparkle"
+  | "pencil"
+  | "camera"
+  | "shield";
 
 type Props = {
   name: IconName;
@@ -99,6 +102,27 @@ export function Icon({
           {...p}
           d="M12 3l1.8 7.2L21 12l-7.2 1.8L12 21l-1.8-7.2L3 12l7.2-1.8L12 3z"
         />
+      )}
+      {name === "pencil" && (
+        <>
+          <Path {...p} d="M12 20h9" />
+          <Path
+            {...p}
+            d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"
+          />
+        </>
+      )}
+      {name === "camera" && (
+        <>
+          <Path
+            {...p}
+            d="M4 8.5a2 2 0 0 1 2-2h1.5l1-2h5l1 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"
+          />
+          <Circle {...p} cx={12} cy={12.5} r={3} />
+        </>
+      )}
+      {name === "shield" && (
+        <Path {...p} d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4" />
       )}
     </Svg>
   );

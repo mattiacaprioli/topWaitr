@@ -13,7 +13,7 @@ type Props = {
   label: string;
   onPress?: () => void;
   disabled?: boolean;
-  size?: "md" | "lg";
+  size?: "sm" | "md" | "lg";
   className?: string;
 };
 
@@ -29,7 +29,8 @@ export function GoldButton({
     transform: [{ scale: scale.value }],
   }));
 
-  const pad = size === "lg" ? 18 : 14;
+  const pad = size === "lg" ? 18 : size === "sm" ? 9 : 14;
+  const padX = size === "sm" ? 18 : 24;
 
   return (
     <Pressable
@@ -53,12 +54,12 @@ export function GoldButton({
           end={{ x: 0, y: 1 }}
           style={{
             paddingVertical: pad,
-            paddingHorizontal: 24,
+            paddingHorizontal: padX,
             alignItems: "center",
           }}
         >
           <Text
-            className="text-base text-gold-ink"
+            className={cn("text-gold-ink", size === "sm" ? "text-sm" : "text-base")}
             style={{ fontFamily: FontFamily.sansSemibold }}
           >
             {label}

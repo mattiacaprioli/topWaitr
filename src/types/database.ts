@@ -192,6 +192,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          city: string | null
           created_at: string
           full_name: string | null
           id: string
@@ -202,6 +203,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           full_name?: string | null
           id: string
@@ -212,6 +214,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          city?: string | null
           created_at?: string
           full_name?: string | null
           id?: string
@@ -330,8 +333,12 @@ export type Database = {
           certifications: string[] | null
           cv_url: string | null
           documents: string[] | null
+          experience: string | null
           hourly_rate_min: number | null
           id: string
+          languages: string | null
+          primary_role: string | null
+          specializations: string | null
           years_experience: number | null
         }
         Insert: {
@@ -339,8 +346,12 @@ export type Database = {
           certifications?: string[] | null
           cv_url?: string | null
           documents?: string[] | null
+          experience?: string | null
           hourly_rate_min?: number | null
           id: string
+          languages?: string | null
+          primary_role?: string | null
+          specializations?: string | null
           years_experience?: number | null
         }
         Update: {
@@ -348,8 +359,12 @@ export type Database = {
           certifications?: string[] | null
           cv_url?: string | null
           documents?: string[] | null
+          experience?: string | null
           hourly_rate_min?: number | null
           id?: string
+          languages?: string | null
+          primary_role?: string | null
+          specializations?: string | null
           years_experience?: number | null
         }
         Relationships: [

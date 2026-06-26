@@ -4,9 +4,10 @@ import type { ShiftWithVenue } from "@/features/shifts/types";
 
 export type Application = Tables<"applications">;
 export type Profile = Tables<"profiles">;
+export type WaiterProfile = Tables<"waiter_profiles">;
 
 export type ApplicationWithWaiter = Application & {
-  waiter: Profile | null;
+  waiter: (Profile & { waiter_profile: WaiterProfile | null }) | null;
 };
 
 export type ApplicationWithShift = Application & {
@@ -18,7 +19,9 @@ export async function getApplications(
 ): Promise<ApplicationWithWaiter[]> {
   const { data, error } = await supabase
     .from("applications")
-    .select("*, waiter:profiles!applications_waiter_id_fkey(*)")
+    .select(
+      "*, waiter:profiles!applications_waiter_id_fkey(*, waiter_profile:waiter_profiles(*))"
+    )
     .eq("shift_id", shiftId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);

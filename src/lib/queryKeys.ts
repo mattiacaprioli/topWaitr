@@ -7,6 +7,9 @@ export const qk = {
     all: ["venues"] as const,
     mine: (ownerId: string) => ["venues", "mine", ownerId] as const,
   },
+  profile: {
+    mine: (userId: string) => ["profile", "mine", userId] as const,
+  },
   shifts: {
     all: ["shifts"] as const,
     open: () => ["shifts", "open"] as const,

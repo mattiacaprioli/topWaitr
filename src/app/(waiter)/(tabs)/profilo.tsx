@@ -1,16 +1,41 @@
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { useAuth } from "@/lib/auth";
+import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
+
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="gap-0.5">
+      <Mono>{label}</Mono>
+      <Text className="text-sm text-t2">{value}</Text>
+    </View>
+  );
+}
 
 export default function WaiterProfiloScreen() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, profile, signOut } = useAuth();
   const name = profile?.full_name ?? "Cameriere";
+
+  const profileQuery = useMyWaiterProfile(session!.user.id);
+  const data = profileQuery.data;
+  const wp = data?.waiter_profile ?? null;
+  const role = wp?.primary_role ?? null;
+  const city = data?.city ?? null;
+  const bio = data?.bio ?? null;
+  const experience = wp?.experience ?? null;
+  const languages = wp?.languages ?? null;
+  const specializations = wp?.specializations ?? null;
+  const hasAny =
+    !!bio || !!experience || !!languages || !!specializations || !!city || !!role;
 
   return (
     <ScrollView
@@ -22,17 +47,51 @@ export default function WaiterProfiloScreen() {
         gap: 24,
       }}
     >
-      <View>
-        <Mono gold>Profilo</Mono>
-        <Display className="mt-1 text-4xl">{name}</Display>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1">
+          <Mono gold>Profilo</Mono>
+          <Display className="mt-1 text-4xl">{name}</Display>
+        </View>
+        <Pressable
+          onPress={() => router.push("/(waiter)/profilo-edit")}
+          hitSlop={8}
+          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+        >
+          <Icon name="pencil" size={18} color="#F8F4ED" />
+        </Pressable>
       </View>
 
       <View className="items-center gap-3 rounded-3xl border border-border-2 bg-bg-card p-6">
         <Avatar name={name} size={72} />
-        <Pill label="Cameriere" variant="tag" />
+        <Pill label={role ?? "Cameriere"} variant="tag" />
+        {city ? <Text className="text-sm text-t3">{city}</Text> : null}
         {session?.user.email ? (
           <Text className="text-sm text-t3">{session.user.email}</Text>
         ) : null}
+      </View>
+
+      <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+        <Mono>Il tuo profilo</Mono>
+        {hasAny ? (
+          <>
+            {bio ? (
+              <Text className="text-sm leading-5 text-t2">{bio}</Text>
+            ) : null}
+            {experience ? (
+              <InfoLine label="Esperienza" value={experience} />
+            ) : null}
+            {languages ? (
+              <InfoLine label="Lingue" value={languages} />
+            ) : null}
+            {specializations ? (
+              <InfoLine label="Specializzazioni" value={specializations} />
+            ) : null}
+          </>
+        ) : (
+          <Text className="text-sm text-t3">
+            Completa il tuo profilo per farti notare dai ristoratori.
+          </Text>
+        )}
       </View>
 
       <GhostButton label="Esci" onPress={signOut} />
