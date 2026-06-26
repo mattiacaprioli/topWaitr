@@ -8,7 +8,11 @@ export type IconName =
   | "check"
   | "close"
   | "alert"
-  | "calendar";
+  | "calendar"
+  | "home"
+  | "search"
+  | "message"
+  | "sparkle";
 
 type Props = {
   name: IconName;
@@ -59,6 +63,27 @@ export function Icon({
           <Rect {...p} x={3} y={5} width={18} height={16} rx={2.5} />
           <Path {...p} d="M3 9.5h18M8 3v4M16 3v4" />
         </>
+      )}
+      {name === "home" && (
+        <Path {...p} d="M4 10.5L12 4l8 6.5M6 9.5V20h12V9.5" />
+      )}
+      {name === "search" && (
+        <>
+          <Circle {...p} cx={11} cy={11} r={7} />
+          <Path {...p} d="M20 20l-3.5-3.5" />
+        </>
+      )}
+      {name === "message" && (
+        <Path
+          {...p}
+          d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 4V6z"
+        />
+      )}
+      {name === "sparkle" && (
+        <Path
+          {...p}
+          d="M12 3l1.8 7.2L21 12l-7.2 1.8L12 21l-1.8-7.2L3 12l7.2-1.8L12 3z"
+        />
       )}
     </Svg>
   );

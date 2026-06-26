@@ -163,10 +163,10 @@ function ShiftCard({
   );
 }
 
-export default function WaiterHome() {
+export default function WaiterShiftsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, signOut } = useAuth();
+  const { session } = useAuth();
   const waiterId = session!.user.id;
 
   const [sort, setSort] = useState<SortKey>("data");
@@ -211,7 +211,7 @@ export default function WaiterHome() {
       contentContainerStyle={{
         paddingTop: insets.top + 12,
         paddingHorizontal: 20,
-        paddingBottom: 32,
+        paddingBottom: insets.bottom + 96,
         gap: 16,
       }}
       refreshControl={
@@ -222,14 +222,9 @@ export default function WaiterHome() {
         />
       }
     >
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1">
-          <Mono gold>{shifts.length} turni aperti</Mono>
-          <Display className="mt-1 text-4xl">Trova turni</Display>
-        </View>
-        <Pressable onPress={signOut} hitSlop={8} className="pt-2">
-          <Text className="text-sm font-sans-semibold text-t3">Esci</Text>
-        </Pressable>
+      <View>
+        <Mono gold>{shifts.length} turni aperti</Mono>
+        <Display className="mt-1 text-4xl">Trova turni</Display>
       </View>
 
       {shifts.length > 0 ? (

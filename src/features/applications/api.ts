@@ -1,11 +1,16 @@
 import { supabase } from "@/lib/supabase";
 import type { Enums, Tables } from "@/types/database";
+import type { ShiftWithVenue } from "@/features/shifts/types";
 
 export type Application = Tables<"applications">;
 export type Profile = Tables<"profiles">;
 
 export type ApplicationWithWaiter = Application & {
   waiter: Profile | null;
+};
+
+export type ApplicationWithShift = Application & {
+  shift: ShiftWithVenue | null;
 };
 
 export async function getApplications(
@@ -29,6 +34,24 @@ export async function updateApplicationStatus(
     .update({ status })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** The waiter's accepted, upcoming shifts (Home "prossimi turni"). */
+export async function getMyUpcomingShifts(
+  waiterId: string
+): Promise<ApplicationWithShift[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("applications")
+    .select("*, shift:shifts(*, venue:venues(*))")
+    .eq("waiter_id", waiterId)
+    .eq("status", "accepted");
+  if (error) throw new Error(error.message);
+  const rows = (data as ApplicationWithShift[] | null) ?? [];
+  // PostgREST can't order by a nested column, so filter/sort the join client-side.
+  return rows
+    .filter((r) => r.shift != null && r.shift.date >= today)
+    .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
 }
 
 /** All of the waiter's applications (to gate the apply CTA across the shift list). */

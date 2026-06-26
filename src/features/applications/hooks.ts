@@ -6,6 +6,7 @@ import {
   getApplications,
   getMyApplication,
   getMyApplications,
+  getMyUpcomingShifts,
   updateApplicationStatus,
 } from "./api";
 
@@ -30,6 +31,15 @@ export function useMyApplications(waiterId: string | undefined) {
   return useQuery({
     queryKey: qk.applications.mineAll(waiterId ?? ""),
     queryFn: () => getMyApplications(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+/** The waiter's accepted, upcoming shifts (Home dashboard). */
+export function useMyUpcomingShifts(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.upcoming(waiterId ?? ""),
+    queryFn: () => getMyUpcomingShifts(waiterId as string),
     enabled: !!waiterId,
   });
 }

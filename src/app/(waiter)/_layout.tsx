@@ -9,7 +9,7 @@ export default function WaiterLayout() {
         contentStyle: { backgroundColor: "#0C0907" },
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen
         name="shift/[id]"
         options={{ title: "Dettaglio turno", headerBackTitle: "Turni" }}
