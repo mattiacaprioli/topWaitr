@@ -1,4 +1,4 @@
-import Svg, { Circle, Path } from "react-native-svg";
+import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 export type IconName =
   | "user"
@@ -7,7 +7,8 @@ export type IconName =
   | "chevL"
   | "check"
   | "close"
-  | "alert";
+  | "alert"
+  | "calendar";
 
 type Props = {
   name: IconName;
@@ -52,6 +53,12 @@ export function Icon({
       {name === "close" && <Path {...p} d="M6 6l12 12M18 6L6 18" />}
       {name === "alert" && (
         <Path {...p} d="M12 3l10 18H2L12 3zM12 10v5M12 18v.1" />
+      )}
+      {name === "calendar" && (
+        <>
+          <Rect {...p} x={3} y={5} width={18} height={16} rx={2.5} />
+          <Path {...p} d="M3 9.5h18M8 3v4M16 3v4" />
+        </>
       )}
     </Svg>
   );

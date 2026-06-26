@@ -3,16 +3,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
+import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { QueryError } from "@/components/ui/QueryError";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
-import { SectionHeader } from "@/components/ui/SectionHeader";
+import { QueryError } from "@/components/ui/QueryError";
 import { ControlledInput } from "@/components/form/ControlledInput";
+import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { formatDate, formatRate, formatTime } from "@/lib/format";
+import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useApply, useMyApplication } from "@/features/applications/hooks";
 import {
@@ -27,6 +30,37 @@ const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
   rejected: "Rifiutata",
   cancelled: "Ritirata",
 };
+
+function InfoRow({
+  label,
+  value,
+  gold,
+  first,
+}: {
+  label: string;
+  value: string;
+  gold?: boolean;
+  first?: boolean;
+}) {
+  return (
+    <View
+      className={cn(
+        "flex-row items-center justify-between py-3.5",
+        !first && "border-t border-border"
+      )}
+    >
+      <Text className="shrink-0 text-sm text-t3">{label}</Text>
+      <Text
+        className={cn(
+          "ml-3 flex-1 text-right text-sm font-sans-semibold",
+          gold ? "text-gold" : "text-t1"
+        )}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
 
 export default function WaiterShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -82,11 +116,18 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
+  const venueName = shift.venue?.name ?? "Locale";
+  const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
   const remaining = Math.max(0, shift.positions_total - shift.positions_filled);
+  const requirements = shift.requirements ?? [];
   const isOpen = shift.status === "open";
   const isFull = remaining === 0;
-  // Una candidatura ritirata (cancelled) può essere reinviata.
   const hasActiveApp = myApp != null && myApp.status !== "cancelled";
+
+  const compenso =
+    total != null
+      ? `${formatEuro(total)} · ${formatRate(shift.hourly_rate)}`
+      : formatRate(shift.hourly_rate);
 
   return (
     <KeyboardAvoidingView
@@ -95,51 +136,66 @@ export default function WaiterShiftDetailScreen() {
     >
       <ScrollView
         className="flex-1 bg-bg-0"
-        contentContainerClassName="p-6"
+        contentContainerClassName="px-5 pb-12 pt-4"
         keyboardShouldPersistTaps="handled"
       >
-        <Card>
-          <Text className="text-xl font-sans-bold text-t1">{shift.title}</Text>
-          {shift.venue ? (
-            <Text className="mt-1 text-sm text-t2">
-              {shift.venue.name}
-              {shift.venue.city ? ` · ${shift.venue.city}` : ""}
-            </Text>
-          ) : null}
-          <Text className="mt-2 text-sm text-t2">
-            {formatDate(shift.date)} · {formatTime(shift.start_time)}–
-            {formatTime(shift.end_time)}
-          </Text>
-          <Text className="mt-1 text-sm text-t2">
-            {formatRate(shift.hourly_rate)}
-          </Text>
-          <Text className="mt-1 text-sm text-t3">
-            {remaining > 0
-              ? `${remaining} posti disponibili`
-              : "Turno al completo"}
-          </Text>
+        <View className="flex-row items-center gap-3.5">
+          <View
+            style={{
+              borderWidth: 2,
+              borderColor: "rgba(234,181,76,0.5)",
+              borderRadius: 999,
+              padding: 2,
+            }}
+          >
+            <Avatar uri={shift.venue?.logo_url} name={venueName} size={52} />
+          </View>
+          <View className="flex-1">
+            <Display className="text-2xl">{venueName}</Display>
+            <Text className="mt-0.5 text-sm text-t3">{shift.title}</Text>
+          </View>
+        </View>
 
+        <Card className="mt-6 rounded-3xl border-border-2 px-5 py-1">
+          <InfoRow
+            first
+            label="Quando"
+            value={`${formatDate(shift.date)} · ${formatTime(
+              shift.start_time
+            )}–${formatTime(shift.end_time)}`}
+          />
+          <InfoRow label="Compenso" value={compenso} gold />
+          <InfoRow
+            label="Posti"
+            value={`${remaining} di ${shift.positions_total} disponibili`}
+          />
           {shift.dress_code ? (
-            <Text className="mt-3 text-sm text-t2">
-              Dress code: {shift.dress_code}
-            </Text>
-          ) : null}
-          {shift.requirements && shift.requirements.length > 0 ? (
-            <View className="mt-3 flex-row flex-wrap gap-2">
-              {shift.requirements.map((r) => (
-                <Pill key={r} label={r} variant="neutral" />
-              ))}
-            </View>
-          ) : null}
-          {shift.description ? (
-            <Text className="mt-3 text-sm text-t2">{shift.description}</Text>
+            <InfoRow label="Dress code" value={shift.dress_code} />
           ) : null}
         </Card>
 
-        <SectionHeader title="Candidatura" className="mt-8" />
+        {requirements.length > 0 ? (
+          <View className="mt-6">
+            <Mono className="mb-2">Requisiti</Mono>
+            <View className="flex-row flex-wrap gap-2">
+              {requirements.map((r) => (
+                <Pill key={r} label={`✓ ${r.toUpperCase()}`} variant="tag" />
+              ))}
+            </View>
+          </View>
+        ) : null}
+
+        {shift.description ? (
+          <View className="mt-6">
+            <Mono className="mb-2">Descrizione</Mono>
+            <Text className="text-sm leading-5 text-t2">{shift.description}</Text>
+          </View>
+        ) : null}
+
+        <Mono className="mb-3 mt-8">Candidatura</Mono>
 
         {hasActiveApp ? (
-          <Card>
+          <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t2">
               Ti sei candidato a questo turno.
             </Text>
@@ -151,17 +207,19 @@ export default function WaiterShiftDetailScreen() {
             ) : null}
           </Card>
         ) : !isOpen ? (
-          <EmptyState
-            title="Turno non disponibile"
-            subtitle="Questo turno non accetta più candidature."
-          />
+          <Card className="rounded-3xl border-border-2 p-5">
+            <Text className="text-sm text-t3">
+              Questo turno non accetta più candidature.
+            </Text>
+          </Card>
         ) : isFull ? (
-          <EmptyState
-            title="Turno al completo"
-            subtitle="Tutte le posizioni sono già coperte."
-          />
+          <Card className="rounded-3xl border-border-2 p-5">
+            <Text className="text-sm text-t3">
+              Tutte le posizioni sono già coperte.
+            </Text>
+          </Card>
         ) : (
-          <View className="gap-4">
+          <Card className="rounded-3xl border-border-2 p-5">
             <ControlledInput
               control={control}
               name="message"
@@ -172,12 +230,17 @@ export default function WaiterShiftDetailScreen() {
               className="h-28"
               textAlignVertical="top"
             />
+            <Text className="mt-3 text-xs leading-4 text-t3">
+              Candidandoti, il ristoratore potrà vedere il tuo profilo e
+              accettarti.
+            </Text>
             <GoldButton
-              label={apply.isPending ? "Invio…" : "Candidati"}
+              className="mt-4"
+              label={apply.isPending ? "Invio…" : "Conferma candidatura"}
               disabled={apply.isPending}
               onPress={onSubmit}
             />
-          </View>
+          </Card>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
+import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
@@ -119,10 +120,13 @@ function ShiftCard({
           </View>
         </View>
 
-        <Text className="mt-3 text-sm text-t2">
-          {formatDate(shift.date)} · {formatTime(shift.start_time)}–
-          {formatTime(shift.end_time)}
-        </Text>
+        <View className="mt-3 flex-row items-center gap-2">
+          <Icon name="calendar" size={15} color="#8c857a" />
+          <Text className="text-sm text-t2">
+            {formatDate(shift.date)} · {formatTime(shift.start_time)}–
+            {formatTime(shift.end_time)}
+          </Text>
+        </View>
 
         <View className="mt-3 flex-row flex-wrap items-center gap-2">
           <Text className="text-sm font-sans-semibold text-t2">
