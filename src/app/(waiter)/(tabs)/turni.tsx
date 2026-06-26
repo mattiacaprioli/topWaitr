@@ -179,6 +179,9 @@ export default function WaiterShiftsScreen() {
     for (const a of myAppsQuery.data ?? []) m.set(a.shift_id, a.status);
     return m;
   }, [myAppsQuery.data]);
+  const pendingCount = (myAppsQuery.data ?? []).filter(
+    (a) => a.status === "pending"
+  ).length;
 
   const sorted = useMemo(() => {
     if (sort !== "pay") return shifts;
@@ -222,9 +225,28 @@ export default function WaiterShiftsScreen() {
         />
       }
     >
-      <View>
-        <Mono gold>{shifts.length} turni aperti</Mono>
-        <Display className="mt-1 text-4xl">Trova turni</Display>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1">
+          <Mono gold>{shifts.length} turni aperti</Mono>
+          <Display className="mt-1 text-4xl">Trova turni</Display>
+        </View>
+        <Pressable
+          onPress={() => router.push("/(waiter)/candidature")}
+          hitSlop={8}
+          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+        >
+          <Icon name="clipboard" size={20} color="#F8F4ED" />
+          {pendingCount > 0 ? (
+            <View
+              className="absolute -right-1.5 -top-1.5 items-center justify-center rounded-full bg-gold px-1"
+              style={{ minWidth: 18, height: 18 }}
+            >
+              <Text className="text-[10px] font-sans-bold text-gold-ink">
+                {pendingCount}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
       </View>
 
       {shifts.length > 0 ? (

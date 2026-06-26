@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
@@ -56,10 +56,18 @@ export default function WaiterHomeScreen() {
 
       <GoldButton label="Trova turni" onPress={() => router.navigate("/turni")} />
 
-      <View className="flex-row items-center justify-between rounded-2xl border border-border bg-bg-card px-5 py-4">
+      <Pressable
+        className="flex-row items-center justify-between rounded-2xl border border-border bg-bg-card px-5 py-4"
+        onPress={() => router.push("/(waiter)/candidature")}
+      >
         <Text className="text-sm text-t2">Candidature in attesa</Text>
-        <Text className="text-base font-sans-bold text-gold">{pendingCount}</Text>
-      </View>
+        <View className="flex-row items-center gap-2">
+          <Text className="text-base font-sans-bold text-gold">
+            {pendingCount}
+          </Text>
+          <Icon name="chevR" size={16} color="#8c857a" />
+        </View>
+      </Pressable>
 
       <View>
         <Mono className="mb-3">Prossimi turni</Mono>

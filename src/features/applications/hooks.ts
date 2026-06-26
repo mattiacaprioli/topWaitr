@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import {
+  cancelMyApplication,
   createApplication,
   getApplications,
   getMyApplication,
   getMyApplications,
+  getMyApplicationsWithShift,
   getMyUpcomingShifts,
   updateApplicationStatus,
 } from "./api";
@@ -41,6 +43,28 @@ export function useMyUpcomingShifts(waiterId: string | undefined) {
     queryKey: qk.applications.upcoming(waiterId ?? ""),
     queryFn: () => getMyUpcomingShifts(waiterId as string),
     enabled: !!waiterId,
+  });
+}
+
+/** The waiter's applications with shift/venue, every status ("Le mie candidature"). */
+export function useMyApplicationsList(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.mineList(waiterId ?? ""),
+    queryFn: () => getMyApplicationsWithShift(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+/** Withdraw a pending application, then refresh every waiter-facing view. */
+export function useCancelApplication() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (appId: string) => cancelMyApplication(appId),
+    onSuccess: () => {
+      // Prefix invalidation covers mineList/mineAll/mine/upcoming.
+      qc.invalidateQueries({ queryKey: qk.applications.all });
+      qc.invalidateQueries({ queryKey: qk.shifts.open() });
+    },
   });
 }
 

@@ -65,6 +65,32 @@ export async function getMyApplications(waiterId: string): Promise<Application[]
   return data ?? [];
 }
 
+/**
+ * The waiter's applications with their shift/venue, every status, newest first
+ * ("Le mie candidature" screen). created_at is on `applications` (not nested), so
+ * PostgREST can order it server-side.
+ */
+export async function getMyApplicationsWithShift(
+  waiterId: string
+): Promise<ApplicationWithShift[]> {
+  const { data, error } = await supabase
+    .from("applications")
+    .select("*, shift:shifts(*, venue:venues(*))")
+    .eq("waiter_id", waiterId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as ApplicationWithShift[] | null) ?? [];
+}
+
+/** Withdraw the waiter's own application (RLS: applications waiter own crud). */
+export async function cancelMyApplication(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("applications")
+    .update({ status: "cancelled" })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
 /** The waiter's own application for a shift, if any (UNIQUE on shift_id+waiter_id). */
 export async function getMyApplication(
   shiftId: string,

@@ -9,6 +9,8 @@ export type IconName =
   | "close"
   | "alert"
   | "calendar"
+  | "clipboard"
+  | "clock"
   | "home"
   | "search"
   | "message"
@@ -62,6 +64,19 @@ export function Icon({
         <>
           <Rect {...p} x={3} y={5} width={18} height={16} rx={2.5} />
           <Path {...p} d="M3 9.5h18M8 3v4M16 3v4" />
+        </>
+      )}
+      {name === "clipboard" && (
+        <>
+          <Rect {...p} x={5} y={4.5} width={14} height={16} rx={2.5} />
+          <Rect {...p} x={9} y={3} width={6} height={3.5} rx={1.2} />
+          <Path {...p} d="M9 11h6M9 15h4" />
+        </>
+      )}
+      {name === "clock" && (
+        <>
+          <Circle {...p} cx={12} cy={12} r={9} />
+          <Path {...p} d="M12 7.5V12l3 1.8" />
         </>
       )}
       {name === "home" && (

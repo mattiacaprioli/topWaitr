@@ -1,12 +1,13 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
@@ -17,7 +18,11 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
-import { useApply, useMyApplication } from "@/features/applications/hooks";
+import {
+  useApply,
+  useCancelApplication,
+  useMyApplication,
+} from "@/features/applications/hooks";
 import {
   applicationSchema,
   type ApplicationForm,
@@ -73,6 +78,31 @@ export default function WaiterShiftDetailScreen() {
   const myAppQuery = useMyApplication(id, waiterId);
   const myApp = myAppQuery.data ?? null;
   const apply = useApply(id, waiterId);
+  const cancel = useCancelApplication();
+
+  function confirmWithdraw() {
+    if (!myApp) return;
+    Alert.alert(
+      "Ritira candidatura",
+      "Vuoi ritirare la candidatura per questo turno?",
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Ritira",
+          style: "destructive",
+          onPress: () =>
+            cancel.mutate(myApp.id, {
+              onSuccess: () => toast.show("Candidatura ritirata"),
+              onError: () =>
+                toast.show(
+                  "Impossibile ritirare la candidatura. Riprova.",
+                  "error"
+                ),
+            }),
+        },
+      ]
+    );
+  }
 
   const { control, handleSubmit, reset } = useForm<ApplicationForm>({
     resolver: zodResolver(applicationSchema),
@@ -204,6 +234,14 @@ export default function WaiterShiftDetailScreen() {
             </View>
             {myApp!.message ? (
               <Text className="mt-3 text-sm text-t3">{myApp!.message}</Text>
+            ) : null}
+            {myApp!.status === "pending" ? (
+              <GhostButton
+                className="mt-4"
+                label={cancel.isPending ? "Ritiro…" : "Ritira candidatura"}
+                disabled={cancel.isPending}
+                onPress={confirmWithdraw}
+              />
             ) : null}
           </Card>
         ) : !isOpen ? (
