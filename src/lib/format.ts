@@ -20,6 +20,29 @@ export function formatRate(rate: number | null): string {
   return `${rate.toFixed(2).replace(".", ",")} €/h`;
 }
 
+// Durata del turno in ore (gestisce i turni che scavalcano la mezzanotte).
+export function shiftDurationHours(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  let mins = eh * 60 + em - (sh * 60 + sm);
+  if (mins <= 0) mins += 24 * 60;
+  return mins / 60;
+}
+
+// Stima del compenso lordo del turno = paga oraria × durata.
+export function shiftTotal(
+  rate: number | null,
+  start: string,
+  end: string
+): number | null {
+  if (rate == null) return null;
+  return rate * shiftDurationHours(start, end);
+}
+
+export function formatEuro(n: number): string {
+  return `€${Math.round(n)}`;
+}
+
 // Date -> "YYYY-MM-DD"
 export function toDateString(d: Date): string {
   const y = d.getFullYear();

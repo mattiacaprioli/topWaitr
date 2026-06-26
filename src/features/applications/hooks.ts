@@ -5,6 +5,7 @@ import {
   createApplication,
   getApplications,
   getMyApplication,
+  getMyApplications,
   updateApplicationStatus,
 } from "./api";
 
@@ -24,6 +25,15 @@ export function useMyApplication(shiftId: string, waiterId: string | undefined) 
   });
 }
 
+/** All of the waiter's applications (gates the inline CTA across the shift list). */
+export function useMyApplications(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.mineAll(waiterId ?? ""),
+    queryFn: () => getMyApplications(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
 /** Submit an application for a shift, then refresh the waiter's views. */
 export function useApply(shiftId: string, waiterId: string) {
   const qc = useQueryClient();
@@ -32,6 +42,7 @@ export function useApply(shiftId: string, waiterId: string) {
       createApplication({ shift_id: shiftId, waiter_id: waiterId, message }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.applications.mine(shiftId, waiterId) });
+      qc.invalidateQueries({ queryKey: qk.applications.mineAll(waiterId) });
       qc.invalidateQueries({ queryKey: qk.shifts.open() });
     },
   });

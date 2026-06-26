@@ -18,5 +18,6 @@ export const qk = {
     byShift: (shiftId: string) => ["applications", "byShift", shiftId] as const,
     mine: (shiftId: string, waiterId: string) =>
       ["applications", "mine", shiftId, waiterId] as const,
+    mineAll: (waiterId: string) => ["applications", "mineAll", waiterId] as const,
   },
 } as const;

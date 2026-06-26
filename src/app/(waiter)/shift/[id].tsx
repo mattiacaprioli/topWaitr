@@ -57,7 +57,7 @@ export default function WaiterShiftDetailScreen() {
 
   if (shiftQuery.isLoading || myAppQuery.isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg-1">
+      <View className="flex-1 items-center justify-center bg-bg-0">
         <ActivityIndicator color="#EAB54C" />
       </View>
     );
@@ -65,7 +65,7 @@ export default function WaiterShiftDetailScreen() {
 
   if (shiftQuery.isError) {
     return (
-      <View className="flex-1 justify-center bg-bg-1 px-6">
+      <View className="flex-1 justify-center bg-bg-0 px-6">
         <QueryError onRetry={() => shiftQuery.refetch()} />
       </View>
     );
@@ -73,7 +73,7 @@ export default function WaiterShiftDetailScreen() {
 
   if (!shift) {
     return (
-      <View className="flex-1 bg-bg-1">
+      <View className="flex-1 bg-bg-0">
         <EmptyState
           title="Turno non trovato"
           subtitle="Questo turno non è più disponibile."
@@ -94,7 +94,7 @@ export default function WaiterShiftDetailScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        className="flex-1 bg-bg-1"
+        className="flex-1 bg-bg-0"
         contentContainerClassName="p-6"
         keyboardShouldPersistTaps="handled"
       >

@@ -9,7 +9,8 @@ type Props = {
   className?: string;
 };
 
-const COLORS = ["#D4A843", "#208AEF", "#22C55E", "#EF4444", "#8B5CF6", "#EC4899"];
+// Muted, desaturated earthy tones that sit well on the warm dark theme.
+const COLORS = ["#6E5A3A", "#3E5B47", "#3D566E", "#5E4B6E", "#6E4A45", "#4A5A3D"];
 
 function initials(name?: string | null) {
   if (!name) return "?";

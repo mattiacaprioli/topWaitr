@@ -14,7 +14,7 @@
   --color-bg-1: #1f1a13;
   --color-bg-2: #2a241b;
   --color-bg-3: #362e24;
-  --color-bg-card: #1f1a13;
+  --color-bg-card: #17120b; /* warm near-black panel — separation comes from the border */
 
   /* Text — warm */
   --color-t1: #f8f4ed;

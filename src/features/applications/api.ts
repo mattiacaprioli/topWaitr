@@ -31,6 +31,17 @@ export async function updateApplicationStatus(
   if (error) throw new Error(error.message);
 }
 
+/** All of the waiter's applications (to gate the apply CTA across the shift list). */
+export async function getMyApplications(waiterId: string): Promise<Application[]> {
+  const { data, error } = await supabase
+    .from("applications")
+    .select("*")
+    .eq("waiter_id", waiterId)
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 /** The waiter's own application for a shift, if any (UNIQUE on shift_id+waiter_id). */
 export async function getMyApplication(
   shiftId: string,
