@@ -9,11 +9,19 @@ export const qk = {
   },
   shifts: {
     all: ["shifts"] as const,
+    open: () => ["shifts", "open"] as const,
     byVenue: (venueId: string) => ["shifts", "byVenue", venueId] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
   },
   applications: {
     all: ["applications"] as const,
     byShift: (shiftId: string) => ["applications", "byShift", shiftId] as const,
+    mine: (shiftId: string, waiterId: string) =>
+      ["applications", "mine", shiftId, waiterId] as const,
+    mineAll: (waiterId: string) => ["applications", "mineAll", waiterId] as const,
+    mineList: (waiterId: string) =>
+      ["applications", "mineList", waiterId] as const,
+    upcoming: (waiterId: string) =>
+      ["applications", "upcoming", waiterId] as const,
   },
 } as const;
