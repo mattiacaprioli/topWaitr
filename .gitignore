@@ -10,7 +10,9 @@ package-lock.json
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# NOTE: expo-env.d.ts is committed on purpose — tsconfig `include`s it and it provides
+# the `*.css` (and asset) module declarations via `expo/types`. Without it CI `tsc`
+# fails on `import "@/global.css"` (TS2882). Expo regenerates it with identical content.
 
 # Native
 .kotlin/
