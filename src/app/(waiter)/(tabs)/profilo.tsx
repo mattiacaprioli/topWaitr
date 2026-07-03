@@ -32,10 +32,10 @@ export default function WaiterProfiloScreen() {
   const city = data?.city ?? null;
   const bio = data?.bio ?? null;
   const experience = wp?.experience ?? null;
-  const languages = wp?.languages ?? null;
+  const languages = wp?.languages ?? [];
   const specializations = wp?.specializations ?? null;
   const hasAny =
-    !!bio || !!experience || !!languages || !!specializations || !!city || !!role;
+    !!bio || !!experience || languages.length > 0 || !!specializations || !!city || !!role;
 
   return (
     <ScrollView
@@ -80,8 +80,8 @@ export default function WaiterProfiloScreen() {
             {experience ? (
               <InfoLine label="Esperienza" value={experience} />
             ) : null}
-            {languages ? (
-              <InfoLine label="Lingue" value={languages} />
+            {languages.length > 0 ? (
+              <InfoLine label="Lingue" value={languages.join(" · ")} />
             ) : null}
             {specializations ? (
               <InfoLine label="Specializzazioni" value={specializations} />

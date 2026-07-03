@@ -5,7 +5,7 @@ export const waiterProfileSchema = z.object({
   city: z.string().trim(),
   bio: z.string().trim().max(180, "Massimo 180 caratteri."),
   primary_role: z.string().trim(),
-  languages: z.string().trim(),
+  languages: z.array(z.string()),
   specializations: z.string().trim(),
   experience: z.string().trim(),
 });

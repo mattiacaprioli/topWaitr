@@ -336,7 +336,7 @@ export type Database = {
           experience: string | null
           hourly_rate_min: number | null
           id: string
-          languages: string | null
+          languages: string[]
           primary_role: string | null
           specializations: string | null
           years_experience: number | null
@@ -349,7 +349,7 @@ export type Database = {
           experience?: string | null
           hourly_rate_min?: number | null
           id: string
-          languages?: string | null
+          languages?: string[]
           primary_role?: string | null
           specializations?: string | null
           years_experience?: number | null
@@ -362,7 +362,7 @@ export type Database = {
           experience?: string | null
           hourly_rate_min?: number | null
           id?: string
-          languages?: string | null
+          languages?: string[]
           primary_role?: string | null
           specializations?: string | null
           years_experience?: number | null

@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ControlledChoiceChips } from "@/components/form/ControlledChoiceChips";
+import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
@@ -18,7 +19,7 @@ import {
   useMyWaiterProfile,
   useSaveWaiterProfile,
 } from "@/features/waiterProfile/hooks";
-import { PRIMARY_ROLE_OPTIONS } from "@/features/waiterProfile/api";
+import { LANGUAGE_OPTIONS, PRIMARY_ROLE_OPTIONS } from "@/features/waiterProfile/api";
 import {
   waiterProfileSchema,
   type WaiterProfileForm,
@@ -43,7 +44,7 @@ export default function WaiterProfileEditScreen() {
       city: "",
       bio: "",
       primary_role: "",
-      languages: "",
+      languages: [],
       specializations: "",
       experience: "",
     },
@@ -61,7 +62,7 @@ export default function WaiterProfileEditScreen() {
       city: data.city ?? "",
       bio: data.bio ?? "",
       primary_role: wp?.primary_role ?? "",
-      languages: wp?.languages ?? "",
+      languages: wp?.languages ?? [],
       specializations: wp?.specializations ?? "",
       experience: wp?.experience ?? "",
     });
@@ -74,7 +75,7 @@ export default function WaiterProfileEditScreen() {
         city: values.city || null,
         bio: values.bio || null,
         primary_role: values.primary_role || null,
-        languages: values.languages || null,
+        languages: values.languages,
         specializations: values.specializations || null,
         experience: values.experience || null,
       });
@@ -195,11 +196,11 @@ export default function WaiterProfileEditScreen() {
                   {bioLen}/{BIO_MAX}
                 </Text>
               </View>
-              <ControlledInput
+              <ControlledMultiChips
                 control={control}
                 name="languages"
                 label="Lingue parlate"
-                placeholder="IT · EN · FR · ES (base)"
+                options={LANGUAGE_OPTIONS}
               />
               <ControlledInput
                 control={control}

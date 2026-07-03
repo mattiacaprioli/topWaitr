@@ -37,10 +37,10 @@ function ApplicantProfile({
   const bio = waiter?.bio ?? null;
   const city = waiter?.city ?? null;
   const experience = wp?.experience ?? null;
-  const languages = wp?.languages ?? null;
+  const languages = wp?.languages ?? [];
   const specializations = wp?.specializations ?? null;
 
-  if (!bio && !city && !experience && !languages && !specializations) {
+  if (!bio && !city && !experience && languages.length === 0 && !specializations) {
     return null;
   }
 
@@ -55,8 +55,8 @@ function ApplicantProfile({
           Specializzazioni: {specializations}
         </Text>
       ) : null}
-      {languages ? (
-        <Text className="text-sm text-t3">Lingue: {languages}</Text>
+      {languages.length > 0 ? (
+        <Text className="text-sm text-t3">Lingue: {languages.join(" · ")}</Text>
       ) : null}
       {city ? <Text className="text-sm text-t3">Città: {city}</Text> : null}
     </View>

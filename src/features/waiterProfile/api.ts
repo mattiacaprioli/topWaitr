@@ -13,7 +13,7 @@ export type WaiterProfileInput = {
   city: string | null;
   bio: string | null;
   primary_role: string | null;
-  languages: string | null;
+  languages: string[];
   specializations: string | null;
   experience: string | null;
 };
@@ -27,6 +27,20 @@ export const PRIMARY_ROLE_OPTIONS = [
   "Barista",
   "Runner",
   "Bartender",
+] as const;
+
+/** Lingue parlate (scelta multipla). Lista curata → dati normalizzati e filtrabili. */
+export const LANGUAGE_OPTIONS = [
+  "Italiano",
+  "Inglese",
+  "Francese",
+  "Spagnolo",
+  "Tedesco",
+  "Portoghese",
+  "Arabo",
+  "Cinese",
+  "Rumeno",
+  "Russo",
 ] as const;
 
 /** The signed-in waiter's profile joined with its waiter_profiles row (1:1). */
