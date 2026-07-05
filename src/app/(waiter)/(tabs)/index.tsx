@@ -16,11 +16,11 @@ import {
 import { reviewUrlFor } from "@/features/reviews/config";
 import {
   useWaiterPublicCard,
-  useWaiterReviews,
+  useWaiterReviewsPreview,
 } from "@/features/reviews/hooks";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatEuro, formatTime, shiftTotal } from "@/lib/format";
-import { ScrollView, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, Linking, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,7 +35,7 @@ export default function WaiterHomeScreen() {
   const appsQuery = useMyApplications(waiterId);
   const appsListQuery = useMyApplicationsList(waiterId);
   const card = useWaiterPublicCard(waiterId).data;
-  const reviews = useWaiterReviews(waiterId).data ?? [];
+  const reviews = useWaiterReviewsPreview(waiterId, 1).data ?? [];
 
   const upcoming = upcomingQuery.data ?? [];
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
@@ -97,7 +97,9 @@ export default function WaiterHomeScreen() {
           />
         </View>
         {featured ? (
-          <ReviewCard review={featured} />
+          <Pressable onPress={() => router.push("/(waiter)/recensioni")}>
+            <ReviewCard review={featured} />
+          </Pressable>
         ) : (
           <View className="rounded-2xl border border-border bg-bg-card p-4">
             <Text className="text-sm leading-5 text-t3">

@@ -18,6 +18,7 @@ export default function WaiterLayout() {
       <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
       <Stack.Screen name="qr" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
+      <Stack.Screen name="recensioni" options={{ headerShown: false }} />
     </Stack>
   );
 }

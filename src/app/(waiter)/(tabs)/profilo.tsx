@@ -4,11 +4,13 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { RatingSummary } from "@/components/ui/RatingSummary";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StatCard } from "@/components/ui/StatCard";
 import {
+  useRatingBreakdown,
   useWaiterPublicCard,
-  useWaiterReviews,
+  useWaiterReviewsPreview,
 } from "@/features/reviews/hooks";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useAuth } from "@/lib/auth";
@@ -60,7 +62,8 @@ export default function WaiterProfiloScreen() {
     !!role;
 
   const card = useWaiterPublicCard(userId).data;
-  const reviews = useWaiterReviews(userId).data ?? [];
+  const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
+  const breakdown = useRatingBreakdown(userId).data;
   const reviewsCount = card?.rating_count ?? 0;
   const ratingLabel =
     reviewsCount > 0
@@ -201,8 +204,21 @@ export default function WaiterProfiloScreen() {
 
       {tab === "recensioni" ? (
         <View className="gap-3">
-          {reviews.length > 0 ? (
-            reviews.map((r) => <ReviewCard key={r.id} review={r} />)
+          {reviewsCount > 0 ? (
+            <>
+              <RatingSummary
+                avg={card?.rating_avg ?? null}
+                count={card?.rating_count ?? null}
+                breakdown={breakdown}
+              />
+              {reviews.map((r) => (
+                <ReviewCard key={r.id} review={r} />
+              ))}
+              <GhostButton
+                label={`Vedi tutte le ${reviewsCount} recensioni`}
+                onPress={() => router.push("/(waiter)/recensioni")}
+              />
+            </>
           ) : (
             <View className="rounded-3xl border border-border-2 bg-bg-card p-5">
               <Text className="text-sm leading-5 text-t3">
