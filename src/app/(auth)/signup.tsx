@@ -1,20 +1,10 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { KeyboardAvoidingView, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { Chip } from "@/components/ui/Chip";
 import { Icon, type IconName } from "@/components/ui/Icon";
-import { GoldButton } from "@/components/ui/GoldButton";
-import { ControlledInput } from "@/components/form/ControlledInput";
-import { cn } from "@/lib/cn";
-import { useAuth, authErrorMessage } from "@/lib/auth";
-import { useToast } from "@/providers/Toast";
-import { signupSchema, type SignupForm } from "@/features/auth/schema";
 import type { Enums } from "@/types/database";
 
 type Role = Enums<"user_role">;
@@ -42,162 +32,80 @@ const ROLES: {
   },
 ];
 
-export default function Signup() {
-  const { signUp } = useAuth();
+export default function SignupRole() {
   const router = useRouter();
-  const toast = useToast();
   const insets = useSafeAreaInsets();
-  const [apiError, setApiError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  const { control, handleSubmit, watch, setValue } = useForm<SignupForm>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", email: "", password: "", role: "waiter" },
-  });
-  const role = watch("role");
-
-  const onSubmit = handleSubmit(async (values) => {
-    if (loading) return;
-    setApiError(null);
-    setInfo(null);
-    setLoading(true);
-    const res = await signUp({
-      email: values.email.trim(),
-      password: values.password,
-      fullName: values.fullName.trim(),
-      role: values.role,
-    });
-    setLoading(false);
-    if (res.error) {
-      setApiError(authErrorMessage(res.error));
-      return;
-    }
-    if (res.needsConfirmation) {
-      setInfo("Ti abbiamo inviato un'email di conferma. Controlla la posta.");
-      toast.show("Controlla la posta per confermare.");
-    }
-    // in caso di sessione attiva, i guard nel root layout reindirizzano
-  });
+  const choose = (role: Role) =>
+    router.push({ pathname: "/(auth)/signup-account", params: { role } });
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    <ScrollView
+      className="flex-1 bg-bg-0"
+      contentContainerClassName="flex-grow px-6 pb-10"
+      keyboardShouldPersistTaps="handled"
     >
-      <ScrollView
-        className="flex-1 bg-bg-0"
-        contentContainerClassName="flex-grow px-6 pb-10"
-        keyboardShouldPersistTaps="handled"
+      <View style={{ height: insets.top + 8 }} />
+      <Pressable
+        onPress={() => router.back()}
+        hitSlop={8}
+        className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-1"
       >
-        <View style={{ height: insets.top + 16 }} />
-        <Display className="text-[28px]">Crea il tuo account</Display>
-        <Text className="mt-2 font-sans text-[13.5px] text-t3">
-          Come userai topWaitr? Potrai cambiare in seguito dalle impostazioni.
-        </Text>
+        <Icon name="chevL" size={18} color="#C2BBB0" />
+      </Pressable>
 
-        <View className="mt-7 gap-3.5">
-          {ROLES.map((r) => {
-            const active = role === r.value;
-            return (
-              <Pressable
-                key={r.value}
-                onPress={() => setValue("role", r.value)}
-                className={cn(
-                  "gap-3.5 rounded-[22px] border bg-bg-1 p-5",
-                  active ? "border-gold" : "border-border"
-                )}
-              >
-                <View className="flex-row items-center gap-3.5">
-                  <View className="overflow-hidden rounded-[14px] border border-border-2">
-                    <LinearGradient
-                      colors={["#362E24", "#1F1A13"]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={{
-                        width: 50,
-                        height: 50,
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <Icon name={r.icon} size={24} color="#EAB54C" />
-                    </LinearGradient>
-                  </View>
-                  <Text className="flex-1 font-sans-semibold text-[17px] text-t1">
-                    {r.title}
-                  </Text>
-                  <Icon
-                    name="chevR"
-                    size={18}
-                    color={active ? "#EAB54C" : "#8C857A"}
-                  />
-                </View>
-                <Text className="font-sans text-[12.5px] leading-5 text-t3">
-                  {r.sub}
-                </Text>
-                <View className="flex-row flex-wrap gap-1.5">
-                  {r.chips.map((c) => (
-                    <Chip key={c} label={c} />
-                  ))}
-                </View>
-              </Pressable>
-            );
-          })}
-        </View>
+      <Display className="mt-6 text-[28px]">Come userai topWaitr?</Display>
+      <Text className="mt-2 font-sans text-[13.5px] text-t3">
+        Scegli come vuoi iniziare. Potrai cambiare in seguito dalle impostazioni.
+      </Text>
 
-        <View className="mt-6 gap-4">
-          <ControlledInput
-            control={control}
-            name="fullName"
-            label="Nome e cognome"
-            placeholder="Mario Rossi"
-            autoCapitalize="words"
-            autoComplete="name"
-          />
-          <ControlledInput
-            control={control}
-            name="email"
-            label="Email"
-            placeholder="nome@email.com"
-            autoCapitalize="none"
-            autoComplete="email"
-            keyboardType="email-address"
-            inputMode="email"
-          />
-          <ControlledInput
-            control={control}
-            name="password"
-            label="Password"
-            placeholder="Almeno 6 caratteri"
-            secureTextEntry
-            autoCapitalize="none"
-          />
+      <View className="mt-7 gap-3.5">
+        {ROLES.map((r) => (
+          <Pressable
+            key={r.value}
+            onPress={() => choose(r.value)}
+            className="gap-3.5 rounded-[22px] border border-border bg-bg-1 p-5"
+          >
+            <View className="flex-row items-center gap-3.5">
+              <View className="overflow-hidden rounded-[14px] border border-border-2">
+                <LinearGradient
+                  colors={["#362E24", "#1F1A13"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{
+                    width: 50,
+                    height: 50,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Icon name={r.icon} size={24} color="#EAB54C" />
+                </LinearGradient>
+              </View>
+              <Text className="flex-1 font-sans-semibold text-[17px] text-t1">
+                {r.title}
+              </Text>
+              <Icon name="chevR" size={18} color="#8C857A" />
+            </View>
+            <Text className="font-sans text-[12.5px] leading-5 text-t3">
+              {r.sub}
+            </Text>
+            <View className="flex-row flex-wrap gap-1.5">
+              {r.chips.map((c) => (
+                <Chip key={c} label={c} />
+              ))}
+            </View>
+          </Pressable>
+        ))}
+      </View>
 
-          {apiError ? (
-            <Text className="font-sans text-sm text-error">{apiError}</Text>
-          ) : null}
-          {info ? (
-            <Text className="font-sans text-sm text-success">{info}</Text>
-          ) : null}
-
-          <GoldButton
-            className="mt-2"
-            size="lg"
-            label={loading ? "Creazione…" : "Crea account"}
-            disabled={loading}
-            onPress={onSubmit}
-          />
-        </View>
-
-        <Pressable
-          className="mt-8 flex-row justify-center gap-1"
-          onPress={() => router.push("/(auth)/login")}
-        >
-          <Text className="font-sans text-sm text-t2">Hai già un account?</Text>
-          <Text className="font-sans-semibold text-sm text-gold">Accedi</Text>
-        </Pressable>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Pressable
+        className="mt-8 flex-row justify-center gap-1"
+        onPress={() => router.push("/(auth)/login")}
+      >
+        <Text className="font-sans text-sm text-t2">Hai già un account?</Text>
+        <Text className="font-sans-semibold text-sm text-gold">Accedi</Text>
+      </Pressable>
+    </ScrollView>
   );
 }

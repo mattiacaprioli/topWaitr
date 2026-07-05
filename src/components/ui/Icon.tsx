@@ -24,7 +24,8 @@ export type IconName =
   | "starOutline"
   | "qr"
   | "send"
-  | "download";
+  | "download"
+  | "upload";
 
 type Props = {
   name: IconName;
@@ -178,6 +179,12 @@ export function Icon({
         <Path
           {...p}
           d="M12 3v11M8 10l4 4 4-4M5 19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2"
+        />
+      )}
+      {name === "upload" && (
+        <Path
+          {...p}
+          d="M12 21V10M8 14l4-4 4 4M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"
         />
       )}
     </Svg>

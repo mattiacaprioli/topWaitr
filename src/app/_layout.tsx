@@ -81,6 +81,9 @@ function RootNavigator() {
 
   const isManager = !!session && profile?.role === "manager";
   const isWaiter = !!session && profile?.role === "waiter";
+  // Un cameriere senza onboarding completato passa prima dal wizard.
+  const waiterOnboarding = isWaiter && !profile?.onboarding_complete;
+  const waiterReady = isWaiter && !!profile?.onboarding_complete;
 
   return (
     <Stack screenOptions={screenOptions}>
@@ -92,7 +95,11 @@ function RootNavigator() {
         <Stack.Screen name="(manager)" options={{ headerShown: false }} />
       </Stack.Protected>
 
-      <Stack.Protected guard={isWaiter}>
+      <Stack.Protected guard={waiterOnboarding}>
+        <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+      </Stack.Protected>
+
+      <Stack.Protected guard={waiterReady}>
         <Stack.Screen name="(waiter)" options={{ headerShown: false }} />
       </Stack.Protected>
 

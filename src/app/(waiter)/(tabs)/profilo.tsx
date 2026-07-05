@@ -4,6 +4,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { NoReviews } from "@/components/ui/NoReviews";
 import { RatingSummary } from "@/components/ui/RatingSummary";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StatCard } from "@/components/ui/StatCard";
@@ -220,12 +221,7 @@ export default function WaiterProfiloScreen() {
               />
             </>
           ) : (
-            <View className="rounded-3xl border border-border-2 bg-bg-card p-5">
-              <Text className="text-sm leading-5 text-t3">
-                Nessuna recensione ancora. Mostra il tuo QR ai clienti a fine
-                servizio: la tua reputazione ti seguirà, locale dopo locale.
-              </Text>
-            </View>
+            <NoReviews onOpenQR={() => router.push("/(waiter)/qr")} />
           )}
         </View>
       ) : null}

@@ -5,6 +5,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { NoReviews } from "@/components/ui/NoReviews";
 import { QueryError } from "@/components/ui/QueryError";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StatCard } from "@/components/ui/StatCard";
@@ -101,12 +102,7 @@ export default function WaiterHomeScreen() {
             <ReviewCard review={featured} />
           </Pressable>
         ) : (
-          <View className="rounded-2xl border border-border bg-bg-card p-4">
-            <Text className="text-sm leading-5 text-t3">
-              Nessuna recensione ancora. Mostra il tuo QR ai clienti a fine
-              servizio per iniziare a raccogliere feedback.
-            </Text>
-          </View>
+          <NoReviews onOpenQR={() => router.push("/(waiter)/qr")} />
         )}
       </View>
 

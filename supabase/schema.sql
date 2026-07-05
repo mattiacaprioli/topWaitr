@@ -142,6 +142,7 @@ CREATE TABLE IF NOT EXISTS "public"."profiles" (
     "avatar_url" "text",
     "phone" "text",
     "bio" "text",
+    "onboarding_complete" boolean DEFAULT false NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL
 );
@@ -194,7 +195,8 @@ CREATE TABLE IF NOT EXISTS "public"."waiter_profiles" (
     "availability_days" "text"[] DEFAULT '{}'::"text"[],
     "hourly_rate_min" numeric(10,2),
     "cv_url" "text",
-    "documents" "text"[] DEFAULT '{}'::"text"[]
+    "documents" "text"[] DEFAULT '{}'::"text"[],
+    "skills" "text"[] DEFAULT '{}'::"text"[] NOT NULL
 );
 
 
