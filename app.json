@@ -38,6 +38,12 @@
       "expo-secure-store",
       "@react-native-community/datetimepicker",
       "expo-font",
+      [
+        "expo-media-library",
+        {
+          "savePhotosPermission": "Consenti a topWaitr di salvare il tuo QR nella galleria."
+        }
+      ],
       "@sentry/react-native"
     ],
     "experiments": {

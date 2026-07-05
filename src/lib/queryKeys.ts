@@ -29,8 +29,16 @@ export const qk = {
   },
   reviews: {
     all: ["reviews"] as const,
-    forWaiter: (waiterId: string) =>
-      ["reviews", "forWaiter", waiterId] as const,
+    preview: (waiterId: string, limit: number) =>
+      ["reviews", "preview", waiterId, limit] as const,
+    page: (
+      waiterId: string,
+      sort: string,
+      ratingFilter: number | null,
+      tag: string | null
+    ) =>
+      ["reviews", "page", waiterId, sort, ratingFilter ?? "all", tag ?? "all"] as const,
+    breakdown: (waiterId: string) => ["reviews", "breakdown", waiterId] as const,
   },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
 } as const;

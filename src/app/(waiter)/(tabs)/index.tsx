@@ -1,18 +1,29 @@
-import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GoldButton } from "@/components/ui/GoldButton";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
+import { ReviewCard } from "@/components/ui/ReviewCard";
+import { StatCard } from "@/components/ui/StatCard";
+import {
+  useMyApplications,
+  useMyApplicationsList,
+  useMyUpcomingShifts,
+} from "@/features/applications/hooks";
+import { reviewUrlFor } from "@/features/reviews/config";
+import {
+  useWaiterPublicCard,
+  useWaiterReviews,
+} from "@/features/reviews/hooks";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatEuro, formatTime, shiftTotal } from "@/lib/format";
-import { useMyApplications, useMyUpcomingShifts } from "@/features/applications/hooks";
+import { ScrollView, Text, View } from "@/tw";
+import { useRouter } from "expo-router";
+import { ActivityIndicator, Linking, RefreshControl } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function WaiterHomeScreen() {
   const router = useRouter();
@@ -22,12 +33,24 @@ export default function WaiterHomeScreen() {
 
   const upcomingQuery = useMyUpcomingShifts(waiterId);
   const appsQuery = useMyApplications(waiterId);
+  const appsListQuery = useMyApplicationsList(waiterId);
+  const card = useWaiterPublicCard(waiterId).data;
+  const reviews = useWaiterReviews(waiterId).data ?? [];
 
   const upcoming = upcomingQuery.data ?? [];
-  const pendingCount = (appsQuery.data ?? []).filter(
-    (a) => a.status === "pending"
-  ).length;
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
+
+  // Reputazione (dati reali). "Servizi" = candidature accettate ormai passate.
+  const today = new Date().toISOString().slice(0, 10);
+  const serviziCount = (appsListQuery.data ?? []).filter(
+    (a) => a.status === "accepted" && a.shift != null && a.shift.date < today,
+  ).length;
+  const reviewsCount = card?.rating_count ?? 0;
+  const ratingLabel =
+    reviewsCount > 0
+      ? (card?.rating_avg ?? 0).toFixed(1).replace(".", ",")
+      : "—";
+  const featured = reviews[0] ?? null;
 
   return (
     <ScrollView
@@ -45,6 +68,7 @@ export default function WaiterHomeScreen() {
           onRefresh={() => {
             upcomingQuery.refetch();
             appsQuery.refetch();
+            appsListQuery.refetch();
           }}
         />
       }
@@ -54,20 +78,35 @@ export default function WaiterHomeScreen() {
         <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
       </View>
 
-      <GoldButton label="Trova turni" onPress={() => router.navigate("/turni")} />
+      {/* Reputazione */}
+      <View className="flex-row gap-2.5">
+        <StatCard value={ratingLabel} label="★ rating" />
+        <StatCard value={String(serviziCount)} label="servizi" />
+        <StatCard value={String(reviewsCount)} label="recensioni" />
+      </View>
 
-      <Pressable
-        className="flex-row items-center justify-between rounded-2xl border border-border bg-bg-card px-5 py-4"
-        onPress={() => router.push("/(waiter)/candidature")}
-      >
-        <Text className="text-sm text-t2">Candidature in attesa</Text>
-        <View className="flex-row items-center gap-2">
-          <Text className="text-base font-sans-bold text-gold">
-            {pendingCount}
-          </Text>
-          <Icon name="chevR" size={16} color="#8c857a" />
+      <View className="gap-3">
+        <View className="flex-row items-center justify-between gap-3">
+          <View className="flex-1">
+            <Mono>Recensioni</Mono>
+            <Display className="mt-0.5 text-2xl">Cosa dicono di te</Display>
+          </View>
+          <GhostButton
+            label="Anteprima"
+            onPress={() => Linking.openURL(reviewUrlFor(waiterId))}
+          />
         </View>
-      </Pressable>
+        {featured ? (
+          <ReviewCard review={featured} />
+        ) : (
+          <View className="rounded-2xl border border-border bg-bg-card p-4">
+            <Text className="text-sm leading-5 text-t3">
+              Nessuna recensione ancora. Mostra il tuo QR ai clienti a fine
+              servizio per iniziare a raccogliere feedback.
+            </Text>
+          </View>
+        )}
+      </View>
 
       <View>
         <Mono className="mb-3">Prossimi turni</Mono>

@@ -1,8 +1,3 @@
-import { useState } from "react";
-import { useRouter } from "expo-router";
-import { ActivityIndicator, RefreshControl } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -11,12 +6,23 @@ import { Icon } from "@/components/ui/Icon";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { cn } from "@/lib/cn";
-import { useAuth } from "@/lib/auth";
-import { formatDate, formatEuro, formatTime, shiftTotal, timeAgo } from "@/lib/format";
-import { useMyApplicationsList } from "@/features/applications/hooks";
 import type { ApplicationWithShift } from "@/features/applications/api";
+import { useMyApplicationsList } from "@/features/applications/hooks";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
+import {
+  formatDate,
+  formatEuro,
+  formatTime,
+  shiftTotal,
+  timeAgo,
+} from "@/lib/format";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import type { Enums } from "@/types/database";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, RefreshControl } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Status = Enums<"application_status">;
 type Filter = "all" | "pending" | "accepted";
@@ -24,7 +30,11 @@ type Filter = "all" | "pending" | "accepted";
 // "Rifiutata" è ammorbidita in "Non selezionato" con stile muted (come nel prototipo).
 const STATUS_DISPLAY: Record<
   Status,
-  { label: string; variant: "pending" | "accepted" | "cancelled"; icon: "clock" | "check" | "close" }
+  {
+    label: string;
+    variant: "pending" | "accepted" | "cancelled";
+    icon: "clock" | "check" | "close";
+  }
 > = {
   pending: { label: "IN ATTESA", variant: "pending", icon: "clock" },
   accepted: { label: "ACCETTATA", variant: "accepted", icon: "check" },
@@ -48,13 +58,13 @@ function FilterChip({
       onPress={onPress}
       className={cn(
         "rounded-full px-4 py-2",
-        active ? "bg-gold" : "border border-border-2"
+        active ? "bg-gold" : "border border-border-2",
       )}
     >
       <Text
         className={cn(
           "text-xs font-sans-semibold uppercase",
-          active ? "text-gold-ink" : "text-t3"
+          active ? "text-gold-ink" : "text-t3",
         )}
         style={{ letterSpacing: 0.6 }}
       >
@@ -89,7 +99,7 @@ function CandidaturaCard({
   const venueName = shift.venue?.name ?? "Locale";
   const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
   const subtitle = `${shift.title} · ${formatDate(shift.date)} · ${formatTime(
-    shift.start_time
+    shift.start_time,
   )}–${formatTime(shift.end_time)}`;
 
   return (
@@ -152,7 +162,8 @@ export default function WaiterApplicationsScreen() {
   const segs: string[] = [];
   if (pendingCount > 0) segs.push(`${pendingCount} in attesa`);
   if (acceptedCount > 0) segs.push(`${acceptedCount} accettate`);
-  const eyebrow = segs.length > 0 ? segs.join(" · ") : `${apps.length} candidature`;
+  const eyebrow =
+    segs.length > 0 ? segs.join(" · ") : `${apps.length} candidature`;
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -174,7 +185,10 @@ export default function WaiterApplicationsScreen() {
             title="Nessuna candidatura"
             subtitle="Candidati a un turno per vederlo qui."
           />
-          <GoldButton label="Trova turni" onPress={() => router.navigate("/turni")} />
+          <GoldButton
+            label="Trova turni"
+            onPress={() => router.navigate("/turni")}
+          />
         </View>
       ) : (
         <ScrollView

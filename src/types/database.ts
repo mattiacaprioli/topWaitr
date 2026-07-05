@@ -466,7 +466,15 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      get_rating_breakdown: {
+        Args: {
+          p_waiter: string
+        }
+        Returns: {
+          rating: number
+          cnt: number
+        }[]
+      }
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"

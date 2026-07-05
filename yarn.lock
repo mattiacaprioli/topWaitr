@@ -3624,6 +3624,11 @@ expo-linking@~56.0.14:
     expo-constants "~56.0.18"
     invariant "^2.2.4"
 
+expo-media-library@~56.0.9:
+  version "56.0.9"
+  resolved "https://registry.yarnpkg.com/expo-media-library/-/expo-media-library-56.0.9.tgz#bb9bbf3864199a766cfe12398a0b81991936b400"
+  integrity sha512-SD92CiE/UPXpDmvSrOWtMX12TeGhN4w9ZdePNNxa43bC9uTnEAS3YTLAkNaFHHbCSUlWSNVLW4yPZhNgugAO/g==
+
 expo-modules-autolinking@~56.0.16:
   version "56.0.16"
   resolved "https://registry.yarnpkg.com/expo-modules-autolinking/-/expo-modules-autolinking-56.0.16.tgz#c6e59aef94f76bb1ee2c1a47ab3410d08b84baf7"
