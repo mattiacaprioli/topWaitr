@@ -1,5 +1,5 @@
-import { Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { Text, View } from "@/tw";
 import { Display } from "./Display";
 import { GoldButton } from "./GoldButton";
 import { Icon } from "./Icon";
@@ -16,7 +16,7 @@ export function NoReviews({
     <View
       className={cn(
         "items-center gap-4 rounded-3xl border border-border-2 bg-bg-card px-6 py-8",
-        className
+        className,
       )}
       style={{ borderStyle: "dashed" }}
     >
@@ -32,7 +32,7 @@ export function NoReviews({
           style={{ maxWidth: 300 }}
         >
           Mostra il QR ai tuoi clienti a fine servizio: ogni recensione
-          verificata fa crescere la tua Aura.
+          verificata fa crescere la tua reputazione.
         </Text>
       </View>
       <GoldButton label="Apri il mio QR" onPress={onOpenQR} />

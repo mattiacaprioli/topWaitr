@@ -160,7 +160,7 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        <GoldButton size="lg" label="Entra in Aura" onPress={onEnter} />
+        <GoldButton size="lg" label="Inizia" onPress={onEnter} />
       </View>
     );
   }
