@@ -4,11 +4,15 @@ import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
+import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
+import { RatingBadge } from "@/components/ui/RatingBadge";
+import { ReviewCard } from "@/components/ui/ReviewCard";
 import { useAuth } from "@/lib/auth";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
+import { useWaiterPublicCard, useWaiterReviews } from "@/features/reviews/hooks";
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
@@ -24,8 +28,9 @@ export default function WaiterProfiloScreen() {
   const insets = useSafeAreaInsets();
   const { session, profile, signOut } = useAuth();
   const name = profile?.full_name ?? "Cameriere";
+  const userId = session!.user.id;
 
-  const profileQuery = useMyWaiterProfile(session!.user.id);
+  const profileQuery = useMyWaiterProfile(userId);
   const data = profileQuery.data;
   const wp = data?.waiter_profile ?? null;
   const role = wp?.primary_role ?? null;
@@ -36,6 +41,9 @@ export default function WaiterProfiloScreen() {
   const specializations = wp?.specializations ?? null;
   const hasAny =
     !!bio || !!experience || languages.length > 0 || !!specializations || !!city || !!role;
+
+  const card = useWaiterPublicCard(userId).data;
+  const reviews = useWaiterReviews(userId).data ?? [];
 
   return (
     <ScrollView
@@ -64,11 +72,17 @@ export default function WaiterProfiloScreen() {
       <View className="items-center gap-3 rounded-3xl border border-border-2 bg-bg-card p-6">
         <Avatar name={name} size={72} />
         <Pill label={role ?? "Cameriere"} variant="tag" />
+        <RatingBadge avg={card?.rating_avg ?? null} count={card?.rating_count ?? null} />
         {city ? <Text className="text-sm text-t3">{city}</Text> : null}
         {session?.user.email ? (
           <Text className="text-sm text-t3">{session.user.email}</Text>
         ) : null}
       </View>
+
+      <GoldButton
+        label="Mostra il mio QR ai clienti"
+        onPress={() => router.push("/(waiter)/qr")}
+      />
 
       <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
         <Mono>Il tuo profilo</Mono>
@@ -91,6 +105,20 @@ export default function WaiterProfiloScreen() {
           <Text className="text-sm text-t3">
             Completa il tuo profilo per farti notare dai ristoratori.
           </Text>
+        )}
+      </View>
+
+      <View className="gap-3">
+        <Mono>Recensioni dei clienti</Mono>
+        {reviews.length > 0 ? (
+          reviews.map((r) => <ReviewCard key={r.id} review={r} />)
+        ) : (
+          <View className="rounded-3xl border border-border-2 bg-bg-card p-5">
+            <Text className="text-sm leading-5 text-t3">
+              Nessuna recensione ancora. Mostra il tuo QR ai clienti a fine
+              servizio: la tua reputazione ti seguirà, locale dopo locale.
+            </Text>
+          </View>
         )}
       </View>
 

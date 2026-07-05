@@ -224,6 +224,73 @@ export type Database = {
         }
         Relationships: []
       }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          receipt_ref: string | null
+          reviewer_name: string | null
+          shift_id: string | null
+          status: string
+          tags: string[]
+          venue_id: string | null
+          verified: boolean
+          waiter_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          receipt_ref?: string | null
+          reviewer_name?: string | null
+          shift_id?: string | null
+          status?: string
+          tags?: string[]
+          venue_id?: string | null
+          verified?: boolean
+          waiter_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          receipt_ref?: string | null
+          reviewer_name?: string | null
+          shift_id?: string | null
+          status?: string
+          tags?: string[]
+          venue_id?: string | null
+          verified?: boolean
+          waiter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           created_at: string
@@ -338,6 +405,8 @@ export type Database = {
           id: string
           languages: string[]
           primary_role: string | null
+          rating_avg: number
+          rating_count: number
           specializations: string | null
           years_experience: number | null
         }
@@ -351,6 +420,8 @@ export type Database = {
           id: string
           languages?: string[]
           primary_role?: string | null
+          rating_avg?: number
+          rating_count?: number
           specializations?: string | null
           years_experience?: number | null
         }
@@ -364,6 +435,8 @@ export type Database = {
           id?: string
           languages?: string[]
           primary_role?: string | null
+          rating_avg?: number
+          rating_count?: number
           specializations?: string | null
           years_experience?: number | null
         }
@@ -379,7 +452,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      waiter_public_cards: {
+        Row: {
+          avatar_url: string | null
+          city: string | null
+          full_name: string | null
+          id: string | null
+          primary_role: string | null
+          rating_avg: number | null
+          rating_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { Pill } from "@/components/ui/Pill";
+import { RatingBadge } from "@/components/ui/RatingBadge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useToast } from "@/providers/Toast";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
@@ -218,6 +219,11 @@ export default function ShiftDetailScreen() {
                       {app.waiter.waiter_profile.primary_role}
                     </Text>
                   ) : null}
+                  <RatingBadge
+                    avg={app.waiter?.waiter_profile?.rating_avg ?? null}
+                    count={app.waiter?.waiter_profile?.rating_count ?? null}
+                    className="mt-1"
+                  />
                   <Pill label={APP_STATUS_LABEL[app.status]} variant={app.status} />
                 </View>
               </View>

@@ -27,4 +27,10 @@ export const qk = {
     upcoming: (waiterId: string) =>
       ["applications", "upcoming", waiterId] as const,
   },
+  reviews: {
+    all: ["reviews"] as const,
+    forWaiter: (waiterId: string) =>
+      ["reviews", "forWaiter", waiterId] as const,
+  },
+  waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
 } as const;

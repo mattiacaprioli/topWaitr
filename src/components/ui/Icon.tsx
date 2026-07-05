@@ -17,7 +17,9 @@ export type IconName =
   | "sparkle"
   | "pencil"
   | "camera"
-  | "shield";
+  | "shield"
+  | "star"
+  | "starOutline";
 
 type Props = {
   name: IconName;
@@ -123,6 +125,19 @@ export function Icon({
       )}
       {name === "shield" && (
         <Path {...p} d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4" />
+      )}
+      {name === "star" && (
+        <Path
+          {...p}
+          fill={color}
+          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+        />
+      )}
+      {name === "starOutline" && (
+        <Path
+          {...p}
+          d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+        />
       )}
     </Svg>
   );
