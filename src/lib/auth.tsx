@@ -25,9 +25,11 @@ type AuthState = {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (
-    params: SignUpParams
-  ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
+  signUp: (params: SignUpParams) => Promise<{
+    error: string | null;
+    needsConfirmation: boolean;
+    alreadyRegistered: boolean;
+  }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
@@ -145,8 +147,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
       password,
       options: { data: { full_name: fullName, role } },
     });
-    if (error) return { error: error.message, needsConfirmation: false };
-    return { error: null, needsConfirmation: !data.session };
+    if (error) {
+      return {
+        error: error.message,
+        needsConfirmation: false,
+        alreadyRegistered: false,
+      };
+    }
+    // Con la conferma email attiva, Supabase risponde con un finto successo se
+    // l'email è già registrata (anti-enumerazione): l'unico segnale è
+    // identities vuoto sull'utente restituito.
+    const alreadyRegistered =
+      !data.session && data.user?.identities?.length === 0;
+    return {
+      error: null,
+      needsConfirmation: !data.session && !alreadyRegistered,
+      alreadyRegistered,
+    };
   }
 
   async function resetPassword(email: string) {
