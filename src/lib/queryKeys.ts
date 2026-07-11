@@ -41,4 +41,9 @@ export const qk = {
     breakdown: (waiterId: string) => ["reviews", "breakdown", waiterId] as const,
   },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
+  notifications: {
+    all: ["notifications"] as const,
+    list: (userId: string) => ["notifications", "list", userId] as const,
+    unread: (userId: string) => ["notifications", "unread", userId] as const,
+  },
 } as const;

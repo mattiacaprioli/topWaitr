@@ -6,6 +6,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NoReviews } from "@/components/ui/NoReviews";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { QueryError } from "@/components/ui/QueryError";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StatCard } from "@/components/ui/StatCard";
@@ -19,6 +20,7 @@ import {
   useWaiterPublicCard,
   useWaiterReviewsPreview,
 } from "@/features/reviews/hooks";
+import { useUnreadCount } from "@/features/notifications/hooks";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatEuro, formatTime, shiftTotal } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -37,6 +39,7 @@ export default function WaiterHomeScreen() {
   const appsListQuery = useMyApplicationsList(waiterId);
   const card = useWaiterPublicCard(waiterId).data;
   const reviews = useWaiterReviewsPreview(waiterId, 1).data ?? [];
+  const unread = useUnreadCount(waiterId).data ?? 0;
 
   const upcoming = upcomingQuery.data ?? [];
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
@@ -74,9 +77,15 @@ export default function WaiterHomeScreen() {
         />
       }
     >
-      <View>
-        <Mono gold>La tua area</Mono>
-        <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <Mono gold>La tua area</Mono>
+          <Display className="mt-1 text-4xl">Ciao, {firstName}</Display>
+        </View>
+        <NotificationBell
+          count={unread}
+          onPress={() => router.push("/(waiter)/notifiche")}
+        />
       </View>
 
       {/* Reputazione */}

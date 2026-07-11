@@ -8,10 +8,12 @@ import { QueryError } from "@/components/ui/QueryError";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Pill } from "@/components/ui/Pill";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useAuth } from "@/lib/auth";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts } from "@/features/shifts/hooks";
+import { useUnreadCount } from "@/features/notifications/hooks";
 import type { Enums } from "@/types/database";
 
 const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
@@ -24,6 +26,7 @@ export default function ManagerHome() {
   const { profile, session, signOut } = useAuth();
   const router = useRouter();
   const userId = session!.user.id;
+  const unread = useUnreadCount(userId).data ?? 0;
 
   const venueQuery = useMyVenue(userId);
   const venue = venueQuery.data ?? null;
@@ -57,6 +60,10 @@ export default function ManagerHome() {
           </Text>
           <Pill label="Ristoratore" variant="open" />
         </View>
+        <NotificationBell
+          count={unread}
+          onPress={() => router.push("/(manager)/notifiche")}
+        />
         <Pressable onPress={signOut} hitSlop={8}>
           <Text className="text-sm font-sans-semibold text-t3">Esci</Text>
         </Pressable>

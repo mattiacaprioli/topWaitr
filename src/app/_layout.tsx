@@ -19,6 +19,7 @@ import { IBMPlexMono_400Regular } from "@expo-google-fonts/ibm-plex-mono/400Regu
 import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Medium";
 import { useAuth } from "@/lib/auth";
 import { AppProviders } from "@/providers/AppProviders";
+import { NotificationsListener } from "@/features/notifications/NotificationsListener";
 
 SplashScreen.preventAutoHideAsync();
 SystemUI.setBackgroundColorAsync("#0C0907");
@@ -86,8 +87,12 @@ function RootNavigator() {
   const waiterReady = isWaiter && !!profile?.onboarding_complete;
 
   return (
-    <Stack screenOptions={screenOptions}>
-      <Stack.Protected guard={!session}>
+    <>
+      {session && profile ? (
+        <NotificationsListener userId={session.user.id} />
+      ) : null}
+      <Stack screenOptions={screenOptions}>
+        <Stack.Protected guard={!session}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack.Protected>
 
@@ -106,7 +111,8 @@ function RootNavigator() {
       {__DEV__ ? (
         <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
       ) : null}
-    </Stack>
+      </Stack>
+    </>
   );
 }
 
