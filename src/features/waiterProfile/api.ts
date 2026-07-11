@@ -43,18 +43,24 @@ export const LANGUAGE_OPTIONS = [
   "Russo",
 ] as const;
 
-/** The signed-in waiter's profile joined with its waiter_profiles row (1:1). */
-export async function getMyWaiterProfile(
-  userId: string
+/**
+ * Un cameriere (profilo + waiter_profile) per id. Il ristoratore può leggerlo se
+ * il cameriere si è candidato a un suo turno (RLS "manager sees applicant profiles").
+ */
+export async function getWaiterProfileById(
+  waiterId: string
 ): Promise<ProfileWithWaiter | null> {
   const { data, error } = await supabase
     .from("profiles")
     .select("*, waiter_profile:waiter_profiles(*)")
-    .eq("id", userId)
+    .eq("id", waiterId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   return (data as ProfileWithWaiter | null) ?? null;
 }
+
+/** Il profilo del cameriere loggato (join 1:1 con waiter_profiles). */
+export const getMyWaiterProfile = getWaiterProfileById;
 
 /**
  * Persist the editable profile. Two non-transactional writes: the shared `profiles`

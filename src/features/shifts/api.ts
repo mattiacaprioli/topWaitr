@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Enums, TablesInsert } from "@/types/database";
+import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import type { Shift, ShiftWithCount, ShiftWithVenue } from "./types";
 
 export type { Shift, ShiftWithCount, ShiftWithVenue };
@@ -66,5 +66,14 @@ export async function updateShiftStatus(
   status: Enums<"shift_status">
 ): Promise<void> {
   const { error } = await supabase.from("shifts").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/** Aggiorna i campi editabili di un turno (RLS: shifts manager crud via venue). */
+export async function updateShift(
+  id: string,
+  fields: TablesUpdate<"shifts">
+): Promise<void> {
+  const { error } = await supabase.from("shifts").update(fields).eq("id", id);
   if (error) throw new Error(error.message);
 }

@@ -1,8 +1,9 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { Pill } from "@/components/ui/Pill";
@@ -67,6 +68,7 @@ function ApplicantProfile({
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
+  const router = useRouter();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -188,6 +190,18 @@ export default function ShiftDetailScreen() {
         ) : null}
       </View>
 
+      {shift.status !== "cancelled" ? (
+        <Pressable
+          disabled={busy}
+          onPress={() => router.push(`/(manager)/shift/edit/${id}`)}
+          className="mt-3 items-center rounded-xl border border-border bg-bg-2 py-3"
+        >
+          <Text className="text-sm font-sans-semibold text-gold">
+            Modifica turno
+          </Text>
+        </Pressable>
+      ) : null}
+
       <SectionHeader title="Candidature" className="mt-8" />
 
       {appsQuery.isError ? (
@@ -204,7 +218,12 @@ export default function ShiftDetailScreen() {
         <View className="gap-3">
           {applications.map((app) => (
             <Card key={app.id}>
-              <View className="flex-row items-center gap-3">
+              <Pressable
+                className="flex-row items-center gap-3"
+                onPress={() =>
+                  router.push(`/(manager)/cameriere/${app.waiter_id}`)
+                }
+              >
                 <Avatar
                   uri={app.waiter?.avatar_url ?? undefined}
                   name={app.waiter?.full_name ?? "Cameriere"}
@@ -226,7 +245,8 @@ export default function ShiftDetailScreen() {
                   />
                   <Pill label={APP_STATUS_LABEL[app.status]} variant={app.status} />
                 </View>
-              </View>
+                <Icon name="chevR" size={18} color="#8c857a" />
+              </Pressable>
 
               {app.message ? (
                 <Text className="mt-3 text-sm text-t2">{app.message}</Text>

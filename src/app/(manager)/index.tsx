@@ -14,6 +14,7 @@ import { formatDate, formatRate, formatTime } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts } from "@/features/shifts/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
+import type { ShiftWithCount } from "@/features/shifts/types";
 import type { Enums } from "@/types/database";
 
 const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
@@ -21,6 +22,36 @@ const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   closed: "Chiuso",
   cancelled: "Annullato",
 };
+
+function ShiftCard({
+  shift,
+  onPress,
+}: {
+  shift: ShiftWithCount;
+  onPress: () => void;
+}) {
+  const count = shift.applications[0]?.count ?? 0;
+  return (
+    <Card onPress={onPress}>
+      <View className="flex-row items-start justify-between">
+        <Text className="flex-1 text-base font-sans-bold text-t1">
+          {shift.title}
+        </Text>
+        <Pill label={STATUS_LABEL[shift.status]} variant={shift.status} />
+      </View>
+      <Text className="mt-1 text-sm text-t2">
+        {formatDate(shift.date)} · {formatTime(shift.start_time)}–
+        {formatTime(shift.end_time)}
+      </Text>
+      <View className="mt-3 flex-row items-center justify-between">
+        <Text className="text-sm text-t3">{formatRate(shift.hourly_rate)}</Text>
+        <Text className="text-sm font-sans-semibold text-gold">
+          {count} candidatur{count === 1 ? "a" : "e"}
+        </Text>
+      </View>
+    </Card>
+  );
+}
 
 export default function ManagerHome() {
   const { profile, session, signOut } = useAuth();
@@ -32,6 +63,9 @@ export default function ManagerHome() {
   const venue = venueQuery.data ?? null;
   const shiftsQuery = useMyShifts(venue?.id);
   const shifts = shiftsQuery.data ?? [];
+  const today = new Date().toISOString().slice(0, 10);
+  const upcomingShifts = shifts.filter((s) => s.date >= today);
+  const pastShifts = shifts.filter((s) => s.date < today).reverse();
 
   const loading = venueQuery.isLoading;
   const refreshing = venueQuery.isRefetching || shiftsQuery.isRefetching;
@@ -121,39 +155,41 @@ export default function ManagerHome() {
               subtitle="Tocca «Pubblica» per creare il tuo primo turno."
             />
           ) : (
-            <View className="gap-3">
-              {shifts.map((shift) => {
-                const count = shift.applications[0]?.count ?? 0;
-                return (
-                  <Card
-                    key={shift.id}
-                    onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
-                  >
-                    <View className="flex-row items-start justify-between">
-                      <Text className="flex-1 text-base font-sans-bold text-t1">
-                        {shift.title}
-                      </Text>
-                      <Pill
-                        label={STATUS_LABEL[shift.status]}
-                        variant={shift.status}
+            <>
+              {upcomingShifts.length === 0 ? (
+                <EmptyState
+                  title="Nessun turno in programma"
+                  subtitle="I turni futuri compariranno qui."
+                />
+              ) : (
+                <View className="gap-3">
+                  {upcomingShifts.map((shift) => (
+                    <ShiftCard
+                      key={shift.id}
+                      shift={shift}
+                      onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {pastShifts.length > 0 ? (
+                <View className="mt-8">
+                  <SectionHeader title="Storico" />
+                  <View className="gap-3">
+                    {pastShifts.map((shift) => (
+                      <ShiftCard
+                        key={shift.id}
+                        shift={shift}
+                        onPress={() =>
+                          router.push(`/(manager)/shift/${shift.id}`)
+                        }
                       />
-                    </View>
-                    <Text className="mt-1 text-sm text-t2">
-                      {formatDate(shift.date)} · {formatTime(shift.start_time)}–
-                      {formatTime(shift.end_time)}
-                    </Text>
-                    <View className="mt-3 flex-row items-center justify-between">
-                      <Text className="text-sm text-t3">
-                        {formatRate(shift.hourly_rate)}
-                      </Text>
-                      <Text className="text-sm font-sans-semibold text-gold">
-                        {count} candidatur{count === 1 ? "a" : "e"}
-                      </Text>
-                    </View>
-                  </Card>
-                );
-              })}
-            </View>
+                    ))}
+                  </View>
+                </View>
+              ) : null}
+            </>
           )}
         </View>
       )}

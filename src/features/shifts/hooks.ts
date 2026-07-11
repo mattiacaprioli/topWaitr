@@ -1,12 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
-import type { Enums, TablesInsert } from "@/types/database";
+import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
   createShift,
   getMyShifts,
   getOpenShifts,
   getShift,
   getShiftWithVenue,
+  updateShift,
   updateShiftStatus,
 } from "./api";
 
@@ -56,6 +57,17 @@ export function useUpdateShiftStatus(shiftId: string, venueId?: string) {
   return useMutation({
     mutationFn: (status: Enums<"shift_status">) =>
       updateShiftStatus(shiftId, status),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
+      if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+    },
+  });
+}
+
+export function useUpdateShift(shiftId: string, venueId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (fields: TablesUpdate<"shifts">) => updateShift(shiftId, fields),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
       if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });

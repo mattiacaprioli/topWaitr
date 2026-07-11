@@ -14,6 +14,8 @@ export default function ManagerLayout() {
       <Stack.Screen name="venue" options={{ title: "Il tuo locale" }} />
       <Stack.Screen name="shift/new" options={{ title: "Nuovo turno" }} />
       <Stack.Screen name="shift/[id]" options={{ title: "Turno" }} />
+      <Stack.Screen name="shift/edit/[id]" options={{ title: "Modifica turno" }} />
+      <Stack.Screen name="cameriere/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
     </Stack>
   );

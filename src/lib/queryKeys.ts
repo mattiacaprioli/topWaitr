@@ -9,6 +9,7 @@ export const qk = {
   },
   profile: {
     mine: (userId: string) => ["profile", "mine", userId] as const,
+    byId: (userId: string) => ["profile", "byId", userId] as const,
   },
   shifts: {
     all: ["shifts"] as const,
