@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
@@ -13,6 +13,7 @@ import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth, authErrorMessage } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { signupSchema, type SignupForm } from "@/features/auth/schema";
+import { PasswordChecklist } from "@/features/auth/PasswordChecklist";
 import type { Enums } from "@/types/database";
 
 type Role = Enums<"user_role">;
@@ -34,6 +35,7 @@ export default function SignupAccount() {
     resolver: zodResolver(signupSchema),
     defaultValues: { fullName: "", email: "", password: "" },
   });
+  const password = useWatch({ control, name: "password" }) ?? "";
 
   const onSubmit = handleSubmit(async (values) => {
     if (loading) return;
@@ -108,10 +110,11 @@ export default function SignupAccount() {
             control={control}
             name="password"
             label="Password"
-            placeholder="Almeno 6 caratteri"
+            placeholder="Crea una password sicura"
             secureTextEntry
             autoCapitalize="none"
           />
+          <PasswordChecklist value={password} />
 
           {apiError ? (
             <Text className="font-sans text-sm text-error">{apiError}</Text>

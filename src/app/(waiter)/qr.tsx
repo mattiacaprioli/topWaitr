@@ -1,6 +1,5 @@
 import { Display } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
-import { Logo } from "@/components/ui/Logo";
 import { Mono } from "@/components/ui/Mono";
 import { REVIEW_SITE_URL, reviewUrlFor } from "@/features/reviews/config";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
@@ -97,13 +96,16 @@ export default function WaiterQRScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: 20,
-          paddingTop: 8,
-          paddingBottom: insets.bottom + 24,
+          flexGrow: 1,
+          paddingHorizontal: 16,
+          paddingTop: 16,
+          paddingBottom: insets.bottom + 20,
           alignItems: "center",
-          gap: 22,
+          justifyContent: "space-between",
         }}
+        showsVerticalScrollIndicator={false}
       >
+        {/* Titolo */}
         <View className="items-center gap-1.5">
           <Mono gold>Recensione certificata</Mono>
           <Display className="text-center text-3xl leading-9">
@@ -111,124 +113,109 @@ export default function WaiterQRScreen() {
           </Display>
         </View>
 
-        {/* QR card */}
-        <View
-          className="items-center"
-          style={{
-            backgroundColor: "#F6F1E3",
-            borderRadius: 28,
-            padding: 24,
-            width: "100%",
-            maxWidth: 320,
-            shadowColor: "#EAB54C",
-            shadowOpacity: 0.18,
-            shadowRadius: 40,
-            shadowOffset: { width: 0, height: 12 },
-          }}
-        >
-          <View style={{ position: "relative" }}>
-            <QRCode
-              value={url}
-              size={228}
-              backgroundColor="#F6F1E3"
-              color="#1A1611"
-              ecl="H"
-              getRef={(c) => {
-                qrRef.current = (c as unknown as QRRef) ?? null;
-              }}
-            />
+        {/* QR card + descrizione */}
+        <View className="w-full items-center gap-6">
+          <View
+            className="items-center"
+            style={{
+              backgroundColor: "#F6F1E3",
+              borderRadius: 28,
+              padding: 24,
+              width: "100%",
+              maxWidth: 320,
+              shadowColor: "#EAB54C",
+              shadowOpacity: 0.18,
+              shadowRadius: 40,
+              shadowOffset: { width: 0, height: 12 },
+            }}
+          >
+            <View style={{ position: "relative" }}>
+              <QRCode
+                value={url}
+                size={228}
+                backgroundColor="#F6F1E3"
+                color="#1A1611"
+                ecl="H"
+                getRef={(c) => {
+                  qrRef.current = (c as unknown as QRRef) ?? null;
+                }}
+              />
+            </View>
+
             <View
               style={{
-                position: "absolute",
-                left: "42%",
-                top: "51%",
-                width: 54,
-                height: 54,
-                marginLeft: -27,
-                marginTop: -27,
-                borderRadius: 15,
-                backgroundColor: "#1A1611",
-                borderWidth: 3,
-                borderColor: "#F6F1E3",
+                alignSelf: "stretch",
+                marginTop: 18,
+                paddingTop: 16,
+                borderTopWidth: 1,
+                borderStyle: "dashed",
+                borderColor: "rgba(26,18,6,0.18)",
                 alignItems: "center",
-                justifyContent: "center",
+                gap: 3,
               }}
             >
-              <Logo size={28} />
+              <Display style={{ color: "#1A1611" }} className="text-xl">
+                {name}
+              </Display>
+              {roleCity ? (
+                <Mono style={{ color: "#5B4A2E" }}>{roleCity}</Mono>
+              ) : null}
             </View>
           </View>
 
-          <View
-            style={{
-              alignSelf: "stretch",
-              marginTop: 18,
-              paddingTop: 16,
-              borderTopWidth: 1,
-              borderStyle: "dashed",
-              borderColor: "rgba(26,18,6,0.18)",
-              alignItems: "center",
-              gap: 3,
-            }}
+          <Text
+            className="text-center text-sm leading-5 text-t3"
+            style={{ maxWidth: 300 }}
           >
-            <Display style={{ color: "#1A1611" }} className="text-xl">
-              {name}
-            </Display>
-            {roleCity ? (
-              <Mono style={{ color: "#5B4A2E" }}>{roleCity}</Mono>
-            ) : null}
-          </View>
+            Mostra questo al cliente a fine servizio per ricevere una{" "}
+            <Text className="font-sans-semibold text-gold">
+              recensione certificata
+            </Text>{" "}
+            sul tuo profilo.
+          </Text>
         </View>
 
-        <Text
-          className="text-center text-sm leading-5 text-t3"
-          style={{ maxWidth: 300 }}
-        >
-          Mostra questo al cliente a fine servizio per ricevere una{" "}
-          <Text className="font-sans-semibold text-gold">
-            recensione certificata
-          </Text>{" "}
-          sul tuo profilo.
-        </Text>
-
-        {/* Actions */}
-        <View className="w-full flex-row gap-2.5">
-          <Pressable
-            onPress={onSave}
-            style={{ flex: 1 }}
-            className="flex-row items-center justify-center gap-2 rounded-full border border-border-2 py-3.5"
-          >
-            <Icon name="download" size={16} color="#F8F4ED" />
-            <Text className="text-sm font-sans-semibold text-t1">Salva</Text>
-          </Pressable>
-          <Pressable
-            onPress={onShare}
-            style={{ flex: 1.3 }}
-            className="overflow-hidden rounded-full"
-          >
-            <LinearGradient
-              colors={["#F5C765", "#D9A23F"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                paddingVertical: 14,
-              }}
+        {/* Azioni + footer */}
+        <View className="w-full items-center gap-4">
+          <View className="w-full flex-row gap-2.5">
+            <Pressable
+              onPress={onSave}
+              style={{ flex: 1 }}
+              className="flex-row items-center justify-center gap-2 rounded-full border border-border-2 py-3.5"
             >
-              <Icon name="send" size={16} color="#1A1206" />
-              <Text
-                className="text-sm font-sans-semibold"
-                style={{ color: "#1A1206" }}
+              <Icon name="download" size={16} color="#F8F4ED" />
+              <Text className="text-sm font-sans-semibold text-t1">Salva</Text>
+            </Pressable>
+            <Pressable
+              onPress={onShare}
+              style={{ flex: 1.3 }}
+              className="overflow-hidden rounded-full"
+            >
+              <LinearGradient
+                colors={["#F5C765", "#D9A23F"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  paddingVertical: 14,
+                }}
               >
-                Condividi link
-              </Text>
-            </LinearGradient>
-          </Pressable>
-        </View>
+                <Icon name="send" size={16} color="#1A1206" />
+                <Text
+                  className="text-sm font-sans-semibold"
+                  style={{ color: "#1A1206" }}
+                >
+                  Condividi link
+                </Text>
+              </LinearGradient>
+            </Pressable>
+          </View>
 
-        <Mono style={{ color: "#5F5849" }}>Codice unico · {host}</Mono>
+          <Mono style={{ color: "#5F5849" }}>Codice unico · {host}</Mono>
+        </View>
       </ScrollView>
     </View>
   );

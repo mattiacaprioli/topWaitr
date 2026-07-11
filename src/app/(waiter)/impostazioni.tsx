@@ -1,8 +1,8 @@
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, View } from "@/tw";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
+import { ScrollView, View } from "@/tw";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function WaiterSettingsScreen() {
   const insets = useSafeAreaInsets();
@@ -16,6 +16,7 @@ export default function WaiterSettingsScreen() {
 
       <ScrollView
         contentContainerStyle={{
+          marginTop: "auto",
           paddingHorizontal: 20,
           paddingTop: 12,
           paddingBottom: insets.bottom + 24,
