@@ -9,6 +9,8 @@ import {
   getMyApplications,
   getMyApplicationsWithShift,
   getMyUpcomingShifts,
+  getPendingCount,
+  getTodayStaff,
   updateApplicationStatus,
 } from "./api";
 
@@ -16,6 +18,24 @@ export function useApplications(shiftId: string) {
   return useQuery({
     queryKey: qk.applications.byShift(shiftId),
     queryFn: () => getApplications(shiftId),
+  });
+}
+
+/** Manager dashboard: waiters accepted on today's shifts for the venue. */
+export function useTodayStaff(venueId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.todayStaff(venueId ?? ""),
+    queryFn: () => getTodayStaff(venueId as string),
+    enabled: !!venueId,
+  });
+}
+
+/** Manager dashboard: pending applications count for the venue. */
+export function usePendingCount(venueId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.pendingByVenue(venueId ?? ""),
+    queryFn: () => getPendingCount(venueId as string),
+    enabled: !!venueId,
   });
 }
 
@@ -97,7 +117,9 @@ export function useApplicationDecision(shiftId: string) {
       status: Enums<"application_status">;
     }) => updateApplicationStatus(vars.appId, vars.status),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.applications.byShift(shiftId) });
+      // Prefix invalidation also refreshes the manager dashboard's
+      // todayStaff/pendingByVenue counters (they live under applications.*).
+      qc.invalidateQueries({ queryKey: qk.applications.all });
       qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
       qc.invalidateQueries({ queryKey: qk.shifts.open() });
     },

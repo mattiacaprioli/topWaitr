@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import type { Enums, Tables } from "@/types/database";
-import type { ShiftWithVenue } from "@/features/shifts/types";
+import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 
 export type Application = Tables<"applications">;
 export type Profile = Tables<"profiles">;
@@ -12,6 +12,15 @@ export type ApplicationWithWaiter = Application & {
 
 export type ApplicationWithShift = Application & {
   shift: ShiftWithVenue | null;
+};
+
+/** A waiter accepted on one of the venue's shifts happening today. */
+export type TodayStaffRow = Application & {
+  waiter: (Profile & { waiter_profile: WaiterProfile | null }) | null;
+  shift: Pick<
+    Shift,
+    "id" | "title" | "date" | "start_time" | "end_time" | "venue_id"
+  > | null;
 };
 
 export async function getApplications(
@@ -37,6 +46,35 @@ export async function updateApplicationStatus(
     .update({ status })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Manager dashboard: accepted waiters on the venue's shifts happening today. */
+export async function getTodayStaff(venueId: string): Promise<TodayStaffRow[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("applications")
+    .select(
+      "*, waiter:profiles!applications_waiter_id_fkey(*, waiter_profile:waiter_profiles(*)), shift:shifts!inner(id,title,date,start_time,end_time,venue_id)"
+    )
+    .eq("status", "accepted")
+    .eq("shift.venue_id", venueId)
+    .eq("shift.date", today);
+  if (error) throw new Error(error.message);
+  const rows = (data as TodayStaffRow[] | null) ?? [];
+  return rows.sort((a, b) =>
+    (a.shift?.start_time ?? "").localeCompare(b.shift?.start_time ?? "")
+  );
+}
+
+/** Manager dashboard: count of pending applications across the venue's shifts. */
+export async function getPendingCount(venueId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("applications")
+    .select("id, shift:shifts!inner(venue_id)", { count: "exact", head: true })
+    .eq("status", "pending")
+    .eq("shift.venue_id", venueId);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 /** The waiter's accepted, upcoming shifts (Home "prossimi turni"). */

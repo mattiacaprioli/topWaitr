@@ -353,6 +353,57 @@ export type Database = {
           },
         ]
       }
+      staff_members: {
+        Row: {
+          created_at: string
+          display_name: string
+          employment_type: Database["public"]["Enums"]["employment_type"]
+          id: string
+          note: string | null
+          phone: string | null
+          role: string | null
+          venue_id: string
+          waiter_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          id?: string
+          note?: string | null
+          phone?: string | null
+          role?: string | null
+          venue_id: string
+          waiter_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          employment_type?: Database["public"]["Enums"]["employment_type"]
+          id?: string
+          note?: string | null
+          phone?: string | null
+          role?: string | null
+          venue_id?: string
+          waiter_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_members_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_members_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       venues: {
         Row: {
           address: string | null
@@ -484,6 +535,7 @@ export type Database = {
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
+      employment_type: "fisso" | "a_chiamata"
       notification_type:
         | "application_received"
         | "application_accepted"
@@ -619,6 +671,7 @@ export const Constants = {
   public: {
     Enums: {
       application_status: ["pending", "accepted", "rejected", "cancelled"],
+      employment_type: ["fisso", "a_chiamata"],
       notification_type: [
         "application_received",
         "application_accepted",

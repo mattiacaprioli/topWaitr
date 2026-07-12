@@ -27,6 +27,10 @@ export const qk = {
       ["applications", "mineList", waiterId] as const,
     upcoming: (waiterId: string) =>
       ["applications", "upcoming", waiterId] as const,
+    todayStaff: (venueId: string) =>
+      ["applications", "todayStaff", venueId] as const,
+    pendingByVenue: (venueId: string) =>
+      ["applications", "pendingByVenue", venueId] as const,
   },
   reviews: {
     all: ["reviews"] as const,
@@ -40,6 +44,11 @@ export const qk = {
     ) =>
       ["reviews", "page", waiterId, sort, ratingFilter ?? "all", tag ?? "all"] as const,
     breakdown: (waiterId: string) => ["reviews", "breakdown", waiterId] as const,
+  },
+  staff: {
+    all: ["staff"] as const,
+    byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,
+    workedWith: (venueId: string) => ["staff", "workedWith", venueId] as const,
   },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
   notifications: {
