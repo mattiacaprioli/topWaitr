@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
@@ -9,12 +9,13 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
-import { PickerField } from "@/components/form/ControlledPicker";
 import { cn } from "@/lib/cn";
 import { formatDate, toDateString, toTimeString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useVenueStaff } from "@/features/staff/hooks";
 import { useCreateInternalShift } from "@/features/assignments/hooks";
+import { DayPicker } from "@/features/shifts/DayPicker";
+import { TimeField } from "@/features/shifts/TimeField";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -22,8 +23,14 @@ function defaultTime(hour: number) {
   return d;
 }
 
+type Props = {
+  venueId: string | undefined;
+  /** Rendered at the top of the scroll (the shared mode toggle). */
+  header?: ReactNode;
+};
+
 /** "Chiamo il mio staff": assegna un turno interno a uno o più membri dell'organico. */
-export function StaffShiftForm({ venueId }: { venueId: string | undefined }) {
+export function StaffShiftForm({ venueId, header }: Props) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(venueId);
@@ -85,12 +92,20 @@ export function StaffShiftForm({ venueId }: { venueId: string | undefined }) {
     >
       <ScrollView
         className="flex-1 bg-bg-0"
-        contentContainerClassName="p-6 gap-5"
+        contentContainerClassName="p-6 gap-7"
         keyboardShouldPersistTaps="handled"
       >
-        <PickerField label="Giorno" mode="date" value={date} onChange={setDate} />
-        <PickerField label="Dalle" mode="time" value={start} onChange={setStart} />
-        <PickerField label="Alle" mode="time" value={end} onChange={setEnd} />
+        {header}
+
+        <View className="gap-3">
+          <Mono>Giorno</Mono>
+          <DayPicker value={date} onChange={setDate} />
+        </View>
+
+        <View className="flex-row gap-4">
+          <TimeField className="flex-1" label="Dalle" value={start} onChange={setStart} />
+          <TimeField className="flex-1" label="Alle" value={end} onChange={setEnd} />
+        </View>
 
         <View className="gap-3">
           <Mono>Chi chiami</Mono>

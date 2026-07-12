@@ -1,68 +1,73 @@
 import { useState } from "react";
-import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, Text, View } from "@/tw";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
-import { useToast } from "@/providers/Toast";
 import { useMyVenue } from "@/features/venues/hooks";
-import { useCreateShift } from "@/features/shifts/hooks";
-import { ShiftFormView } from "@/features/shifts/ShiftFormView";
-import { formToShiftFields } from "@/features/shifts/form";
+import { ExtraShiftForm } from "@/features/shifts/ExtraShiftForm";
 import { StaffShiftForm } from "@/features/assignments/StaffShiftForm";
-import type { ShiftForm } from "@/features/shifts/schema";
 
 type Mode = "staff" | "extra";
 
-function defaultTime(hour: number) {
-  const d = new Date();
-  d.setHours(hour, 0, 0, 0);
-  return d;
-}
+const MODES: { id: Mode; label: string; hint: string }[] = [
+  { id: "staff", label: "Chiamo il mio staff", hint: "Dal tuo organico" },
+  { id: "extra", label: "Cerco un extra", hint: "Sul marketplace" },
+];
 
-/** "Cerco un extra": il turno marketplace classico (candidature). */
-function ExtraShiftForm({ venueId }: { venueId: string | undefined }) {
-  const router = useRouter();
-  const toast = useToast();
-  const create = useCreateShift(venueId);
-
-  const onSubmit = (values: ShiftForm) => {
-    if (!venueId) {
-      toast.show("Configura prima il tuo locale.", "error");
-      return;
-    }
-    create.mutate(
-      { venue_id: venueId, ...formToShiftFields(values) },
-      {
-        onSuccess: () => {
-          toast.show("Turno pubblicato");
-          router.back();
-        },
-        onError: () =>
-          toast.show("Impossibile pubblicare il turno. Riprova.", "error"),
-      }
-    );
-  };
-
+function ModeToggle({
+  mode,
+  onChange,
+}: {
+  mode: Mode;
+  onChange: (m: Mode) => void;
+}) {
   return (
-    <ShiftFormView
-      defaultValues={{
-        title: "",
-        date: new Date(),
-        start: defaultTime(18),
-        end: defaultTime(23),
-        positions: "1",
-        rate: "",
-        dressCode: "",
-        requirements: "",
-        description: "",
-      }}
-      submitLabel="Pubblica turno"
-      pendingLabel="Pubblicazione…"
-      pending={create.isPending}
-      onSubmit={onSubmit}
-    />
+    <View className="flex-row gap-3">
+      {MODES.map((opt) => {
+        const active = opt.id === mode;
+        const content = (
+          <View className="px-4 py-4">
+            <Text
+              className={cn(
+                "text-base font-sans-semibold",
+                active ? "text-gold-ink" : "text-t2"
+              )}
+            >
+              {opt.label}
+            </Text>
+            <Text
+              className={cn("mt-1 text-xs", !active && "text-t4")}
+              style={active ? { color: "rgba(26,18,6,0.72)" } : undefined}
+            >
+              {opt.hint}
+            </Text>
+          </View>
+        );
+        return (
+          <Pressable
+            key={opt.id}
+            onPress={() => onChange(opt.id)}
+            className="flex-1 overflow-hidden rounded-2xl"
+          >
+            {active ? (
+              <LinearGradient
+                colors={["#F5C765", "#D9A23F"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+              >
+                {content}
+              </LinearGradient>
+            ) : (
+              <View className="rounded-2xl border border-border bg-bg-card">
+                {content}
+              </View>
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -73,47 +78,23 @@ export default function NewShiftScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("staff");
 
+  const header = <ModeToggle mode={mode} onChange={setMode} />;
+
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
-      <View className="px-6">
-        <ScreenHeader eyebrow="Turno" title="Nuovo turno" />
-      </View>
-      <View className="px-6 pt-5">
-        <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
-          {(
-            [
-              { id: "staff", label: "Chiamo il mio staff" },
-              { id: "extra", label: "Cerco un extra" },
-            ] as { id: Mode; label: string }[]
-          ).map((opt) => {
-            const active = opt.id === mode;
-            return (
-              <Pressable
-                key={opt.id}
-                onPress={() => setMode(opt.id)}
-                className={cn(
-                  "flex-1 items-center rounded-xl py-2.5",
-                  active && "bg-bg-2"
-                )}
-              >
-                <Text
-                  className={cn(
-                    "text-sm",
-                    active ? "font-sans-semibold text-t1" : "text-t3"
-                  )}
-                >
-                  {opt.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      <View className="px-6 pb-4">
+        <ScreenHeader
+          eyebrow="Nuovo turno"
+          goldEyebrow
+          title="Copri un turno"
+          icon="close"
+        />
       </View>
 
       {mode === "staff" ? (
-        <StaffShiftForm venueId={venueId} />
+        <StaffShiftForm venueId={venueId} header={header} />
       ) : (
-        <ExtraShiftForm venueId={venueId} />
+        <ExtraShiftForm venueId={venueId} header={header} />
       )}
     </View>
   );
