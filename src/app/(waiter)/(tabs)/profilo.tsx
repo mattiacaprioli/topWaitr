@@ -1,4 +1,6 @@
 import { Avatar } from "@/components/ui/Avatar";
+import { Card } from "@/components/ui/Card";
+import { Chip } from "@/components/ui/Chip";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -14,10 +16,14 @@ import {
   useWaiterReviewsPreview,
 } from "@/features/reviews/hooks";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
+import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
+import type { MyEmployer } from "@/features/staff/api";
+import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
+import { Alert } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -34,6 +40,66 @@ function InfoLine({ label, value }: { label: string; value: string }) {
       <Mono>{label}</Mono>
       <Text className="text-sm text-t2">{value}</Text>
     </View>
+  );
+}
+
+/** Un locale per cui il cameriere è staff, con azione "Lascia il locale". */
+function EmployerCard({ employer }: { employer: MyEmployer }) {
+  const toast = useToast();
+  const leave = useLeaveVenue();
+  const venueName = employer.venue?.name ?? "Locale";
+
+  function confirmLeave() {
+    Alert.alert(
+      "Lasciare questo locale?",
+      `Non farai più parte dello staff di ${venueName}.`,
+      [
+        { text: "Annulla", style: "cancel" },
+        {
+          text: "Lascia",
+          style: "destructive",
+          onPress: () =>
+            leave.mutate(employer.id, {
+              onSuccess: () => toast.show("Hai lasciato il locale"),
+              onError: () =>
+                toast.show("Operazione non riuscita. Riprova.", "error"),
+            }),
+        },
+      ]
+    );
+  }
+
+  return (
+    <Card className="rounded-3xl border-border-2 p-4">
+      <View className="flex-row items-center gap-3">
+        <Avatar
+          uri={employer.venue?.logo_url ?? undefined}
+          name={venueName}
+          size={40}
+        />
+        <View className="flex-1">
+          <Text className="text-base font-sans-bold text-t1">{venueName}</Text>
+          {employer.venue?.city ? (
+            <Text className="text-xs text-t3">{employer.venue.city}</Text>
+          ) : null}
+        </View>
+        <Chip
+          label={employer.employment_type === "fisso" ? "Fisso" : "A chiamata"}
+          active
+          gold={employer.employment_type === "fisso"}
+        />
+      </View>
+      <Pressable
+        onPress={confirmLeave}
+        disabled={leave.isPending}
+        hitSlop={6}
+        className="mt-3 self-start"
+      >
+        <Text className="text-sm font-sans-semibold text-error">
+          {leave.isPending ? "Attendere…" : "Lascia il locale"}
+        </Text>
+      </Pressable>
+    </Card>
   );
 }
 
@@ -65,6 +131,7 @@ export default function WaiterProfiloScreen() {
   const card = useWaiterPublicCard(userId).data;
   const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
   const breakdown = useRatingBreakdown(userId).data;
+  const employers = useMyEmployers(userId).data ?? [];
   const reviewsCount = card?.rating_count ?? 0;
   const ratingLabel =
     reviewsCount > 0
@@ -150,6 +217,16 @@ export default function WaiterProfiloScreen() {
           onPress={() => router.push("/(waiter)/profilo-edit")}
         />
       </View>
+
+      {/* I tuoi locali (staff fisso/a chiamata) */}
+      {employers.length > 0 ? (
+        <View className="gap-3">
+          <Mono>I tuoi locali</Mono>
+          {employers.map((e) => (
+            <EmployerCard key={e.id} employer={e} />
+          ))}
+        </View>
+      ) : null}
 
       {/* Tabs */}
       <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">

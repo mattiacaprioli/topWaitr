@@ -150,6 +150,23 @@ export async function getMyPendingInvites(
   return (data as PendingInvite[] | null) ?? [];
 }
 
+/** Waiter: a venue they're active staff for (their "I tuoi locali"). */
+export type MyEmployer = StaffMember & {
+  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "logo_url"> | null;
+};
+
+/** Waiter: the venues where they are confirmed (active) staff. */
+export async function getMyEmployers(waiterId: string): Promise<MyEmployer[]> {
+  const { data, error } = await supabase
+    .from("staff_members")
+    .select("*, venue:venues(id, name, city, logo_url)")
+    .eq("waiter_id", waiterId)
+    .eq("link_status", "active")
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as MyEmployer[] | null) ?? [];
+}
+
 /** Waiter: accept (true) or decline (false) a staff invite (via DEFINER RPC). */
 export async function respondToInvite(
   staffId: string,
@@ -159,5 +176,11 @@ export async function respondToInvite(
     p_staff_id: staffId,
     p_accept: accept,
   });
+  if (error) throw new Error(error.message);
+}
+
+/** Waiter: resign from a venue's staff (via DEFINER RPC; notifies the owner). */
+export async function leaveVenue(staffId: string): Promise<void> {
+  const { error } = await supabase.rpc("leave_venue", { p_staff_id: staffId });
   if (error) throw new Error(error.message);
 }

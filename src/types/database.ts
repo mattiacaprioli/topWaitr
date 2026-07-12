@@ -588,6 +588,12 @@ export type Database = {
           cnt: number
         }[]
       }
+      leave_venue: {
+        Args: {
+          p_staff_id: string
+        }
+        Returns: undefined
+      }
       respond_to_staff_invite: {
         Args: {
           p_accept: boolean

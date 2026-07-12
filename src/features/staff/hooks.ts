@@ -4,14 +4,25 @@ import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   addStaffMember,
   findWaiterByEmail,
+  getMyEmployers,
   getMyPendingInvites,
   getStaffMember,
   getVenueStaff,
   getWorkedWithWaiters,
+  leaveVenue,
   removeStaffMember,
   respondToInvite,
   updateStaffMember,
 } from "./api";
+
+/** Waiter: the venues where they are confirmed staff ("I tuoi locali"). */
+export function useMyEmployers(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.staff.employers(waiterId ?? ""),
+    queryFn: () => getMyEmployers(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
 
 export function useVenueStaff(venueId: string | undefined) {
   return useQuery({
@@ -86,6 +97,18 @@ export function useRespondToInvite() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.staff.all });
       qc.invalidateQueries({ queryKey: qk.notifications.all });
+    },
+  });
+}
+
+/** Waiter: resign from a venue's staff, then refresh "I tuoi locali" + assignments. */
+export function useLeaveVenue() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (staffId: string) => leaveVenue(staffId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.staff.all });
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
     },
   });
 }
