@@ -493,6 +493,47 @@ export type Database = {
           },
         ]
       }
+      waiter_experiences: {
+        Row: {
+          company_name: string
+          created_at: string
+          detail: string | null
+          end_year: number | null
+          id: string
+          role: string | null
+          start_year: number | null
+          waiter_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string
+          detail?: string | null
+          end_year?: number | null
+          id?: string
+          role?: string | null
+          start_year?: number | null
+          waiter_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string
+          detail?: string | null
+          end_year?: number | null
+          id?: string
+          role?: string | null
+          start_year?: number | null
+          waiter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiter_experiences_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waiter_profiles: {
         Row: {
           availability_days: string[] | null
@@ -569,9 +610,7 @@ export type Database = {
     }
     Functions: {
       find_waiter_by_email: {
-        Args: {
-          p_email: string
-        }
+        Args: { p_email: string }
         Returns: {
           avatar_url: string
           city: string
@@ -580,25 +619,15 @@ export type Database = {
         }[]
       }
       get_rating_breakdown: {
-        Args: {
-          p_waiter: string
-        }
+        Args: { p_waiter: string }
         Returns: {
-          rating: number
           cnt: number
+          rating: number
         }[]
       }
-      leave_venue: {
-        Args: {
-          p_staff_id: string
-        }
-        Returns: undefined
-      }
+      leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
       respond_to_staff_invite: {
-        Args: {
-          p_accept: boolean
-          p_staff_id: string
-        }
+        Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
       }
     }

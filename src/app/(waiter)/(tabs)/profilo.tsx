@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
+import { ExperienceTimeline } from "@/components/ui/ExperienceTimeline";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
@@ -10,7 +11,9 @@ import { Mono } from "@/components/ui/Mono";
 import { NoReviews } from "@/components/ui/NoReviews";
 import { RatingSummary } from "@/components/ui/RatingSummary";
 import { ReviewCard } from "@/components/ui/ReviewCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { useExperiences } from "@/features/experiences/hooks";
 import {
   useRatingBreakdown,
   useWaiterPublicCard,
@@ -121,16 +124,11 @@ export default function WaiterProfiloScreen() {
   const role = wp?.primary_role ?? null;
   const city = data?.city ?? null;
   const bio = data?.bio ?? null;
-  const experience = wp?.experience ?? null;
   const languages = wp?.languages ?? [];
   const specializations = wp?.specializations ?? null;
-  const hasAny =
-    !!bio ||
-    !!experience ||
-    languages.length > 0 ||
-    !!specializations ||
-    !!city ||
-    !!role;
+  const hasProfileInfo = !!bio || languages.length > 0 || !!specializations;
+
+  const experiences = useExperiences(userId).data ?? [];
 
   const card = useWaiterPublicCard(userId).data;
   const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
@@ -259,15 +257,39 @@ export default function WaiterProfiloScreen() {
       </View>
 
       {tab === "esperienze" ? (
-        <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
-          <Mono>Il tuo profilo</Mono>
-          {hasAny ? (
-            <>
+        <View className="gap-6">
+          <View>
+            <SectionHeader
+              title="Esperienze"
+              actionLabel="Aggiungi"
+              onAction={() => router.push("/(waiter)/esperienza/new")}
+            />
+            {experiences.length > 0 ? (
+              <ExperienceTimeline
+                items={experiences}
+                onPressItem={(id) =>
+                  router.push(`/(waiter)/esperienza/${id}`)
+                }
+              />
+            ) : (
+              <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
+                <Text className="text-sm leading-5 text-t3">
+                  Aggiungi i tuoi lavori passati per farti notare dai
+                  ristoratori.
+                </Text>
+                <GoldButton
+                  label="Aggiungi esperienza"
+                  onPress={() => router.push("/(waiter)/esperienza/new")}
+                />
+              </View>
+            )}
+          </View>
+
+          {hasProfileInfo ? (
+            <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+              <Mono>Il tuo profilo</Mono>
               {bio ? (
                 <Text className="text-sm leading-5 text-t2">{bio}</Text>
-              ) : null}
-              {experience ? (
-                <InfoLine label="Esperienza" value={experience} />
               ) : null}
               {languages.length > 0 ? (
                 <InfoLine label="Lingue" value={languages.join(" · ")} />
@@ -275,12 +297,8 @@ export default function WaiterProfiloScreen() {
               {specializations ? (
                 <InfoLine label="Specializzazioni" value={specializations} />
               ) : null}
-            </>
-          ) : (
-            <Text className="text-sm text-t3">
-              Completa il tuo profilo per farti notare dai ristoratori.
-            </Text>
-          )}
+            </View>
+          ) : null}
         </View>
       ) : null}
 

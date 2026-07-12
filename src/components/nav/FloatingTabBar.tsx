@@ -27,12 +27,12 @@ export function FloatingTabBar({
     <View
       style={{
         position: "absolute",
-        left: 24,
-        right: 24,
+        left: 10,
+        right: 10,
         bottom: insets.bottom > 0 ? insets.bottom : 16,
         height: 64,
         flexDirection: "row",
-        borderRadius: 30,
+        borderRadius: 20,
         borderCurve: "continuous",
         backgroundColor: palette.surface,
         borderWidth: 1,

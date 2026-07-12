@@ -2,9 +2,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
+import { ExperienceTimeline } from "@/components/ui/ExperienceTimeline";
+import { Mono } from "@/components/ui/Mono";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { WaiterReviewsList } from "@/features/reviews/WaiterReviewsList";
+import { useExperiences } from "@/features/experiences/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useWaiterProfile } from "@/features/waiterProfile/hooks";
 
@@ -15,6 +18,7 @@ export default function WaiterProfileScreen() {
   const card = useWaiterPublicCard(id).data;
   const profile = useWaiterProfile(id).data;
   const wp = profile?.waiter_profile ?? null;
+  const experiences = useExperiences(id).data ?? [];
 
   const name = card?.full_name ?? profile?.full_name ?? "Cameriere";
   const roleCity = [card?.primary_role, card?.city].filter(Boolean).join(" · ");
@@ -36,9 +40,6 @@ export default function WaiterProfileScreen() {
       {profile?.bio ? (
         <Text className="text-sm text-t2">{profile.bio}</Text>
       ) : null}
-      {wp?.experience ? (
-        <Text className="text-sm text-t3">Esperienza: {wp.experience}</Text>
-      ) : null}
       {wp?.specializations ? (
         <Text className="text-sm text-t3">
           Specializzazioni: {wp.specializations}
@@ -46,6 +47,12 @@ export default function WaiterProfileScreen() {
       ) : null}
       {wp?.languages && wp.languages.length > 0 ? (
         <Text className="text-sm text-t3">Lingue: {wp.languages.join(" · ")}</Text>
+      ) : null}
+      {experiences.length > 0 ? (
+        <View className="mt-1 gap-3 border-t border-border pt-4">
+          <Mono>Esperienze</Mono>
+          <ExperienceTimeline items={experiences} />
+        </View>
       ) : null}
     </View>
   );

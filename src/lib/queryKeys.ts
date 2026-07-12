@@ -11,6 +11,11 @@ export const qk = {
     mine: (userId: string) => ["profile", "mine", userId] as const,
     byId: (userId: string) => ["profile", "byId", userId] as const,
   },
+  experiences: {
+    byWaiter: (waiterId: string) =>
+      ["experiences", "byWaiter", waiterId] as const,
+    detail: (id: string) => ["experiences", "detail", id] as const,
+  },
   shifts: {
     all: ["shifts"] as const,
     open: () => ["shifts", "open"] as const,
