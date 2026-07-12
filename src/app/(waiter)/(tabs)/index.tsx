@@ -15,6 +15,10 @@ import {
   useMyApplicationsList,
   useMyUpcomingShifts,
 } from "@/features/applications/hooks";
+import { useMyAssignedUpcoming } from "@/features/assignments/hooks";
+import { useMyPendingInvites } from "@/features/staff/hooks";
+import { Pill } from "@/components/ui/Pill";
+import type { ShiftWithVenue } from "@/features/shifts/types";
 import { reviewUrlFor } from "@/features/reviews/config";
 import {
   useWaiterPublicCard,
@@ -28,6 +32,8 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Linking, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+type UpcomingItem = { key: string; shift: ShiftWithVenue; assigned: boolean };
+
 export default function WaiterHomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -35,6 +41,8 @@ export default function WaiterHomeScreen() {
   const waiterId = session!.user.id;
 
   const upcomingQuery = useMyUpcomingShifts(waiterId);
+  const assignedQuery = useMyAssignedUpcoming(waiterId);
+  const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
   const appsQuery = useMyApplications(waiterId);
   const appsListQuery = useMyApplicationsList(waiterId);
   const card = useWaiterPublicCard(waiterId).data;
@@ -42,6 +50,15 @@ export default function WaiterHomeScreen() {
   const unread = useUnreadCount(waiterId).data ?? 0;
 
   const upcoming = upcomingQuery.data ?? [];
+  const assigned = assignedQuery.data ?? [];
+  const upcomingItems: UpcomingItem[] = [
+    ...assigned
+      .filter((a) => a.shift != null)
+      .map((a) => ({ key: `asg-${a.id}`, shift: a.shift!, assigned: true })),
+    ...upcoming
+      .filter((a) => a.shift != null)
+      .map((a) => ({ key: `app-${a.id}`, shift: a.shift!, assigned: false })),
+  ].sort((a, b) => a.shift.date.localeCompare(b.shift.date));
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
 
   // Reputazione (dati reali). "Servizi" = candidature accettate ormai passate.
@@ -71,6 +88,7 @@ export default function WaiterHomeScreen() {
           refreshing={upcomingQuery.isRefetching}
           onRefresh={() => {
             upcomingQuery.refetch();
+            assignedQuery.refetch();
             appsQuery.refetch();
             appsListQuery.refetch();
           }}
@@ -87,6 +105,23 @@ export default function WaiterHomeScreen() {
           onPress={() => router.push("/(waiter)/notifiche")}
         />
       </View>
+
+      {pendingInvites.length > 0 ? (
+        <Pressable onPress={() => router.push("/(waiter)/inviti")}>
+          <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-2 p-4">
+            <Icon name="users" size={20} color="#EAB54C" />
+            <View className="flex-1">
+              <Text className="text-sm font-sans-bold text-t1">
+                {pendingInvites.length === 1
+                  ? "1 richiesta di collaborazione"
+                  : `${pendingInvites.length} richieste di collaborazione`}
+              </Text>
+              <Text className="text-xs text-t3">Tocca per rispondere</Text>
+            </View>
+            <Icon name="chevR" size={18} color="#8c857a" />
+          </View>
+        </Pressable>
+      ) : null}
 
       {/* Reputazione */}
       <View className="flex-row gap-2.5">
@@ -121,19 +156,21 @@ export default function WaiterHomeScreen() {
           <ActivityIndicator color="#EAB54C" className="mt-4" />
         ) : upcomingQuery.isError ? (
           <QueryError onRetry={() => upcomingQuery.refetch()} />
-        ) : upcoming.length === 0 ? (
+        ) : upcomingItems.length === 0 ? (
           <EmptyState
             title="Nessun turno in programma"
-            subtitle="Le candidature accettate compariranno qui."
+            subtitle="I turni assegnati e le candidature accettate compariranno qui."
           />
         ) : (
           <View className="gap-3">
-            {upcoming.map((app) => {
-              const s = app.shift!;
-              const total = shiftTotal(s.hourly_rate, s.start_time, s.end_time);
+            {upcomingItems.map((item) => {
+              const s = item.shift;
+              const total = item.assigned
+                ? null
+                : shiftTotal(s.hourly_rate, s.start_time, s.end_time);
               return (
                 <Card
-                  key={app.id}
+                  key={item.key}
                   className="rounded-3xl border-border-2 p-5"
                   onPress={() => router.push(`/(waiter)/shift/${s.id}`)}
                 >
@@ -157,7 +194,9 @@ export default function WaiterHomeScreen() {
                         {s.title}
                       </Text>
                     </View>
-                    {total != null ? (
+                    {item.assigned ? (
+                      <Pill label="Staff" variant="tag" />
+                    ) : total != null ? (
                       <Text className="text-lg font-sans-bold text-gold">
                         {formatEuro(total)}
                       </Text>

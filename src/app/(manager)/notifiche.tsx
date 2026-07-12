@@ -25,6 +25,10 @@ export default function ManagerNotificationsScreen() {
 
   const onOpen = (n: Notification) => {
     if (n.read_at == null) markRead.mutate(n.id);
+    if (n.type === "staff_response") {
+      router.push("/(manager)/(tabs)/staff");
+      return;
+    }
     if (n.related_id) router.push(`/(manager)/shift/${n.related_id}`);
   };
 

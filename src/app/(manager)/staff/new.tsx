@@ -16,13 +16,44 @@ import { useToast } from "@/providers/Toast";
 import { useMyVenue } from "@/features/venues/hooks";
 import {
   useAddStaffMember,
+  useFindWaiterByEmail,
   useVenueStaff,
   useWorkedWithWaiters,
 } from "@/features/staff/hooks";
+import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
-type Mode = "storico" | "manuale";
+type Mode = "storico" | "manuale" | "invita";
+const MODES: { id: Mode; label: string }[] = [
+  { id: "storico", label: "Storico" },
+  { id: "manuale", label: "Manuale" },
+  { id: "invita", label: "Invita" },
+];
 const ROLES = ["Cameriere", "Chef de Rang", "Sommelier", "Runner", "Hostess", "Barman"];
+
+function TypeChips({
+  value,
+  onChange,
+}: {
+  value: Enums<"employment_type">;
+  onChange: (v: Enums<"employment_type">) => void;
+}) {
+  return (
+    <View className="flex-row gap-2">
+      <Chip
+        label="Fisso"
+        active={value === "fisso"}
+        gold={value === "fisso"}
+        onPress={() => onChange("fisso")}
+      />
+      <Chip
+        label="A chiamata"
+        active={value === "a_chiamata"}
+        onPress={() => onChange("a_chiamata")}
+      />
+    </View>
+  );
+}
 
 export default function StaffNewScreen() {
   const { session } = useAuth();
@@ -35,14 +66,16 @@ export default function StaffNewScreen() {
   const [mode, setMode] = useState<Mode>("storico");
   const add = useAddStaffMember();
 
-  // Dallo storico: camerieri che hanno già lavorato qui, esclusi quelli già in organico.
-  const workedQuery = useWorkedWithWaiters(venueId);
+  // Camerieri già in organico (attivi o invitati) — per escluderli.
   const staffQuery = useVenueStaff(venueId);
   const existing = new Set(
     (staffQuery.data ?? [])
       .map((s) => s.waiter_id)
       .filter((id): id is string => !!id)
   );
+
+  // Dallo storico
+  const workedQuery = useWorkedWithWaiters(venueId);
   const candidates = (workedQuery.data ?? []).filter((w) => !existing.has(w.id));
 
   // Nuova scheda (manuale)
@@ -51,15 +84,27 @@ export default function StaffNewScreen() {
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
 
-  function onAdded() {
-    toast.show("Aggiunto allo staff");
+  // Invita per email
+  const find = useFindWaiterByEmail();
+  const [email, setEmail] = useState("");
+  const [found, setFound] = useState<WaiterLookup | null>(null);
+  const [searched, setSearched] = useState(false);
+  const [inviteType, setInviteType] = useState<Enums<"employment_type">>("fisso");
+  const alreadyInStaff = found ? existing.has(found.id) : false;
+
+  function onAdded(msg: string) {
+    toast.show(msg);
     router.back();
   }
   function onAddError() {
-    toast.show("Impossibile aggiungere. Riprova.", "error");
+    toast.show("Operazione non riuscita. Riprova.", "error");
   }
 
-  function addFromWorked(w: { id: string; full_name: string | null; primary_role: string | null }) {
+  function addFromWorked(w: {
+    id: string;
+    full_name: string | null;
+    primary_role: string | null;
+  }) {
     if (!venueId) return;
     add.mutate(
       {
@@ -69,7 +114,7 @@ export default function StaffNewScreen() {
         waiter_id: w.id,
         employment_type: "a_chiamata",
       },
-      { onSuccess: onAdded, onError: onAddError }
+      { onSuccess: () => onAdded("Aggiunto allo staff"), onError: onAddError }
     );
   }
 
@@ -83,7 +128,33 @@ export default function StaffNewScreen() {
         employment_type: empType,
         phone: phone.trim() || null,
       },
-      { onSuccess: onAdded, onError: onAddError }
+      { onSuccess: () => onAdded("Aggiunto allo staff"), onError: onAddError }
+    );
+  }
+
+  function onSearch() {
+    const e = email.trim();
+    if (!e) return;
+    find.mutate(e, {
+      onSuccess: (res) => {
+        setFound(res);
+        setSearched(true);
+      },
+      onError: () => toast.show("Ricerca non riuscita. Riprova.", "error"),
+    });
+  }
+
+  function sendInvite() {
+    if (!venueId || !found) return;
+    add.mutate(
+      {
+        venue_id: venueId,
+        display_name: found.full_name ?? email.trim(),
+        employment_type: inviteType,
+        waiter_id: found.id,
+        link_status: "pending",
+      },
+      { onSuccess: () => onAdded("Richiesta inviata"), onError: onAddError }
     );
   }
 
@@ -99,12 +170,12 @@ export default function StaffNewScreen() {
       >
         {/* Segmented */}
         <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
-          {(["storico", "manuale"] as Mode[]).map((m) => {
-            const active = m === mode;
+          {MODES.map((m) => {
+            const active = m.id === mode;
             return (
               <Pressable
-                key={m}
-                onPress={() => setMode(m)}
+                key={m.id}
+                onPress={() => setMode(m.id)}
                 className={cn(
                   "flex-1 items-center rounded-xl py-2.5",
                   active && "bg-bg-2"
@@ -116,7 +187,7 @@ export default function StaffNewScreen() {
                     active ? "font-sans-semibold text-t1" : "text-t3"
                   )}
                 >
-                  {m === "storico" ? "Ha già lavorato qui" : "Nuova scheda"}
+                  {m.label}
                 </Text>
               </Pressable>
             );
@@ -131,7 +202,7 @@ export default function StaffNewScreen() {
           ) : candidates.length === 0 ? (
             <EmptyState
               title="Nessun candidato"
-              subtitle="Qui compaiono i camerieri che hanno già lavorato da te e non sono ancora nel tuo staff. Usa «Nuova scheda» per aggiungerne uno a mano."
+              subtitle="Qui compaiono i camerieri che hanno già lavorato da te e non sono ancora nel tuo staff. Usa «Manuale» o «Invita»."
             />
           ) : (
             <View className="gap-3">
@@ -165,7 +236,7 @@ export default function StaffNewScreen() {
               ))}
             </View>
           )
-        ) : (
+        ) : mode === "manuale" ? (
           <View className="gap-5">
             <Input
               label="Nome"
@@ -173,7 +244,6 @@ export default function StaffNewScreen() {
               onChangeText={setName}
               placeholder="Es. Marco Rossi"
             />
-
             <View className="gap-2">
               <Mono>Ruolo</Mono>
               <View className="flex-row flex-wrap gap-2">
@@ -188,24 +258,10 @@ export default function StaffNewScreen() {
                 ))}
               </View>
             </View>
-
             <View className="gap-2">
               <Mono>Tipo</Mono>
-              <View className="flex-row gap-2">
-                <Chip
-                  label="Fisso"
-                  active={empType === "fisso"}
-                  gold={empType === "fisso"}
-                  onPress={() => setEmpType("fisso")}
-                />
-                <Chip
-                  label="A chiamata"
-                  active={empType === "a_chiamata"}
-                  onPress={() => setEmpType("a_chiamata")}
-                />
-              </View>
+              <TypeChips value={empType} onChange={setEmpType} />
             </View>
-
             <Input
               label="Telefono (facoltativo)"
               value={phone}
@@ -213,13 +269,84 @@ export default function StaffNewScreen() {
               keyboardType="phone-pad"
               placeholder="Es. 333 1234567"
             />
-
             <GoldButton
               className="mt-1"
               label={add.isPending ? "Aggiunta…" : "Aggiungi allo staff"}
               disabled={add.isPending || !name.trim()}
               onPress={addManual}
             />
+          </View>
+        ) : (
+          <View className="gap-5">
+            <Input
+              label="Email del cameriere"
+              value={email}
+              onChangeText={(t) => {
+                setEmail(t);
+                setFound(null);
+                setSearched(false);
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="nome@email.com"
+            />
+            <GoldButton
+              label={find.isPending ? "Ricerca…" : "Cerca"}
+              disabled={find.isPending || !email.trim()}
+              onPress={onSearch}
+            />
+
+            {searched ? (
+              found ? (
+                alreadyInStaff ? (
+                  <Card className="rounded-3xl border-border-2 p-5">
+                    <Text className="text-sm text-t2">
+                      {found.full_name ?? "Questo cameriere"} è già nel tuo
+                      staff.
+                    </Text>
+                  </Card>
+                ) : (
+                  <Card className="rounded-3xl border-border-2 p-5">
+                    <View className="flex-row items-center gap-3">
+                      <Avatar
+                        uri={found.avatar_url ?? undefined}
+                        name={found.full_name ?? "Cameriere"}
+                        size={48}
+                      />
+                      <View className="flex-1">
+                        <Text className="text-base font-sans-bold text-t1">
+                          {found.full_name ?? "Cameriere"}
+                        </Text>
+                        {found.city ? (
+                          <Text className="text-xs text-t3">{found.city}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <View className="mt-4 gap-2">
+                      <Mono>Tipo</Mono>
+                      <TypeChips value={inviteType} onChange={setInviteType} />
+                    </View>
+                    <GoldButton
+                      className="mt-4"
+                      label={add.isPending ? "Invio…" : "Invia richiesta"}
+                      disabled={add.isPending}
+                      onPress={sendInvite}
+                    />
+                  </Card>
+                )
+              ) : (
+                <EmptyState
+                  title="Nessun cameriere trovato"
+                  subtitle="Controlla che l'email sia esatta e che abbia un account cameriere su topWaitr."
+                />
+              )
+            ) : (
+              <Text className="text-xs leading-4 text-t3">
+                Inserisci l&apos;email esatta del cameriere. Riceverà una
+                richiesta e, se accetta, entrerà nel tuo organico.
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>

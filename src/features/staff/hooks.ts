@@ -3,10 +3,13 @@ import { qk } from "@/lib/queryKeys";
 import type { TablesInsert, TablesUpdate } from "@/types/database";
 import {
   addStaffMember,
+  findWaiterByEmail,
+  getMyPendingInvites,
   getStaffMember,
   getVenueStaff,
   getWorkedWithWaiters,
   removeStaffMember,
+  respondToInvite,
   updateStaffMember,
 } from "./api";
 
@@ -55,5 +58,34 @@ export function useRemoveStaffMember() {
   return useMutation({
     mutationFn: (id: string) => removeStaffMember(id),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+  });
+}
+
+/** Manager: search a waiter by exact email (on-demand). */
+export function useFindWaiterByEmail() {
+  return useMutation({
+    mutationFn: (email: string) => findWaiterByEmail(email),
+  });
+}
+
+/** Waiter: their pending staff invites. */
+export function useMyPendingInvites(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.staff.invites(waiterId ?? ""),
+    queryFn: () => getMyPendingInvites(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+/** Waiter: accept/decline a staff invite, then refresh invites + notifications. */
+export function useRespondToInvite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { staffId: string; accept: boolean }) =>
+      respondToInvite(vars.staffId, vars.accept),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.staff.all });
+      qc.invalidateQueries({ queryKey: qk.notifications.all });
+    },
   });
 }

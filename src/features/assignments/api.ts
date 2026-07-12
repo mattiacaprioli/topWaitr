@@ -1,9 +1,14 @@
 import { supabase } from "@/lib/supabase";
 import type { Enums, Tables } from "@/types/database";
-import type { Shift } from "@/features/shifts/types";
+import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember } from "@/features/staff/api";
 
 export type Assignment = Tables<"shift_assignments">;
+
+/** Waiter side: an assignment joined with its shift + venue. */
+export type AssignmentWithShift = Assignment & {
+  shift: ShiftWithVenue | null;
+};
 
 type WaiterMini = Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url">;
 
@@ -96,6 +101,40 @@ export async function updateAssignmentStatus(
     .update({ status })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Waiter side: the waiter's upcoming assigned shifts (their "Prossimi turni"). */
+export async function getMyAssignedUpcoming(
+  waiterId: string
+): Promise<AssignmentWithShift[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      "*, staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
+    )
+    .eq("staff_member.waiter_id", waiterId)
+    .neq("status", "declined");
+  if (error) throw new Error(error.message);
+  const rows = (data as AssignmentWithShift[] | null) ?? [];
+  return rows
+    .filter((r) => r.shift != null && r.shift.date >= today)
+    .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
+}
+
+/** Waiter side: the waiter's assignment for a specific shift, if any. */
+export async function getMyAssignmentForShift(
+  shiftId: string,
+  waiterId: string
+): Promise<Assignment | null> {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select("*, staff_member:staff_members!inner(waiter_id)")
+    .eq("shift_id", shiftId)
+    .eq("staff_member.waiter_id", waiterId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as Assignment | null) ?? null;
 }
 
 /** Assignees working today on the venue's internal shifts (home dashboard). */

@@ -401,6 +401,7 @@ export type Database = {
           display_name: string
           employment_type: Database["public"]["Enums"]["employment_type"]
           id: string
+          link_status: Database["public"]["Enums"]["staff_link_status"]
           note: string | null
           phone: string | null
           role: string | null
@@ -412,6 +413,7 @@ export type Database = {
           display_name: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
+          link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           phone?: string | null
           role?: string | null
@@ -423,6 +425,7 @@ export type Database = {
           display_name?: string
           employment_type?: Database["public"]["Enums"]["employment_type"]
           id?: string
+          link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           phone?: string | null
           role?: string | null
@@ -565,6 +568,17 @@ export type Database = {
       }
     }
     Functions: {
+      find_waiter_by_email: {
+        Args: {
+          p_email: string
+        }
+        Returns: {
+          avatar_url: string
+          city: string
+          full_name: string
+          id: string
+        }[]
+      }
       get_rating_breakdown: {
         Args: {
           p_waiter: string
@@ -573,6 +587,13 @@ export type Database = {
           rating: number
           cnt: number
         }[]
+      }
+      respond_to_staff_invite: {
+        Args: {
+          p_accept: boolean
+          p_staff_id: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
@@ -585,8 +606,11 @@ export type Database = {
         | "application_rejected"
         | "new_message"
         | "shift_assigned"
+        | "staff_invite"
+        | "staff_response"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
+      staff_link_status: "pending" | "active"
       user_role: "waiter" | "manager"
     }
     CompositeTypes: {
@@ -724,9 +748,12 @@ export const Constants = {
         "application_rejected",
         "new_message",
         "shift_assigned",
+        "staff_invite",
+        "staff_response",
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],
+      staff_link_status: ["pending", "active"],
       user_role: ["waiter", "manager"],
     },
   },

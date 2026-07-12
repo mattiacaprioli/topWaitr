@@ -25,6 +25,10 @@ export default function WaiterNotificationsScreen() {
 
   const onOpen = (n: Notification) => {
     if (n.read_at == null) markRead.mutate(n.id);
+    if (n.type === "staff_invite") {
+      router.push("/(waiter)/inviti");
+      return;
+    }
     if (n.related_id) router.push(`/(waiter)/shift/${n.related_id}`);
   };
 

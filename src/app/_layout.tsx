@@ -20,6 +20,7 @@ import { IBMPlexMono_500Medium } from "@expo-google-fonts/ibm-plex-mono/500Mediu
 import { useAuth } from "@/lib/auth";
 import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsListener } from "@/features/notifications/NotificationsListener";
+import { RealtimeSync } from "@/features/realtime/RealtimeSync";
 
 SplashScreen.preventAutoHideAsync();
 SystemUI.setBackgroundColorAsync("#0C0907");
@@ -89,7 +90,10 @@ function RootNavigator() {
   return (
     <>
       {session && profile ? (
-        <NotificationsListener userId={session.user.id} />
+        <>
+          <NotificationsListener userId={session.user.id} />
+          <RealtimeSync userId={session.user.id} />
+        </>
       ) : null}
       <Stack screenOptions={screenOptions}>
         <Stack.Protected guard={!session}>

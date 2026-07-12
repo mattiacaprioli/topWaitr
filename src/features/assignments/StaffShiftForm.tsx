@@ -27,7 +27,10 @@ export function StaffShiftForm({ venueId }: { venueId: string | undefined }) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(venueId);
-  const staff = staffQuery.data ?? [];
+  // Solo staff confermato: gli inviti ancora da accettare non sono assegnabili.
+  const staff = (staffQuery.data ?? []).filter(
+    (m) => m.link_status === "active"
+  );
   const create = useCreateInternalShift(venueId);
 
   const [date, setDate] = useState(new Date());

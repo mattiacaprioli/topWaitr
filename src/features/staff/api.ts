@@ -110,3 +110,54 @@ export async function removeStaffMember(id: string): Promise<void> {
   const { error } = await supabase.from("staff_members").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** A waiter found by exact email (via the DEFINER RPC). Only public fields. */
+export type WaiterLookup = {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  city: string | null;
+};
+
+/** Manager: look up a waiter by exact email to invite them. */
+export async function findWaiterByEmail(
+  email: string
+): Promise<WaiterLookup | null> {
+  const { data, error } = await supabase.rpc("find_waiter_by_email", {
+    p_email: email,
+  });
+  if (error) throw new Error(error.message);
+  const row = (data as WaiterLookup[] | null)?.[0];
+  return row ?? null;
+}
+
+/** Waiter: a pending staff invite joined with the venue. */
+export type PendingInvite = StaffMember & {
+  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "logo_url"> | null;
+};
+
+/** Waiter: their pending staff invites ("Richieste di collaborazione"). */
+export async function getMyPendingInvites(
+  waiterId: string
+): Promise<PendingInvite[]> {
+  const { data, error } = await supabase
+    .from("staff_members")
+    .select("*, venue:venues(id, name, city, logo_url)")
+    .eq("waiter_id", waiterId)
+    .eq("link_status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as PendingInvite[] | null) ?? [];
+}
+
+/** Waiter: accept (true) or decline (false) a staff invite (via DEFINER RPC). */
+export async function respondToInvite(
+  staffId: string,
+  accept: boolean
+): Promise<void> {
+  const { error } = await supabase.rpc("respond_to_staff_invite", {
+    p_staff_id: staffId,
+    p_accept: accept,
+  });
+  if (error) throw new Error(error.message);
+}

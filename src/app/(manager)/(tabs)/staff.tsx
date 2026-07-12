@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { useMyVenue } from "@/features/venues/hooks";
@@ -40,6 +41,11 @@ function StaffRow({
           </View>
           {member.role ? (
             <Text className="text-xs text-t3">{member.role}</Text>
+          ) : null}
+          {member.link_status === "pending" ? (
+            <View className="mt-1 flex-row">
+              <Pill label="Invito in attesa" variant="pending" />
+            </View>
           ) : null}
         </View>
         <Chip

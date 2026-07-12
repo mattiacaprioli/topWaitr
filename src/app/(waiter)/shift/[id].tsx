@@ -24,6 +24,10 @@ import {
   useMyApplication,
 } from "@/features/applications/hooks";
 import {
+  useMyAssignmentForShift,
+  useRespondToAssignment,
+} from "@/features/assignments/hooks";
+import {
   applicationSchema,
   type ApplicationForm,
 } from "@/features/applications/schema";
@@ -34,6 +38,12 @@ const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
   accepted: "Accettata",
   rejected: "Rifiutata",
   cancelled: "Ritirata",
+};
+
+const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
+  assigned: "Da confermare",
+  confirmed: "Confermato",
+  declined: "Rifiutato",
 };
 
 function InfoRow({
@@ -79,6 +89,34 @@ export default function WaiterShiftDetailScreen() {
   const myApp = myAppQuery.data ?? null;
   const apply = useApply(id, waiterId);
   const cancel = useCancelApplication();
+  const myAssignmentQuery = useMyAssignmentForShift(id, waiterId);
+  const myAssignment = myAssignmentQuery.data ?? null;
+  const respond = useRespondToAssignment();
+
+  function onRespond(status: Enums<"assignment_status">) {
+    if (!myAssignment) return;
+    respond.mutate(
+      { id: myAssignment.id, status },
+      {
+        onSuccess: () =>
+          toast.show(
+            status === "confirmed" ? "Presenza confermata" : "Turno rifiutato"
+          ),
+        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+      }
+    );
+  }
+
+  function confirmDecline() {
+    Alert.alert("Rifiutare il turno?", "Il ristoratore verrà avvisato.", [
+      { text: "Annulla", style: "cancel" },
+      {
+        text: "Rifiuta",
+        style: "destructive",
+        onPress: () => onRespond("declined"),
+      },
+    ]);
+  }
 
   function confirmWithdraw() {
     if (!myApp) return;
@@ -119,7 +157,7 @@ export default function WaiterShiftDetailScreen() {
     }
   });
 
-  if (shiftQuery.isLoading || myAppQuery.isLoading) {
+  if (shiftQuery.isLoading || myAppQuery.isLoading || myAssignmentQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-0">
         <ActivityIndicator color="#EAB54C" />
@@ -146,6 +184,7 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
+  const internal = shift.kind === "internal";
   const venueName = shift.venue?.name ?? "Locale";
   const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
   const remaining = Math.max(0, shift.positions_total - shift.positions_filled);
@@ -194,11 +233,15 @@ export default function WaiterShiftDetailScreen() {
               shift.start_time
             )}–${formatTime(shift.end_time)}`}
           />
-          <InfoRow label="Compenso" value={compenso} gold />
-          <InfoRow
-            label="Posti"
-            value={`${remaining} di ${shift.positions_total} disponibili`}
-          />
+          {internal ? null : (
+            <>
+              <InfoRow label="Compenso" value={compenso} gold />
+              <InfoRow
+                label="Posti"
+                value={`${remaining} di ${shift.positions_total} disponibili`}
+              />
+            </>
+          )}
           {shift.dress_code ? (
             <InfoRow label="Dress code" value={shift.dress_code} />
           ) : null}
@@ -222,9 +265,69 @@ export default function WaiterShiftDetailScreen() {
           </View>
         ) : null}
 
-        <Mono className="mb-3 mt-8">Candidatura</Mono>
+        {internal ? (
+          <>
+            <Mono className="mb-3 mt-8">Turno dello staff</Mono>
+            {myAssignment ? (
+              <Card className="rounded-3xl border-border-2 p-5">
+                <Text className="text-sm text-t2">
+                  Sei stato assegnato a questo turno da {venueName}.
+                </Text>
+                <View className="mt-2 flex-row">
+                  <Pill
+                    label={ASSIGN_STATUS_LABEL[myAssignment.status]}
+                    variant={
+                      myAssignment.status === "confirmed"
+                        ? "accepted"
+                        : myAssignment.status === "declined"
+                          ? "cancelled"
+                          : "pending"
+                    }
+                  />
+                </View>
+                {myAssignment.status === "assigned" ? (
+                  <View className="mt-4 gap-2.5">
+                    <GoldButton
+                      label={respond.isPending ? "Attendere…" : "Conferma presenza"}
+                      disabled={respond.isPending}
+                      onPress={() => onRespond("confirmed")}
+                    />
+                    <GhostButton
+                      label="Non posso"
+                      disabled={respond.isPending}
+                      onPress={confirmDecline}
+                    />
+                  </View>
+                ) : myAssignment.status === "confirmed" ? (
+                  <Text className="mt-3 text-sm text-t3">
+                    Hai confermato la presenza. A presto!
+                  </Text>
+                ) : (
+                  <View className="mt-3 gap-2.5">
+                    <Text className="text-sm text-t3">
+                      Hai rifiutato questo turno.
+                    </Text>
+                    <GhostButton
+                      label="Ci sono, conferma"
+                      disabled={respond.isPending}
+                      onPress={() => onRespond("confirmed")}
+                    />
+                  </View>
+                )}
+              </Card>
+            ) : (
+              <Card className="rounded-3xl border-border-2 p-5">
+                <Text className="text-sm text-t3">
+                  Questo è un turno riservato allo staff del locale.
+                </Text>
+              </Card>
+            )}
+          </>
+        ) : (
+          <>
+            <Mono className="mb-3 mt-8">Candidatura</Mono>
 
-        {hasActiveApp ? (
+            {hasActiveApp ? (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t2">
               Ti sei candidato a questo turno.
@@ -279,6 +382,8 @@ export default function WaiterShiftDetailScreen() {
               onPress={onSubmit}
             />
           </Card>
+            )}
+          </>
         )}
       </ScrollView>
     </KeyboardAvoidingView>

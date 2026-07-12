@@ -3,10 +3,41 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import {
   createInternalShift,
+  getMyAssignedUpcoming,
+  getMyAssignmentForShift,
   getShiftAssignments,
   getTodayAssignments,
   updateAssignmentStatus,
 } from "./api";
+
+export function useMyAssignedUpcoming(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.assignments.mineUpcoming(waiterId ?? ""),
+    queryFn: () => getMyAssignedUpcoming(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+export function useMyAssignmentForShift(
+  shiftId: string,
+  waiterId: string | undefined
+) {
+  return useQuery({
+    queryKey: qk.assignments.mineForShift(shiftId, waiterId ?? ""),
+    queryFn: () => getMyAssignmentForShift(shiftId, waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+/** Waiter confirms/declines an assignment; refresh every assignment view. */
+export function useRespondToAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string; status: Enums<"assignment_status"> }) =>
+      updateAssignmentStatus(vars.id, vars.status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.assignments.all }),
+  });
+}
 
 export function useShiftAssignments(shiftId: string) {
   return useQuery({
