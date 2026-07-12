@@ -1,16 +1,19 @@
 import { useRouter } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { useMyVenue } from "@/features/venues/hooks";
+import type { Venue } from "@/features/venues/api";
 
 function InfoLine({ label, value }: { label: string; value: string }) {
   return (
@@ -21,12 +24,59 @@ function InfoLine({ label, value }: { label: string; value: string }) {
   );
 }
 
+/** Barra + checklist dei campi mancanti del locale. Nascosta se la scheda è completa. */
+function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void }) {
+  const items = [
+    { label: "Città", done: !!venue.city },
+    { label: "Indirizzo", done: !!venue.address },
+    { label: "Tipo di cucina", done: !!venue.cuisine_type },
+    { label: "Descrizione", done: !!venue.description },
+  ];
+  const completed = items.filter((i) => i.done).length;
+  if (completed >= items.length) return null;
+
+  return (
+    <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
+      <View className="flex-row items-center justify-between">
+        <Mono>Completa la scheda</Mono>
+        <Text className="text-sm text-t3">
+          {completed}/{items.length}
+        </Text>
+      </View>
+      <ProgressBar progress={completed / items.length} />
+      <View className="gap-1">
+        {items.map((item) => (
+          <Pressable
+            key={item.label}
+            onPress={onEdit}
+            className="flex-row items-center gap-3 py-1.5"
+          >
+            <View
+              className={cn(
+                "h-6 w-6 items-center justify-center rounded-full border bg-bg-2",
+                item.done ? "border-gold" : "border-border-2",
+              )}
+            >
+              {item.done ? <Icon name="check" size={14} color="#EAB54C" /> : null}
+            </View>
+            <Text
+              className={cn("flex-1 text-sm", item.done ? "text-t3" : "text-t1")}
+            >
+              {item.label}
+            </Text>
+            {!item.done ? <Icon name="chevR" size={16} color="#5A5348" /> : null}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function ManagerProfiloScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, profile, signOut } = useAuth();
+  const { session } = useAuth();
   const userId = session!.user.id;
-  const name = profile?.full_name ?? "Ristoratore";
 
   const venueQuery = useMyVenue(userId);
   const venue = venueQuery.data ?? null;
@@ -41,7 +91,16 @@ export default function ManagerProfiloScreen() {
         gap: 24,
       }}
     >
-      <Mono>Profilo · Locale</Mono>
+      <View className="flex-row items-center justify-between">
+        <Mono>Profilo · Locale</Mono>
+        <Pressable
+          onPress={() => router.push("/(manager)/impostazioni")}
+          hitSlop={8}
+          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+        >
+          <Icon name="settings" size={19} color="#F8F4ED" />
+        </Pressable>
+      </View>
 
       {venueQuery.isLoading ? (
         <ActivityIndicator color="#EAB54C" className="mt-16" />
@@ -90,6 +149,11 @@ export default function ManagerProfiloScreen() {
             onPress={() => router.push("/(manager)/venue")}
           />
 
+          <CompletenessCard
+            venue={venue}
+            onEdit={() => router.push("/(manager)/venue")}
+          />
+
           {venue.cuisine_type || venue.address || venue.description ? (
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
               <Mono>Il tuo locale</Mono>
@@ -108,12 +172,6 @@ export default function ManagerProfiloScreen() {
           ) : null}
         </>
       )}
-
-      <View className="mt-auto">
-        <Mono className="mb-2">Account</Mono>
-        <Text className="mb-3 text-sm text-t3">{name}</Text>
-        <GhostButton label="Esci" onPress={signOut} />
-      </View>
     </ScrollView>
   );
 }
