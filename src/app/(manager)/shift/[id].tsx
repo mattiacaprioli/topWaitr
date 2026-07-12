@@ -13,8 +13,49 @@ import { useToast } from "@/providers/Toast";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
+import { useShiftAssignments } from "@/features/assignments/hooks";
 import type { ApplicationWithWaiter } from "@/features/applications/api";
+import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
+
+const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
+  assigned: "Assegnato",
+  confirmed: "Confermato",
+  declined: "Rifiutato",
+};
+
+/** Riga staff assegnato a un turno interno (vista ristoratore). */
+function AssignedRow({
+  assignment,
+  onPress,
+}: {
+  assignment: AssignmentWithStaff;
+  onPress?: () => void;
+}) {
+  const sm = assignment.staff_member;
+  const name = sm?.display_name ?? "Staff";
+  return (
+    <Card onPress={onPress}>
+      <View className="flex-row items-center gap-3">
+        <Avatar uri={sm?.waiter?.avatar_url ?? undefined} name={name} size={44} />
+        <View className="flex-1">
+          <View className="flex-row items-center gap-1.5">
+            <Text className="text-base font-sans-bold text-t1">{name}</Text>
+            {sm?.waiter_id ? (
+              <Icon name="verified" size={15} color="#EAB54C" />
+            ) : null}
+          </View>
+          {sm?.role ? <Text className="text-xs text-t3">{sm.role}</Text> : null}
+        </View>
+        <Pill
+          label={ASSIGN_STATUS_LABEL[assignment.status]}
+          variant={assignment.status === "declined" ? "cancelled" : "neutral"}
+        />
+        {onPress ? <Icon name="chevR" size={18} color="#8c857a" /> : null}
+      </View>
+    </Card>
+  );
+}
 
 const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   open: "Aperto",
@@ -74,6 +115,8 @@ export default function ShiftDetailScreen() {
   const shift = shiftQuery.data ?? null;
   const appsQuery = useApplications(id);
   const applications = appsQuery.data ?? [];
+  const assignmentsQuery = useShiftAssignments(id);
+  const assignments = assignmentsQuery.data ?? [];
 
   const decision = useApplicationDecision(id);
   const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
@@ -128,6 +171,8 @@ export default function ShiftDetailScreen() {
     );
   }
 
+  const internal = shift.kind === "internal";
+
   return (
     <ScrollView className="flex-1 bg-bg-1" contentContainerClassName="p-6">
       <Card>
@@ -139,9 +184,15 @@ export default function ShiftDetailScreen() {
           {formatDate(shift.date)} · {formatTime(shift.start_time)}–
           {formatTime(shift.end_time)}
         </Text>
-        <Text className="mt-1 text-sm text-t2">{formatRate(shift.hourly_rate)}</Text>
+        {internal ? null : (
+          <Text className="mt-1 text-sm text-t2">
+            {formatRate(shift.hourly_rate)}
+          </Text>
+        )}
         <Text className="mt-1 text-sm text-t3">
-          {shift.positions_filled}/{shift.positions_total} posizioni coperte
+          {internal
+            ? `${assignments.length} nello staff`
+            : `${shift.positions_filled}/${shift.positions_total} posizioni coperte`}
         </Text>
 
         {shift.dress_code ? (
@@ -190,7 +241,7 @@ export default function ShiftDetailScreen() {
         ) : null}
       </View>
 
-      {shift.status !== "cancelled" ? (
+      {!internal && shift.status !== "cancelled" ? (
         <Pressable
           disabled={busy}
           onPress={() => router.push(`/(manager)/shift/edit/${id}`)}
@@ -202,18 +253,52 @@ export default function ShiftDetailScreen() {
         </Pressable>
       ) : null}
 
-      <SectionHeader title="Candidature" className="mt-8" />
+      {internal ? (
+        <>
+          <SectionHeader title="Staff assegnato" className="mt-8" />
+          {assignmentsQuery.isError ? (
+            <QueryError
+              onRetry={() => assignmentsQuery.refetch()}
+              subtitle="Non siamo riusciti a caricare lo staff. Riprova."
+            />
+          ) : assignments.length === 0 ? (
+            <EmptyState
+              title="Nessuno assegnato"
+              subtitle="Questo turno non ha ancora nessuno dello staff."
+            />
+          ) : (
+            <View className="gap-3">
+              {assignments.map((a) => {
+                const waiterId = a.staff_member?.waiter_id ?? null;
+                return (
+                  <AssignedRow
+                    key={a.id}
+                    assignment={a}
+                    onPress={
+                      waiterId
+                        ? () => router.push(`/(manager)/cameriere/${waiterId}`)
+                        : undefined
+                    }
+                  />
+                );
+              })}
+            </View>
+          )}
+        </>
+      ) : (
+        <>
+          <SectionHeader title="Candidature" className="mt-8" />
 
-      {appsQuery.isError ? (
-        <QueryError
-          onRetry={() => appsQuery.refetch()}
-          subtitle="Non siamo riusciti a caricare le candidature. Riprova."
-        />
-      ) : applications.length === 0 ? (
-        <EmptyState
-          title="Nessuna candidatura"
-          subtitle="Quando un cameriere si candida lo vedrai qui."
-        />
+          {appsQuery.isError ? (
+            <QueryError
+              onRetry={() => appsQuery.refetch()}
+              subtitle="Non siamo riusciti a caricare le candidature. Riprova."
+            />
+          ) : applications.length === 0 ? (
+            <EmptyState
+              title="Nessuna candidatura"
+              subtitle="Quando un cameriere si candida lo vedrai qui."
+            />
       ) : (
         <View className="gap-3">
           {applications.map((app) => (
@@ -275,6 +360,8 @@ export default function ShiftDetailScreen() {
             </Card>
           ))}
         </View>
+          )}
+        </>
       )}
     </ScrollView>
   );

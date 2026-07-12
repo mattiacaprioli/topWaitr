@@ -294,6 +294,45 @@ export type Database = {
           },
         ]
       }
+      shift_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          shift_id: string
+          staff_member_id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          shift_id: string
+          staff_member_id: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          shift_id?: string
+          staff_member_id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_assignments_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_assignments_staff_member_id_fkey"
+            columns: ["staff_member_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           created_at: string
@@ -303,6 +342,7 @@ export type Database = {
           end_time: string
           hourly_rate: number | null
           id: string
+          kind: Database["public"]["Enums"]["shift_kind"]
           positions_filled: number
           positions_total: number
           requirements: string[] | null
@@ -319,6 +359,7 @@ export type Database = {
           end_time: string
           hourly_rate?: number | null
           id?: string
+          kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
           requirements?: string[] | null
@@ -335,6 +376,7 @@ export type Database = {
           end_time?: string
           hourly_rate?: number | null
           id?: string
+          kind?: Database["public"]["Enums"]["shift_kind"]
           positions_filled?: number
           positions_total?: number
           requirements?: string[] | null
@@ -535,12 +577,15 @@ export type Database = {
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
+      assignment_status: "assigned" | "confirmed" | "declined"
       employment_type: "fisso" | "a_chiamata"
       notification_type:
         | "application_received"
         | "application_accepted"
         | "application_rejected"
         | "new_message"
+        | "shift_assigned"
+      shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       user_role: "waiter" | "manager"
     }
@@ -671,13 +716,16 @@ export const Constants = {
   public: {
     Enums: {
       application_status: ["pending", "accepted", "rejected", "cancelled"],
+      assignment_status: ["assigned", "confirmed", "declined"],
       employment_type: ["fisso", "a_chiamata"],
       notification_type: [
         "application_received",
         "application_accepted",
         "application_rejected",
         "new_message",
+        "shift_assigned",
       ],
+      shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],
       user_role: ["waiter", "manager"],
     },

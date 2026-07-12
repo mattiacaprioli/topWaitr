@@ -19,9 +19,22 @@ import { formatTime } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts } from "@/features/shifts/hooks";
 import { usePendingCount, useTodayStaff } from "@/features/applications/hooks";
+import { useTodayAssignments } from "@/features/assignments/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 
 const PREVIEW_COUNT = 3;
+
+type TodayWorker = {
+  key: string;
+  name: string;
+  avatarUri?: string;
+  role: string | null;
+  ratingAvg: number | null;
+  ratingCount: number | null;
+  start: string;
+  end: string;
+  onPress?: () => void;
+};
 
 export default function ManagerHome() {
   const { profile, session } = useAuth();
@@ -36,24 +49,63 @@ export default function ManagerHome() {
   const shifts = shiftsQuery.data ?? [];
   const staffQuery = useTodayStaff(venue?.id);
   const todayStaff = staffQuery.data ?? [];
+  const assignQuery = useTodayAssignments(venue?.id);
+  const todayAssignments = assignQuery.data ?? [];
   const pending = usePendingCount(venue?.id).data ?? 0;
   const unread = useUnreadCount(userId).data ?? 0;
 
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = shifts.filter((s) => s.date >= today);
   const past = shifts.filter((s) => s.date < today);
-  const openCount = upcoming.filter((s) => s.status === "open").length;
+  const openCount = upcoming.filter(
+    (s) => s.kind === "marketplace" && s.status === "open"
+  ).length;
   const filled = upcoming.reduce((n, s) => n + s.positions_filled, 0);
   const totalPos = upcoming.reduce((n, s) => n + s.positions_total, 0);
+
+  // "Chi lavora oggi": staff assegnato ai turni interni + camerieri accettati
+  // sui turni marketplace di oggi, in un'unica lista.
+  const workers: TodayWorker[] = [
+    ...todayAssignments.map((a) => {
+      const sm = a.staff_member;
+      const waiterId = sm?.waiter_id ?? null;
+      return {
+        key: `asg-${a.id}`,
+        name: sm?.display_name ?? "Staff",
+        avatarUri: sm?.waiter?.avatar_url ?? undefined,
+        role: sm?.role ?? null,
+        ratingAvg: sm?.waiter?.waiter_profile?.rating_avg ?? null,
+        ratingCount: sm?.waiter?.waiter_profile?.rating_count ?? null,
+        start: a.shift?.start_time ?? "",
+        end: a.shift?.end_time ?? "",
+        onPress: waiterId
+          ? () => router.push(`/(manager)/cameriere/${waiterId}`)
+          : undefined,
+      };
+    }),
+    ...todayStaff.map((row) => ({
+      key: `app-${row.id}`,
+      name: row.waiter?.full_name ?? "Cameriere",
+      avatarUri: row.waiter?.avatar_url ?? undefined,
+      role: row.waiter?.waiter_profile?.primary_role ?? null,
+      ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
+      ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
+      start: row.shift?.start_time ?? "",
+      end: row.shift?.end_time ?? "",
+      onPress: () => router.push(`/(manager)/cameriere/${row.waiter_id}`),
+    })),
+  ].sort((a, b) => a.start.localeCompare(b.start));
 
   const refreshing =
     venueQuery.isRefetching ||
     shiftsQuery.isRefetching ||
-    staffQuery.isRefetching;
+    staffQuery.isRefetching ||
+    assignQuery.isRefetching;
   const onRefresh = () => {
     venueQuery.refetch();
     shiftsQuery.refetch();
     staffQuery.refetch();
+    assignQuery.refetch();
   };
 
   return (
@@ -124,50 +176,39 @@ export default function ManagerHome() {
           </View>
 
           {/* Chi lavora oggi */}
-          {todayStaff.length > 0 ? (
+          {workers.length > 0 ? (
             <View className="gap-3">
               <View>
-                <Mono gold>Oggi in sala · {todayStaff.length}</Mono>
+                <Mono gold>Oggi in sala · {workers.length}</Mono>
                 <Display className="mt-0.5 text-2xl">Chi lavora oggi</Display>
               </View>
               <View className="gap-3">
-                {todayStaff.map((row) => (
+                {workers.map((w) => (
                   <Card
-                    key={row.id}
+                    key={w.key}
                     className="rounded-3xl border-border-2 p-4"
-                    onPress={() =>
-                      router.push(`/(manager)/cameriere/${row.waiter_id}`)
-                    }
+                    onPress={w.onPress}
                   >
                     <View className="flex-row items-center gap-3">
-                      <Avatar
-                        uri={row.waiter?.avatar_url ?? undefined}
-                        name={row.waiter?.full_name ?? "Cameriere"}
-                        size={44}
-                      />
+                      <Avatar uri={w.avatarUri} name={w.name} size={44} />
                       <View className="flex-1">
                         <Text className="text-base font-sans-bold text-t1">
-                          {row.waiter?.full_name ?? "Cameriere"}
+                          {w.name}
                         </Text>
-                        {row.waiter?.waiter_profile?.primary_role ? (
-                          <Text className="text-xs text-t3">
-                            {row.waiter.waiter_profile.primary_role}
-                          </Text>
+                        {w.role ? (
+                          <Text className="text-xs text-t3">{w.role}</Text>
                         ) : null}
                         <RatingBadge
-                          avg={row.waiter?.waiter_profile?.rating_avg ?? null}
-                          count={
-                            row.waiter?.waiter_profile?.rating_count ?? null
-                          }
+                          avg={w.ratingAvg}
+                          count={w.ratingCount}
                           className="mt-1"
                         />
                       </View>
-                      {row.shift ? (
+                      {w.start && w.end ? (
                         <View className="flex-row items-center gap-1.5">
                           <Icon name="clock" size={14} color="#8c857a" />
                           <Text className="text-sm text-t2">
-                            {formatTime(row.shift.start_time)}–
-                            {formatTime(row.shift.end_time)}
+                            {formatTime(w.start)}–{formatTime(w.end)}
                           </Text>
                         </View>
                       ) : null}

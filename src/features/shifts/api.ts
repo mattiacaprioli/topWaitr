@@ -7,7 +7,7 @@ export type { Shift, ShiftWithCount, ShiftWithVenue };
 export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
   const { data, error } = await supabase
     .from("shifts")
-    .select("*, applications(count)")
+    .select("*, applications(count), shift_assignments(count)")
     .eq("venue_id", venueId)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -22,6 +22,7 @@ export async function getOpenShifts(): Promise<ShiftWithVenue[]> {
     .from("shifts")
     .select("*, venue:venues(*)")
     .eq("status", "open")
+    .eq("kind", "marketplace")
     .gte("date", today)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });

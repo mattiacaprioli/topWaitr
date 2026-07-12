@@ -41,7 +41,7 @@ export function ControlledPicker<T extends FieldValues>({
   );
 }
 
-function PickerField({
+export function PickerField({
   label,
   mode,
   value,
