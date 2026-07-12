@@ -84,7 +84,7 @@ export function StaffShiftForm({ venueId }: { venueId: string | undefined }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        className="flex-1 bg-bg-1"
+        className="flex-1 bg-bg-0"
         contentContainerClassName="p-6 gap-5"
         keyboardShouldPersistTaps="handled"
       >

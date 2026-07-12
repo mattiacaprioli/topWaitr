@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +11,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
@@ -59,6 +61,7 @@ export default function StaffNewScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const userId = session!.user.id;
   const venue = useMyVenue(userId).data ?? null;
   const venueId = venue?.id;
@@ -164,10 +167,17 @@ export default function StaffNewScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        className="flex-1 bg-bg-1"
-        contentContainerClassName="p-6 gap-5"
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 20,
+        }}
         keyboardShouldPersistTaps="handled"
       >
+        <ScreenHeader eyebrow="Staff" title="Aggiungi" />
+
         {/* Segmented */}
         <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
           {MODES.map((m) => {

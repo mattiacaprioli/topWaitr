@@ -10,10 +10,7 @@ export default function WaiterLayout() {
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="shift/[id]"
-        options={{ title: "Dettaglio turno", headerBackTitle: "Turni" }}
-      />
+      <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="candidature" options={{ headerShown: false }} />
       <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
       <Stack.Screen name="qr" options={{ headerShown: false }} />

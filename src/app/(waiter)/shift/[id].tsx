@@ -1,14 +1,18 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from "react-native";
-import { ScrollView, Text, View } from "@/tw";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
@@ -79,6 +83,8 @@ function InfoRow({
 
 export default function WaiterShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const waiterId = session!.user.id;
   const toast = useToast();
@@ -93,6 +99,10 @@ export default function WaiterShiftDetailScreen() {
   const myAssignment = myAssignmentQuery.data ?? null;
   const respond = useRespondToAssignment();
 
+  const [withdrawVisible, setWithdrawVisible] = useState(false);
+  const [declineVisible, setDeclineVisible] = useState(false);
+
+  /** Conferma presenza (o ri-conferma dopo un rifiuto). */
   function onRespond(status: Enums<"assignment_status">) {
     if (!myAssignment) return;
     respond.mutate(
@@ -107,39 +117,35 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
-  function confirmDecline() {
-    Alert.alert("Rifiutare il turno?", "Il ristoratore verrà avvisato.", [
-      { text: "Annulla", style: "cancel" },
+  function doDecline() {
+    if (!myAssignment) return;
+    respond.mutate(
+      { id: myAssignment.id, status: "declined" },
       {
-        text: "Rifiuta",
-        style: "destructive",
-        onPress: () => onRespond("declined"),
-      },
-    ]);
+        onSuccess: () => {
+          setDeclineVisible(false);
+          toast.show("Turno rifiutato");
+        },
+        onError: () => {
+          setDeclineVisible(false);
+          toast.show("Operazione non riuscita. Riprova.", "error");
+        },
+      }
+    );
   }
 
-  function confirmWithdraw() {
+  function doWithdraw() {
     if (!myApp) return;
-    Alert.alert(
-      "Ritira candidatura",
-      "Vuoi ritirare la candidatura per questo turno?",
-      [
-        { text: "Annulla", style: "cancel" },
-        {
-          text: "Ritira",
-          style: "destructive",
-          onPress: () =>
-            cancel.mutate(myApp.id, {
-              onSuccess: () => toast.show("Candidatura ritirata"),
-              onError: () =>
-                toast.show(
-                  "Impossibile ritirare la candidatura. Riprova.",
-                  "error"
-                ),
-            }),
-        },
-      ]
-    );
+    cancel.mutate(myApp.id, {
+      onSuccess: () => {
+        setWithdrawVisible(false);
+        toast.show("Candidatura ritirata");
+      },
+      onError: () => {
+        setWithdrawVisible(false);
+        toast.show("Impossibile ritirare la candidatura. Riprova.", "error");
+      },
+    });
   }
 
   const { control, handleSubmit, reset } = useForm<ApplicationForm>({
@@ -205,9 +211,21 @@ export default function WaiterShiftDetailScreen() {
     >
       <ScrollView
         className="flex-1 bg-bg-0"
-        contentContainerClassName="px-5 pb-12 pt-4"
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+        }}
         keyboardShouldPersistTaps="handled"
       >
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          className="mb-5 h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+        >
+          <Icon name="chevL" size={22} color="#F8F4ED" />
+        </Pressable>
+
         <View className="flex-row items-center gap-3.5">
           <View
             style={{
@@ -295,7 +313,7 @@ export default function WaiterShiftDetailScreen() {
                     <GhostButton
                       label="Non posso"
                       disabled={respond.isPending}
-                      onPress={confirmDecline}
+                      onPress={() => setDeclineVisible(true)}
                     />
                   </View>
                 ) : myAssignment.status === "confirmed" ? (
@@ -343,7 +361,7 @@ export default function WaiterShiftDetailScreen() {
                 className="mt-4"
                 label={cancel.isPending ? "Ritiro…" : "Ritira candidatura"}
                 disabled={cancel.isPending}
-                onPress={confirmWithdraw}
+                onPress={() => setWithdrawVisible(true)}
               />
             ) : null}
           </Card>
@@ -386,6 +404,27 @@ export default function WaiterShiftDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <ConfirmModal
+        visible={withdrawVisible}
+        title="Ritirare la candidatura?"
+        message="Non risulterai più tra i candidati per questo turno."
+        confirmLabel="Ritira"
+        destructive
+        pending={cancel.isPending}
+        onConfirm={doWithdraw}
+        onCancel={() => setWithdrawVisible(false)}
+      />
+      <ConfirmModal
+        visible={declineVisible}
+        title="Rifiutare il turno?"
+        message="Il ristoratore verrà avvisato."
+        confirmLabel="Rifiuta"
+        destructive
+        pending={respond.isPending}
+        onConfirm={doDecline}
+        onCancel={() => setDeclineVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

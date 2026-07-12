@@ -1,6 +1,7 @@
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { Chip } from "@/components/ui/Chip";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
@@ -23,7 +24,6 @@ import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
-import { Alert } from "react-native";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -47,26 +47,20 @@ function InfoLine({ label, value }: { label: string; value: string }) {
 function EmployerCard({ employer }: { employer: MyEmployer }) {
   const toast = useToast();
   const leave = useLeaveVenue();
+  const [confirmVisible, setConfirmVisible] = useState(false);
   const venueName = employer.venue?.name ?? "Locale";
 
-  function confirmLeave() {
-    Alert.alert(
-      "Lasciare questo locale?",
-      `Non farai più parte dello staff di ${venueName}.`,
-      [
-        { text: "Annulla", style: "cancel" },
-        {
-          text: "Lascia",
-          style: "destructive",
-          onPress: () =>
-            leave.mutate(employer.id, {
-              onSuccess: () => toast.show("Hai lasciato il locale"),
-              onError: () =>
-                toast.show("Operazione non riuscita. Riprova.", "error"),
-            }),
-        },
-      ]
-    );
+  function onConfirm() {
+    leave.mutate(employer.id, {
+      onSuccess: () => {
+        setConfirmVisible(false);
+        toast.show("Hai lasciato il locale");
+      },
+      onError: () => {
+        setConfirmVisible(false);
+        toast.show("Operazione non riuscita. Riprova.", "error");
+      },
+    });
   }
 
   return (
@@ -90,15 +84,25 @@ function EmployerCard({ employer }: { employer: MyEmployer }) {
         />
       </View>
       <Pressable
-        onPress={confirmLeave}
-        disabled={leave.isPending}
+        onPress={() => setConfirmVisible(true)}
         hitSlop={6}
         className="mt-3 self-start"
       >
         <Text className="text-sm font-sans-semibold text-error">
-          {leave.isPending ? "Attendere…" : "Lascia il locale"}
+          Lascia il locale
         </Text>
       </Pressable>
+
+      <ConfirmModal
+        visible={confirmVisible}
+        title="Lasciare questo locale?"
+        message={`Non farai più parte dello staff di ${venueName}.`}
+        confirmLabel="Lascia"
+        destructive
+        pending={leave.isPending}
+        onConfirm={onConfirm}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </Card>
   );
 }

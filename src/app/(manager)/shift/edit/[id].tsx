@@ -1,8 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { useShift, useUpdateShift } from "@/features/shifts/hooks";
 import { ShiftFormView } from "@/features/shifts/ShiftFormView";
@@ -13,6 +15,7 @@ export default function EditShiftScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -20,7 +23,7 @@ export default function EditShiftScreen() {
 
   if (shiftQuery.isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg-1">
+      <View className="flex-1 items-center justify-center bg-bg-0">
         <ActivityIndicator color="#EAB54C" />
       </View>
     );
@@ -28,7 +31,7 @@ export default function EditShiftScreen() {
 
   if (shiftQuery.isError) {
     return (
-      <View className="flex-1 justify-center bg-bg-1 px-6">
+      <View className="flex-1 justify-center bg-bg-0 px-6">
         <QueryError onRetry={() => shiftQuery.refetch()} />
       </View>
     );
@@ -36,7 +39,7 @@ export default function EditShiftScreen() {
 
   if (!shift) {
     return (
-      <View className="flex-1 bg-bg-1">
+      <View className="flex-1 bg-bg-0">
         <EmptyState
           title="Turno non trovato"
           subtitle="Questo turno non è più disponibile."
@@ -57,12 +60,17 @@ export default function EditShiftScreen() {
   };
 
   return (
-    <ShiftFormView
-      defaultValues={shiftToForm(shift)}
-      submitLabel="Salva modifiche"
-      pendingLabel="Salvataggio…"
-      pending={update.isPending}
-      onSubmit={onSubmit}
-    />
+    <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
+      <View className="px-6">
+        <ScreenHeader eyebrow="Turno" title="Modifica turno" />
+      </View>
+      <ShiftFormView
+        defaultValues={shiftToForm(shift)}
+        submitLabel="Salva modifiche"
+        pendingLabel="Salvataggio…"
+        pending={update.isPending}
+        onSubmit={onSubmit}
+      />
+    </View>
   );
 }

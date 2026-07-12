@@ -1,18 +1,17 @@
 import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import {
-  ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Chip } from "@/components/ui/Chip";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import {
   useRemoveStaffMember,
@@ -28,6 +27,7 @@ const ROLES = ["Cameriere", "Chef de Rang", "Sommelier", "Runner", "Hostess", "B
 function StaffEditForm({ member }: { member: StaffMember }) {
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const update = useUpdateStaffMember();
   const remove = useRemoveStaffMember();
   const busy = update.isPending || remove.isPending;
@@ -39,6 +39,8 @@ function StaffEditForm({ member }: { member: StaffMember }) {
   );
   const [phone, setPhone] = useState(member.phone ?? "");
   const [note, setNote] = useState(member.note ?? "");
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const waiterId = member.waiter_id;
 
   function onSave() {
     if (!name.trim()) return;
@@ -63,27 +65,18 @@ function StaffEditForm({ member }: { member: StaffMember }) {
     );
   }
 
-  function onRemove() {
-    Alert.alert(
-      "Rimuovere dallo staff?",
-      `${member.display_name} non sarà più nel tuo organico.`,
-      [
-        { text: "Annulla", style: "cancel" },
-        {
-          text: "Rimuovi",
-          style: "destructive",
-          onPress: () =>
-            remove.mutate(member.id, {
-              onSuccess: () => {
-                toast.show("Rimosso dallo staff");
-                router.back();
-              },
-              onError: () =>
-                toast.show("Impossibile rimuovere. Riprova.", "error"),
-            }),
-        },
-      ]
-    );
+  function doRemove() {
+    remove.mutate(member.id, {
+      onSuccess: () => {
+        setConfirmVisible(false);
+        toast.show("Rimosso dallo staff");
+        router.back();
+      },
+      onError: () => {
+        setConfirmVisible(false);
+        toast.show("Impossibile rimuovere. Riprova.", "error");
+      },
+    });
   }
 
   return (
@@ -92,14 +85,32 @@ function StaffEditForm({ member }: { member: StaffMember }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        className="flex-1 bg-bg-1"
-        contentContainerClassName="p-6 gap-5"
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 20,
+        }}
         keyboardShouldPersistTaps="handled"
       >
-        {member.waiter_id ? (
-          <View className="flex-row items-center gap-2 rounded-2xl border border-border-2 bg-bg-card px-4 py-3">
-            <Mono gold>Collegato a un account app</Mono>
-          </View>
+        <ScreenHeader eyebrow="Staff" title={member.display_name} />
+
+        {waiterId ? (
+          <Pressable
+            onPress={() => router.push(`/(manager)/cameriere/${waiterId}`)}
+          >
+            <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-card px-4 py-3.5">
+              <Icon name="verified" size={18} color="#EAB54C" />
+              <View className="flex-1">
+                <Mono gold>Account app collegato</Mono>
+                <Text className="mt-0.5 text-sm text-t2">
+                  Vedi profilo e recensioni
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#8c857a" />
+            </View>
+          </Pressable>
         ) : null}
 
         <Input
@@ -167,14 +178,25 @@ function StaffEditForm({ member }: { member: StaffMember }) {
         />
         <Pressable
           disabled={busy}
-          onPress={onRemove}
-          className="items-center rounded-xl border border-border py-3"
+          onPress={() => setConfirmVisible(true)}
+          className="items-center rounded-2xl border border-border-2 py-3.5"
         >
           <Text className="text-sm font-sans-semibold text-error">
             Rimuovi dallo staff
           </Text>
         </Pressable>
       </ScrollView>
+
+      <ConfirmModal
+        visible={confirmVisible}
+        title="Rimuovere dallo staff?"
+        message={`${member.display_name} non sarà più nel tuo organico.`}
+        confirmLabel="Rimuovi"
+        destructive
+        pending={remove.isPending}
+        onConfirm={doRemove}
+        onCancel={() => setConfirmVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -186,7 +208,7 @@ export default function StaffMemberScreen() {
 
   if (memberQuery.isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg-1">
+      <View className="flex-1 items-center justify-center bg-bg-0">
         <ActivityIndicator color="#EAB54C" />
       </View>
     );
@@ -194,7 +216,7 @@ export default function StaffMemberScreen() {
 
   if (memberQuery.isError) {
     return (
-      <View className="flex-1 justify-center bg-bg-1 px-6">
+      <View className="flex-1 justify-center bg-bg-0 px-6">
         <QueryError onRetry={() => memberQuery.refetch()} />
       </View>
     );
@@ -202,7 +224,7 @@ export default function StaffMemberScreen() {
 
   if (!member) {
     return (
-      <View className="flex-1 bg-bg-1">
+      <View className="flex-1 bg-bg-0">
         <EmptyState
           title="Scheda non trovata"
           subtitle="Questo membro dello staff non esiste più."

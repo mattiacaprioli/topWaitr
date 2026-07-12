@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, Text, View } from "@/tw";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
@@ -68,11 +70,15 @@ export default function NewShiftScreen() {
   const { session } = useAuth();
   const userId = session!.user.id;
   const venueId = useMyVenue(userId).data?.id;
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("staff");
 
   return (
-    <View className="flex-1 bg-bg-1">
-      <View className="px-6 pt-4">
+    <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
+      <View className="px-6">
+        <ScreenHeader eyebrow="Turno" title="Nuovo turno" />
+      </View>
+      <View className="px-6 pt-5">
         <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">
           {(
             [

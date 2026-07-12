@@ -3,10 +3,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { QueryError } from "@/components/ui/QueryError";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { useMyVenue, useSaveVenue } from "@/features/venues/hooks";
@@ -16,6 +18,7 @@ export default function VenueScreen() {
   const { session } = useAuth();
   const router = useRouter();
   const toast = useToast();
+  const insets = useSafeAreaInsets();
   const userId = session!.user.id;
 
   const venueQuery = useMyVenue(userId);
@@ -58,11 +61,11 @@ export default function VenueScreen() {
     }
   });
 
-  if (venueQuery.isLoading) return <View className="flex-1 bg-bg-1" />;
+  if (venueQuery.isLoading) return <View className="flex-1 bg-bg-0" />;
 
   if (venueQuery.isError) {
     return (
-      <View className="flex-1 justify-center bg-bg-1 px-6">
+      <View className="flex-1 justify-center bg-bg-0 px-6">
         <QueryError onRetry={() => venueQuery.refetch()} />
       </View>
     );
@@ -74,10 +77,17 @@ export default function VenueScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        className="flex-1 bg-bg-1"
-        contentContainerClassName="p-6 gap-4"
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 48,
+          gap: 16,
+        }}
         keyboardShouldPersistTaps="handled"
       >
+        <ScreenHeader eyebrow="Locale" title="Il tuo locale" />
+
         <Text className="text-base text-t2">
           Queste informazioni saranno visibili ai camerieri sui tuoi turni.
         </Text>
