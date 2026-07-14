@@ -19,6 +19,7 @@ import {
   useUpdateStaffMember,
 } from "@/features/staff/hooks";
 import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
+import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
 import type { StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
@@ -115,6 +116,11 @@ function StaffEditForm({ member }: { member: StaffMember }) {
         ) : null}
 
         <StaffHoursSection staffMemberId={member.id} />
+
+        <StaffPerformanceSection
+          staffMemberId={member.id}
+          waiterId={member.waiter_id}
+        />
 
         <Input
           label="Nome"
