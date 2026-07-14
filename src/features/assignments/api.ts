@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember } from "@/features/staff/api";
+import { assignmentHours, isWorked } from "./hours";
 
 export type Assignment = Tables<"shift_assignments">;
 
@@ -101,6 +102,116 @@ export async function updateAssignmentStatus(
     .update({ status })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Presenza a turno concluso: stato (presente/assente) e/o ore effettive. */
+export async function setAssignmentPresence(
+  id: string,
+  fields: { status?: Enums<"assignment_status">; worked_hours?: number | null }
+): Promise<void> {
+  const { error } = await supabase
+    .from("shift_assignments")
+    .update(fields)
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+type ShiftSlot = Pick<
+  Shift,
+  "id" | "title" | "date" | "start_time" | "end_time" | "venue_id"
+>;
+
+/** Manager side: an assignment joined with a lightweight shift slot. */
+export type StaffAssignment = Assignment & { shift: ShiftSlot | null };
+
+/** All assignments of one roster member (for the hours/history section). */
+export async function getStaffAssignments(
+  staffMemberId: string
+): Promise<StaffAssignment[]> {
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      "*, shift:shifts!inner(id, title, date, start_time, end_time, venue_id)"
+    )
+    .eq("staff_member_id", staffMemberId);
+  if (error) throw new Error(error.message);
+  const rows = (data as StaffAssignment[] | null) ?? [];
+  return rows.sort((a, b) =>
+    (b.shift?.date ?? "").localeCompare(a.shift?.date ?? "")
+  );
+}
+
+/** Ore lavorate per membro dell'organico in un mese ("YYYY-MM"). */
+export type StaffHoursRow = {
+  staff_member_id: string;
+  display_name: string;
+  role: string | null;
+  shifts_count: number;
+  hours: number;
+};
+
+type HoursRawRow = {
+  status: Enums<"assignment_status">;
+  worked_hours: number | null;
+  staff_member: { id: string; display_name: string; role: string | null } | null;
+  shift: { date: string; start_time: string; end_time: string } | null;
+};
+
+function monthBounds(month: string): { start: string; end: string } {
+  const [y, m] = month.split("-").map(Number);
+  const nextY = m === 12 ? y + 1 : y;
+  const nextM = m === 12 ? 1 : m + 1;
+  return {
+    start: `${month}-01`,
+    end: `${nextY}-${String(nextM).padStart(2, "0")}-01`,
+  };
+}
+
+/**
+ * Riepilogo ore per l'organico di un locale in un mese: aggrega i turni interni
+ * già svolti (data passata, non rifiutati/assenti) per membro. Ordine per ore desc.
+ */
+export async function getVenueHoursSummary(
+  venueId: string,
+  month: string
+): Promise<StaffHoursRow[]> {
+  const { start, end } = monthBounds(month);
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      "status, worked_hours, staff_member:staff_members!inner(id, display_name, role), shift:shifts!inner(date, start_time, end_time, venue_id, kind)"
+    )
+    .eq("shift.venue_id", venueId)
+    .eq("shift.kind", "internal")
+    .gte("shift.date", start)
+    .lt("shift.date", end);
+  if (error) throw new Error(error.message);
+
+  const rows = (data as HoursRawRow[] | null) ?? [];
+  const byMember = new Map<string, StaffHoursRow>();
+  for (const r of rows) {
+    const sm = r.staff_member;
+    const sh = r.shift;
+    if (!sm || !sh) continue;
+    if (sh.date >= today) continue; // solo turni conclusi
+    if (!isWorked(r.status)) continue; // esclude rifiutati/assenti
+    const h = assignmentHours(r.status, r.worked_hours, sh);
+    let entry = byMember.get(sm.id);
+    if (!entry) {
+      entry = {
+        staff_member_id: sm.id,
+        display_name: sm.display_name,
+        role: sm.role,
+        shifts_count: 0,
+        hours: 0,
+      };
+      byMember.set(sm.id, entry);
+    }
+    entry.shifts_count += 1;
+    entry.hours += h;
+  }
+  return [...byMember.values()].sort((a, b) => b.hours - a.hours);
 }
 
 /** Waiter side: the waiter's upcoming assigned shifts (their "Prossimi turni"). */

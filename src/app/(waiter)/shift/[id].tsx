@@ -48,6 +48,7 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
   assigned: "Da confermare",
   confirmed: "Confermato",
   declined: "Rifiutato",
+  no_show: "Assente",
 };
 
 function InfoRow({

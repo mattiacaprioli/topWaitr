@@ -115,6 +115,26 @@ export default function ManagerStaffScreen() {
             onPress={() => router.push("/(manager)/staff/new")}
           />
 
+          <Card
+            className="rounded-3xl border-border-2 p-4"
+            onPress={() => router.push("/(manager)/ore")}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                <Icon name="clock" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-sans-bold text-t1">
+                  Ore del mese
+                </Text>
+                <Text className="text-xs text-t3">
+                  Riepilogo ore e export per il commercialista
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#8c857a" />
+            </View>
+          </Card>
+
           {staffQuery.isLoading ? (
             <ActivityIndicator color="#EAB54C" className="mt-6" />
           ) : staffQuery.isError ? (

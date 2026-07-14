@@ -301,6 +301,7 @@ export type Database = {
           shift_id: string
           staff_member_id: string
           status: Database["public"]["Enums"]["assignment_status"]
+          worked_hours: number | null
         }
         Insert: {
           created_at?: string
@@ -308,6 +309,7 @@ export type Database = {
           shift_id: string
           staff_member_id: string
           status?: Database["public"]["Enums"]["assignment_status"]
+          worked_hours?: number | null
         }
         Update: {
           created_at?: string
@@ -315,6 +317,7 @@ export type Database = {
           shift_id?: string
           staff_member_id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
+          worked_hours?: number | null
         }
         Relationships: [
           {
@@ -633,7 +636,7 @@ export type Database = {
     }
     Enums: {
       application_status: "pending" | "accepted" | "rejected" | "cancelled"
-      assignment_status: "assigned" | "confirmed" | "declined"
+      assignment_status: "assigned" | "confirmed" | "declined" | "no_show"
       employment_type: "fisso" | "a_chiamata"
       notification_type:
         | "application_received"
@@ -775,7 +778,7 @@ export const Constants = {
   public: {
     Enums: {
       application_status: ["pending", "accepted", "rejected", "cancelled"],
-      assignment_status: ["assigned", "confirmed", "declined"],
+      assignment_status: ["assigned", "confirmed", "declined", "no_show"],
       employment_type: ["fisso", "a_chiamata"],
       notification_type: [
         "application_received",

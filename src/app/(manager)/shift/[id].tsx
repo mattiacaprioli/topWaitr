@@ -15,10 +15,20 @@ import { RatingBadge } from "@/components/ui/RatingBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { cn } from "@/lib/cn";
-import { formatDate, formatRate, formatTime } from "@/lib/format";
+import {
+  formatDate,
+  formatHours,
+  formatRate,
+  formatTime,
+  shiftDurationHours,
+} from "@/lib/format";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
-import { useShiftAssignments } from "@/features/assignments/hooks";
+import {
+  useSetAssignmentPresence,
+  useShiftAssignments,
+} from "@/features/assignments/hooks";
+import { isWorked } from "@/features/assignments/hours";
 import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
@@ -40,6 +50,7 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
   assigned: "Assegnato",
   confirmed: "Confermato",
   declined: "Rifiutato",
+  no_show: "Assente",
 };
 
 /** Riga label/valore nella card info (come il dettaglio turno cameriere). */
@@ -103,6 +114,154 @@ function AssignedRow({
         />
         {onPress ? <Icon name="chevR" size={18} color="#8c857a" /> : null}
       </View>
+    </Card>
+  );
+}
+
+/** Riga presenza per un turno interno concluso: presente/assente + ore effettive. */
+function PresenceRow({
+  assignment,
+  plannedHours,
+  shiftId,
+}: {
+  assignment: AssignmentWithStaff;
+  plannedHours: number;
+  shiftId: string;
+}) {
+  const presence = useSetAssignmentPresence(shiftId);
+  const sm = assignment.staff_member;
+  const name = sm?.display_name ?? "Staff";
+  const present = isWorked(assignment.status);
+  const effective = present ? (assignment.worked_hours ?? plannedHours) : 0;
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(plannedHours);
+
+  function setPresent(p: boolean) {
+    presence.mutate({ id: assignment.id, status: p ? "confirmed" : "no_show" });
+    if (!p) setEditing(false);
+  }
+  function step(delta: number) {
+    setDraft((d) => Math.max(0, Math.min(24, Math.round((d + delta) * 2) / 2)));
+  }
+  function saveHours() {
+    presence.mutate(
+      { id: assignment.id, worked_hours: draft },
+      { onSuccess: () => setEditing(false) }
+    );
+  }
+  function resetPlanned() {
+    presence.mutate(
+      { id: assignment.id, worked_hours: null },
+      { onSuccess: () => setEditing(false) }
+    );
+  }
+
+  return (
+    <Card className="rounded-3xl border-border-2 p-4">
+      <View className="flex-row items-center gap-3">
+        <Avatar uri={sm?.waiter?.avatar_url ?? undefined} name={name} size={44} />
+        <View className="flex-1">
+          <Text className="text-base font-sans-bold text-t1">{name}</Text>
+          {sm?.role ? <Text className="text-xs text-t3">{sm.role}</Text> : null}
+        </View>
+        <View className="flex-row overflow-hidden rounded-full border border-border">
+          <Pressable
+            disabled={presence.isPending}
+            onPress={() => setPresent(true)}
+            className={cn("px-3 py-1.5", present && "bg-gold")}
+          >
+            <Text
+              className={cn(
+                "text-xs font-sans-semibold",
+                present ? "text-gold-ink" : "text-t3"
+              )}
+            >
+              Presente
+            </Text>
+          </Pressable>
+          <Pressable
+            disabled={presence.isPending}
+            onPress={() => setPresent(false)}
+            className={cn("px-3 py-1.5", !present && "bg-error")}
+          >
+            <Text
+              className="text-xs font-sans-semibold"
+              style={{ color: !present ? "#FFFFFF" : "#8c857a" }}
+            >
+              Assente
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {present ? (
+        <View className="mt-3 border-t border-border pt-3">
+          {!editing ? (
+            <Pressable
+              onPress={() => {
+                setDraft(effective);
+                setEditing(true);
+              }}
+              className="flex-row items-center justify-between"
+            >
+              <View className="flex-row items-center gap-2">
+                <Icon name="clock" size={15} color="#8c857a" />
+                <Text className="text-sm text-t2">Ore: {formatHours(effective)}</Text>
+                {assignment.worked_hours != null ? (
+                  <Text className="text-[11px] text-t4">· modificate</Text>
+                ) : null}
+              </View>
+              <Text className="text-sm font-sans-semibold text-gold">Modifica</Text>
+            </Pressable>
+          ) : (
+            <View className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-sm text-t2">Ore effettive</Text>
+                <View className="flex-row items-center gap-4">
+                  <Pressable
+                    onPress={() => step(-0.5)}
+                    hitSlop={8}
+                    className="h-9 w-9 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                  >
+                    <Text className="text-lg text-t1">−</Text>
+                  </Pressable>
+                  <Text className="w-16 text-center font-sans-semibold text-base text-t1">
+                    {formatHours(draft)}
+                  </Text>
+                  <Pressable
+                    onPress={() => step(0.5)}
+                    hitSlop={8}
+                    className="h-9 w-9 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                  >
+                    <Text className="text-lg text-t1">+</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View className="flex-row gap-2.5">
+                <Pressable
+                  disabled={presence.isPending}
+                  onPress={resetPlanned}
+                  className="flex-1 items-center rounded-2xl border border-border-2 py-2.5"
+                >
+                  <Text className="text-sm font-sans-semibold text-t2">
+                    Pianificate
+                  </Text>
+                </Pressable>
+                <Pressable
+                  disabled={presence.isPending}
+                  onPress={saveHours}
+                  className="flex-1 items-center rounded-2xl bg-gold py-2.5"
+                >
+                  <Text className="text-sm font-sans-semibold text-gold-ink">
+                    Salva
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </View>
+      ) : null}
     </Card>
   );
 }
@@ -225,6 +384,8 @@ export default function ShiftDetailScreen() {
 
   const internal = shift.kind === "internal";
   const requirements = shift.requirements ?? [];
+  const isPast = shift.date < new Date().toISOString().slice(0, 10);
+  const plannedHours = shiftDurationHours(shift.start_time, shift.end_time);
 
   return (
     <>
@@ -343,7 +504,12 @@ export default function ShiftDetailScreen() {
 
       {internal ? (
         <View className="mt-8 gap-3">
-          <Mono>Staff assegnato</Mono>
+          <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
+          {isPast ? (
+            <Text className="-mt-1 text-xs text-t3">
+              Segna chi ha svolto il turno e correggi le ore se serve.
+            </Text>
+          ) : null}
           {assignmentsQuery.isError ? (
             <QueryError
               onRetry={() => assignmentsQuery.refetch()}
@@ -354,6 +520,15 @@ export default function ShiftDetailScreen() {
               title="Nessuno assegnato"
               subtitle="Questo turno non ha ancora nessuno dello staff."
             />
+          ) : isPast ? (
+            assignments.map((a) => (
+              <PresenceRow
+                key={a.id}
+                assignment={a}
+                plannedHours={plannedHours}
+                shiftId={id}
+              />
+            ))
           ) : (
             assignments.map((a) => {
               const waiterId = a.staff_member?.waiter_id ?? null;

@@ -6,7 +6,10 @@ import {
   getMyAssignedUpcoming,
   getMyAssignmentForShift,
   getShiftAssignments,
+  getStaffAssignments,
   getTodayAssignments,
+  getVenueHoursSummary,
+  setAssignmentPresence,
   updateAssignmentStatus,
 } from "./api";
 
@@ -81,6 +84,45 @@ export function useUpdateAssignmentStatus(shiftId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
       qc.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}
+
+export function useStaffAssignments(staffMemberId: string | undefined) {
+  return useQuery({
+    queryKey: qk.assignments.byStaff(staffMemberId ?? ""),
+    queryFn: () => getStaffAssignments(staffMemberId as string),
+    enabled: !!staffMemberId,
+  });
+}
+
+export function useVenueHoursSummary(
+  venueId: string | undefined,
+  month: string
+) {
+  return useQuery({
+    queryKey: qk.staff.hours(venueId ?? "", month),
+    queryFn: () => getVenueHoursSummary(venueId as string, month),
+    enabled: !!venueId,
+  });
+}
+
+/** Manager marks presence/hours on a concluded internal shift; refresh views. */
+export function useSetAssignmentPresence(shiftId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...fields
+    }: {
+      id: string;
+      status?: Enums<"assignment_status">;
+      worked_hours?: number | null;
+    }) => setAssignmentPresence(id, fields),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+      qc.invalidateQueries({ queryKey: qk.staff.all });
     },
   });
 }

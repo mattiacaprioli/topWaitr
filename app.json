@@ -44,7 +44,8 @@
           "savePhotosPermission": "Consenti a topWaitr di salvare il tuo QR nella galleria."
         }
       ],
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

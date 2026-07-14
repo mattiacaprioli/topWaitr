@@ -43,6 +43,14 @@ export function formatEuro(n: number): string {
   return `€${Math.round(n)}`;
 }
 
+// Ore in italiano, 1 decimale con virgola, senza decimale se intero: "5 h", "12,5 h".
+export function formatHours(hours: number): string {
+  const rounded = Math.round(hours * 10) / 10;
+  const label =
+    rounded % 1 === 0 ? String(rounded) : rounded.toFixed(1).replace(".", ",");
+  return `${label} h`;
+}
+
 // Tempo relativo in italiano da un timestamp ISO: "ora", "5 min fa", "2 ore fa",
 // "ieri", "3 giorni fa"; oltre la settimana ricade sulla data formattata.
 export function timeAgo(iso: string): string {

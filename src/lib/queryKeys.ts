@@ -56,10 +56,14 @@ export const qk = {
     workedWith: (venueId: string) => ["staff", "workedWith", venueId] as const,
     invites: (waiterId: string) => ["staff", "invites", waiterId] as const,
     employers: (waiterId: string) => ["staff", "employers", waiterId] as const,
+    hours: (venueId: string, month: string) =>
+      ["staff", "hours", venueId, month] as const,
   },
   assignments: {
     all: ["assignments"] as const,
     byShift: (shiftId: string) => ["assignments", "byShift", shiftId] as const,
+    byStaff: (staffMemberId: string) =>
+      ["assignments", "byStaff", staffMemberId] as const,
     today: (venueId: string) => ["assignments", "today", venueId] as const,
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
