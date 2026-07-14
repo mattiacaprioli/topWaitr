@@ -18,6 +18,7 @@ export default function ManagerLayout() {
       <Stack.Screen name="staff/new" options={{ headerShown: false }} />
       <Stack.Screen name="staff/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="ore" options={{ headerShown: false }} />
+      <Stack.Screen name="copertura" options={{ headerShown: false }} />
       <Stack.Screen name="cameriere/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />

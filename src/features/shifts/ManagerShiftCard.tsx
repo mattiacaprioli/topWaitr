@@ -1,6 +1,7 @@
 import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
 import type { Enums } from "@/types/database";
 import type { ShiftWithCount } from "./types";
@@ -20,9 +21,9 @@ export function ManagerShiftCard({
   onPress: () => void;
 }) {
   const internal = shift.kind === "internal";
-  const count = internal
-    ? shift.shift_assignments[0]?.count ?? 0
-    : shift.applications[0]?.count ?? 0;
+  const applicants = shift.applications[0]?.count ?? 0;
+  const covered = shift.positions_filled;
+  const total = shift.positions_total;
   return (
     <Card className="rounded-3xl border-border-2 p-5" onPress={onPress}>
       <View className="flex-row items-start justify-between gap-3">
@@ -45,10 +46,16 @@ export function ManagerShiftCard({
         </Text>
         <Text className="text-sm font-sans-semibold text-gold">
           {internal
-            ? `${count} assegnat${count === 1 ? "o" : "i"}`
-            : `${count} candidatur${count === 1 ? "a" : "e"}`}
+            ? `${covered}/${total} coperti`
+            : `${applicants} candidatur${applicants === 1 ? "a" : "e"}`}
         </Text>
       </View>
+      {internal ? (
+        <ProgressBar
+          className="mt-2.5"
+          progress={total > 0 ? Math.min(1, covered / total) : 0}
+        />
+      ) : null}
     </Card>
   );
 }

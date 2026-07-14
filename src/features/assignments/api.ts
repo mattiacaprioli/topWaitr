@@ -51,20 +51,33 @@ export async function createInternalShift(input: {
   end_time: string;
   description: string | null;
   staffIds: string[];
+  /** Fabbisogno per ruolo (es. 2 Cameriere + 1 Sommelier). */
+  roleTargets?: { role: string; count: number }[];
 }): Promise<Shift> {
-  const { staffIds, ...fields } = input;
+  const { staffIds, roleTargets, ...fields } = input;
+  const targets = (roleTargets ?? []).filter((t) => t.count > 0);
+  const targetSum = targets.reduce((s, t) => s + t.count, 0);
   const { data: shift, error } = await supabase
     .from("shifts")
     .insert({
       ...fields,
       kind: "internal",
       status: "open",
-      positions_total: Math.max(1, staffIds.length),
+      positions_total: Math.max(1, targetSum, staffIds.length),
       positions_filled: staffIds.length,
     })
     .select("*")
     .single();
   if (error) throw new Error(error.message);
+
+  if (targets.length > 0) {
+    const { error: rErr } = await supabase
+      .from("shift_role_requirements")
+      .insert(
+        targets.map((t) => ({ shift_id: shift.id, role: t.role, count: t.count }))
+      );
+    if (rErr) throw new Error(rErr.message);
+  }
 
   if (staffIds.length > 0) {
     const rows = staffIds.map((id) => ({
@@ -77,6 +90,54 @@ export async function createInternalShift(input: {
     if (aErr) throw new Error(aErr.message);
   }
   return shift;
+}
+
+export type ShiftRoleRequirement = Tables<"shift_role_requirements">;
+
+/** Fabbisogno per ruolo di un turno. */
+export async function getShiftRoleRequirements(
+  shiftId: string
+): Promise<ShiftRoleRequirement[]> {
+  const { data, error } = await supabase
+    .from("shift_role_requirements")
+    .select("*")
+    .eq("shift_id", shiftId)
+    .order("role", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as ShiftRoleRequirement[] | null) ?? [];
+}
+
+/** Turno interno con fabbisogno + assegnati (con ruolo) per il calcolo copertura. */
+export type CoverageShift = {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  positions_total: number;
+  positions_filled: number;
+  shift_role_requirements: { role: string; count: number }[];
+  shift_assignments: {
+    status: Enums<"assignment_status">;
+    staff_member: { role: string | null } | null;
+  }[];
+};
+
+/** Turni interni futuri del locale con dati per calcolare la copertura per ruolo. */
+export async function getVenueCoverage(venueId: string): Promise<CoverageShift[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(
+      "id, title, date, start_time, end_time, positions_total, positions_filled, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+    )
+    .eq("venue_id", venueId)
+    .eq("kind", "internal")
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as CoverageShift[] | null) ?? [];
 }
 
 export async function getShiftAssignments(

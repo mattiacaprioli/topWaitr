@@ -6,8 +6,10 @@ import {
   getMyAssignedUpcoming,
   getMyAssignmentForShift,
   getShiftAssignments,
+  getShiftRoleRequirements,
   getStaffAssignments,
   getTodayAssignments,
+  getVenueCoverage,
   getVenueHoursSummary,
   setAssignmentPresence,
   updateAssignmentStatus,
@@ -68,11 +70,30 @@ export function useCreateInternalShift(venueId: string | undefined) {
       end_time: string;
       description: string | null;
       staffIds: string[];
+      roleTargets?: { role: string; count: number }[];
     }) => createInternalShift({ venue_id: venueId as string, ...input }),
     onSuccess: () => {
-      if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+      if (venueId) {
+        qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+        qc.invalidateQueries({ queryKey: qk.assignments.coverage(venueId) });
+      }
       qc.invalidateQueries({ queryKey: qk.assignments.all });
     },
+  });
+}
+
+export function useShiftRoleRequirements(shiftId: string) {
+  return useQuery({
+    queryKey: qk.assignments.roleReqs(shiftId),
+    queryFn: () => getShiftRoleRequirements(shiftId),
+  });
+}
+
+export function useVenueCoverage(venueId: string | undefined) {
+  return useQuery({
+    queryKey: qk.assignments.coverage(venueId ?? ""),
+    queryFn: () => getVenueCoverage(venueId as string),
+    enabled: !!venueId,
   });
 }
 

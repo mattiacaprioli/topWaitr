@@ -1,7 +1,7 @@
 import { type ReactNode, useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
-import { ScrollView, Text, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/cn";
 import { formatDate, toDateString, toTimeString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useVenueStaff } from "@/features/staff/hooks";
+import { STAFF_ROLES } from "@/features/staff/roles";
 import { useCreateInternalShift } from "@/features/assignments/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { TimeField } from "@/features/shifts/TimeField";
@@ -45,6 +46,7 @@ export function StaffShiftForm({ venueId, header }: Props) {
   const [end, setEnd] = useState(defaultTime(23));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState("");
+  const [targets, setTargets] = useState<Record<string, number>>({});
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -54,6 +56,15 @@ export function StaffShiftForm({ venueId, header }: Props) {
       return next;
     });
   }
+
+  function setTarget(role: string, delta: number) {
+    setTargets((prev) => ({
+      ...prev,
+      [role]: Math.max(0, Math.min(20, (prev[role] ?? 0) + delta)),
+    }));
+  }
+
+  const selectedMembers = staff.filter((m) => selected.has(m.id));
 
   function onSubmit() {
     if (!venueId) {
@@ -65,6 +76,10 @@ export function StaffShiftForm({ venueId, header }: Props) {
       return;
     }
     const dateStr = toDateString(date);
+    const roleTargets = STAFF_ROLES.map((role) => ({
+      role: role as string,
+      count: targets[role] ?? 0,
+    })).filter((t) => t.count > 0);
     create.mutate(
       {
         title: `Turno · ${formatDate(dateStr)}`,
@@ -73,6 +88,7 @@ export function StaffShiftForm({ venueId, header }: Props) {
         end_time: toTimeString(end),
         description: note.trim() || null,
         staffIds: [...selected],
+        roleTargets,
       },
       {
         onSuccess: () => {
@@ -105,6 +121,57 @@ export function StaffShiftForm({ venueId, header }: Props) {
         <View className="flex-row gap-4">
           <TimeField className="flex-1" label="Dalle" value={start} onChange={setStart} />
           <TimeField className="flex-1" label="Alle" value={end} onChange={setEnd} />
+        </View>
+
+        <View className="gap-2">
+          <Mono>Fabbisogno per ruolo · facoltativo</Mono>
+          <View>
+            {STAFF_ROLES.map((role) => {
+              const target = targets[role] ?? 0;
+              const assigned = selectedMembers.filter(
+                (m) => m.role === role
+              ).length;
+              return (
+                <View
+                  key={role}
+                  className="flex-row items-center justify-between py-1.5"
+                >
+                  <View className="flex-1">
+                    <Text className="text-sm text-t1">{role}</Text>
+                    {target > 0 ? (
+                      <Text
+                        className={cn(
+                          "text-xs",
+                          assigned >= target ? "text-success" : "text-t3"
+                        )}
+                      >
+                        {assigned}/{target} assegnati
+                      </Text>
+                    ) : null}
+                  </View>
+                  <View className="flex-row items-center gap-4">
+                    <Pressable
+                      onPress={() => setTarget(role, -1)}
+                      hitSlop={8}
+                      className="h-8 w-8 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                    >
+                      <Text className="text-base text-t1">−</Text>
+                    </Pressable>
+                    <Text className="w-5 text-center font-sans-semibold text-t1">
+                      {target}
+                    </Text>
+                    <Pressable
+                      onPress={() => setTarget(role, 1)}
+                      hitSlop={8}
+                      className="h-8 w-8 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                    >
+                      <Text className="text-base text-t1">+</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
         <View className="gap-3">

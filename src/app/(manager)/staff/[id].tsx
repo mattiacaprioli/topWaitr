@@ -20,10 +20,9 @@ import {
 } from "@/features/staff/hooks";
 import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
 import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
+import { STAFF_ROLES } from "@/features/staff/roles";
 import type { StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
-
-const ROLES = ["Cameriere", "Chef de Rang", "Sommelier", "Runner", "Hostess", "Barman"];
 
 /** Editable form — state seeded from props (mounted with key={member.id}). */
 function StaffEditForm({ member }: { member: StaffMember }) {
@@ -132,7 +131,7 @@ function StaffEditForm({ member }: { member: StaffMember }) {
         <View className="gap-2">
           <Mono>Ruolo</Mono>
           <View className="flex-row flex-wrap gap-2">
-            {ROLES.map((r) => (
+            {STAFF_ROLES.map((r) => (
               <Chip
                 key={r}
                 label={r}

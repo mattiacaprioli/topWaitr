@@ -22,6 +22,7 @@ import {
   useVenueStaff,
   useWorkedWithWaiters,
 } from "@/features/staff/hooks";
+import { STAFF_ROLES } from "@/features/staff/roles";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
@@ -31,7 +32,6 @@ const MODES: { id: Mode; label: string }[] = [
   { id: "manuale", label: "Manuale" },
   { id: "invita", label: "Invita" },
 ];
-const ROLES = ["Cameriere", "Chef de Rang", "Sommelier", "Runner", "Hostess", "Barman"];
 
 function TypeChips({
   value,
@@ -257,7 +257,7 @@ export default function StaffNewScreen() {
             <View className="gap-2">
               <Mono>Ruolo</Mono>
               <View className="flex-row flex-wrap gap-2">
-                {ROLES.map((r) => (
+                {STAFF_ROLES.map((r) => (
                   <Chip
                     key={r}
                     label={r}

@@ -1,10 +1,12 @@
 import { useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ScrollView, View } from "@/tw";
+import { ScrollView, Text, View } from "@/tw";
+import { Card } from "@/components/ui/Card";
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -72,6 +74,26 @@ export default function ManagerShiftsScreen() {
             label="Pubblica turno"
             onPress={() => router.push("/(manager)/shift/new")}
           />
+
+          <Card
+            className="rounded-3xl border-border-2 p-4"
+            onPress={() => router.push("/(manager)/copertura")}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                <Icon name="users" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-sans-bold text-t1">
+                  Copertura turni
+                </Text>
+                <Text className="text-xs text-t3">
+                  Fabbisogno per ruolo e turni scoperti
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#8c857a" />
+            </View>
+          </Card>
 
           {shiftsQuery.isLoading ? (
             <ActivityIndicator color="#EAB54C" className="mt-6" />

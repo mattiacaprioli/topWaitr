@@ -9,6 +9,7 @@ import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
+import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { Pill } from "@/components/ui/Pill";
 import { RatingBadge } from "@/components/ui/RatingBadge";
@@ -27,8 +28,10 @@ import { useApplicationDecision, useApplications } from "@/features/applications
 import {
   useSetAssignmentPresence,
   useShiftAssignments,
+  useShiftRoleRequirements,
 } from "@/features/assignments/hooks";
 import { isWorked } from "@/features/assignments/hours";
+import { computeCoverage } from "@/features/assignments/coverage";
 import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
@@ -314,6 +317,8 @@ export default function ShiftDetailScreen() {
   const applications = appsQuery.data ?? [];
   const assignmentsQuery = useShiftAssignments(id);
   const assignments = assignmentsQuery.data ?? [];
+  const roleReqsQuery = useShiftRoleRequirements(id);
+  const roleRequirements = roleReqsQuery.data ?? [];
 
   const decision = useApplicationDecision(id);
   const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
@@ -386,6 +391,13 @@ export default function ShiftDetailScreen() {
   const requirements = shift.requirements ?? [];
   const isPast = shift.date < new Date().toISOString().slice(0, 10);
   const plannedHours = shiftDurationHours(shift.start_time, shift.end_time);
+  const roleCoverage = computeCoverage(
+    roleRequirements.map((r) => ({ role: r.role, count: r.count })),
+    assignments.map((a) => ({
+      status: a.status,
+      role: a.staff_member?.role ?? null,
+    }))
+  );
 
   return (
     <>
@@ -501,6 +513,44 @@ export default function ShiftDetailScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      {internal && roleRequirements.length > 0 ? (
+        <View className="mt-8 gap-3">
+          <Mono>Copertura</Mono>
+          {roleCoverage.rows.map((row) => {
+            const short = row.required - row.covered;
+            return (
+              <View
+                key={row.role}
+                className="gap-2 rounded-2xl border border-border bg-bg-card px-4 py-3"
+              >
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-sm font-sans-semibold text-t1">
+                    {row.role}
+                  </Text>
+                  {short > 0 ? (
+                    <Pill label={`manca ${short}`} variant="pending" icon="alert" />
+                  ) : (
+                    <Text className="text-sm font-sans-semibold text-success">
+                      Completo
+                    </Text>
+                  )}
+                </View>
+                <ProgressBar
+                  progress={
+                    row.required > 0
+                      ? Math.min(1, row.covered / row.required)
+                      : 0
+                  }
+                />
+                <Text className="text-xs text-t3">
+                  {row.covered}/{row.required} coperti
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
 
       {internal ? (
         <View className="mt-8 gap-3">

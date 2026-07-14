@@ -336,6 +336,38 @@ export type Database = {
           },
         ]
       }
+      shift_role_requirements: {
+        Row: {
+          count: number
+          created_at: string
+          id: string
+          role: string
+          shift_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          id?: string
+          role: string
+          shift_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          id?: string
+          role?: string
+          shift_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_role_requirements_shift_id_fkey"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shifts: {
         Row: {
           created_at: string
