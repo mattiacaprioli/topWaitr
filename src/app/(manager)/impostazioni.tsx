@@ -1,5 +1,6 @@
 import { GhostButton } from "@/components/ui/GhostButton";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { NotificationSettings } from "@/features/notifications/NotificationSettings";
 import { useAuth } from "@/lib/auth";
 import { ScrollView, View } from "@/tw";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,14 +17,17 @@ export default function ManagerSettingsScreen() {
 
       <ScrollView
         contentContainerStyle={{
-          marginTop: "auto",
           paddingHorizontal: 20,
           paddingTop: 12,
           paddingBottom: insets.bottom + 24,
-          gap: 16,
+          gap: 24,
+          flexGrow: 1,
         }}
       >
-        <GhostButton label="Esci" onPress={signOut} />
+        <NotificationSettings />
+        <View style={{ marginTop: "auto" }}>
+          <GhostButton label="Esci" onPress={signOut} />
+        </View>
       </ScrollView>
     </View>
   );

@@ -1,4 +1,4 @@
-import Constants from "expo-constants";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -11,10 +11,14 @@ function getProjectId(): string | undefined {
 
 /**
  * Richiede il permesso e restituisce l'Expo push token del device, oppure `null`
- * (emulatore, permesso negato, projectId mancante). Best-effort: non lancia mai,
- * la registrazione push non deve poter bloccare l'avvio dell'app.
+ * (Expo Go, emulatore, permesso negato, projectId mancante). Best-effort: non
+ * lancia mai, la registrazione push non deve poter bloccare l'avvio dell'app.
  */
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  // Expo Go (dal SDK 53) non supporta le push remote: le API lanciano.
+  if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+    return null;
+  }
   // Le push remote non arrivano su emulatore/simulatore.
   if (!Device.isDevice) return null;
 

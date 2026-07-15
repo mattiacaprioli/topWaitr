@@ -196,6 +196,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          notification_prefs: Json
           onboarding_complete: boolean
           phone: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -208,6 +209,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
           role: Database["public"]["Enums"]["user_role"]
@@ -220,6 +222,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
           role?: Database["public"]["Enums"]["user_role"]
@@ -709,6 +712,10 @@ export type Database = {
       mark_conversation_read: {
         Args: { p_conversation: string }
         Returns: undefined
+      }
+      notification_category: {
+        Args: { t: Database["public"]["Enums"]["notification_type"] }
+        Returns: string
       }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
