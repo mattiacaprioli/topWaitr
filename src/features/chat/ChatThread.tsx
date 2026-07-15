@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,6 +14,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { toTimeString } from "@/lib/format";
+import { qk } from "@/lib/queryKeys";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/providers/Toast";
 import type { Message } from "./api";
@@ -67,7 +68,18 @@ export function ChatThread({ conversationId, userId }: Props) {
 
   const conversation = useConversation(conversationId, userId);
   const query = useMessagesInfinite(conversationId);
-  const messages = query.data?.pages.flat() ?? [];
+  // La paginazione a offset + il prepend dei nuovi messaggi in cache fa
+  // riapparire la riga di confine nella pagina successiva: dedupe per id.
+  const messages = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Message[] = [];
+    for (const m of query.data?.pages.flat() ?? []) {
+      if (seen.has(m.id)) continue;
+      seen.add(m.id);
+      out.push(m);
+    }
+    return out;
+  }, [query.data]);
   const send = useSendMessage(conversationId, userId);
   const markRead = useMarkConversationRead(conversationId, userId);
   const markReadMutate = markRead.mutate;
@@ -82,6 +94,10 @@ export function ChatThread({ conversationId, userId }: Props) {
   // Canale realtime del thread: appende in cache i nuovi messaggi (dedupe per
   // id, quindi l'eco dei propri invii è innocuo) e marca letti quelli altrui.
   useEffect(() => {
+    // postgres_changes non rigioca gli eventi persi: alla ri-sottoscrizione
+    // (riconnessione dopo un buco / ritorno in foreground) rifacciamo il fetch
+    // dei messaggi. La prima sottoscrizione ha già i dati dalla query.
+    let firstSubscribe = true;
     const channel = supabase
       .channel(`chat:${conversationId}`)
       .on(
@@ -98,7 +114,14 @@ export function ChatThread({ conversationId, userId }: Props) {
           if (message.sender_id !== userId) markReadMutate();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status !== "SUBSCRIBED") return;
+        if (firstSubscribe) {
+          firstSubscribe = false;
+          return;
+        }
+        qc.invalidateQueries({ queryKey: qk.chat.messages(conversationId) });
+      });
 
     return () => {
       supabase.removeChannel(channel);
