@@ -12,6 +12,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts, useVenuePastShifts } from "@/features/shifts/hooks";
 
@@ -27,6 +28,9 @@ export default function ManagerShiftsScreen() {
   const upcoming = upcomingQuery.data ?? [];
   const pastQuery = useVenuePastShifts(venue?.id);
   const pastShifts = pastQuery.data?.pages.flat() ?? [];
+  const pull = usePullToRefresh(() =>
+    Promise.all([upcomingQuery.refetch(), pastQuery.refetch()])
+  );
 
   const contentStyle = {
     paddingTop: insets.top + 12,
@@ -157,11 +161,8 @@ export default function ManagerShiftsScreen() {
       refreshControl={
         <RefreshControl
           tintColor="#EAB54C"
-          refreshing={upcomingQuery.isRefetching || pastQuery.isRefetching}
-          onRefresh={() => {
-            upcomingQuery.refetch();
-            pastQuery.refetch();
-          }}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
         />
       }
     />

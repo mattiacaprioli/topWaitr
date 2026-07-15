@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { CountBadge } from "@/components/ui/CountBadge";
 import { Display } from "@/components/ui/Display";
 import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -237,16 +238,7 @@ export default function WaiterShiftsScreen() {
           className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
         >
           <Icon name="clipboard" size={20} color="#F8F4ED" />
-          {pendingCount > 0 ? (
-            <View
-              className="absolute -right-1.5 -top-1.5 items-center justify-center rounded-full bg-gold px-1"
-              style={{ minWidth: 18, height: 18 }}
-            >
-              <Text className="text-[10px] font-sans-bold text-gold-ink">
-                {pendingCount}
-              </Text>
-            </View>
-          ) : null}
+          <CountBadge count={pendingCount} className="absolute -right-1.5 -top-1.5" />
         </Pressable>
       </View>
 

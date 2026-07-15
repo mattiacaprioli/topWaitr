@@ -10,6 +10,7 @@ import {
 } from "@/features/notifications/hooks";
 import type { Notification } from "@/features/notifications/api";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 
 export default function WaiterNotificationsScreen() {
   const insets = useSafeAreaInsets();
@@ -19,6 +20,7 @@ export default function WaiterNotificationsScreen() {
 
   const query = useNotifications(userId);
   const items = query.data ?? [];
+  const pull = usePullToRefresh(query.refetch);
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead(userId);
   const hasUnread = items.some((n) => n.read_at == null);
@@ -47,8 +49,8 @@ export default function WaiterNotificationsScreen() {
       </View>
       <NotificationList
         notifications={items}
-        refreshing={query.isRefetching}
-        onRefresh={() => query.refetch()}
+        refreshing={pull.refreshing}
+        onRefresh={pull.onRefresh}
         onOpen={onOpen}
         onMarkAll={() => markAll.mutate()}
         hasUnread={hasUnread}

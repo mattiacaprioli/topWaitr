@@ -15,6 +15,7 @@ import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatTime } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
@@ -98,17 +99,14 @@ export default function ManagerHome() {
     })),
   ].sort((a, b) => a.start.localeCompare(b.start));
 
-  const refreshing =
-    venueQuery.isRefetching ||
-    shiftsQuery.isRefetching ||
-    staffQuery.isRefetching ||
-    assignQuery.isRefetching;
-  const onRefresh = () => {
-    venueQuery.refetch();
-    shiftsQuery.refetch();
-    staffQuery.refetch();
-    assignQuery.refetch();
-  };
+  const { refreshing, onRefresh } = usePullToRefresh(() =>
+    Promise.all([
+      venueQuery.refetch(),
+      shiftsQuery.refetch(),
+      staffQuery.refetch(),
+      assignQuery.refetch(),
+    ])
+  );
 
   return (
     <ScrollView

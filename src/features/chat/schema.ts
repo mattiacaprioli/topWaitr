@@ -7,5 +7,3 @@ export const messageSchema = z.object({
     .min(1, "Scrivi un messaggio.")
     .max(1000, "Messaggio troppo lungo (max 1000 caratteri)."),
 });
-
-export type MessageForm = z.infer<typeof messageSchema>;

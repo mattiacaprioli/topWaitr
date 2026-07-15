@@ -9,6 +9,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
 import {
   useMyPendingInvites,
@@ -78,6 +79,7 @@ export default function WaiterInvitesScreen() {
 
   const query = useMyPendingInvites(userId);
   const invites = query.data ?? [];
+  const pull = usePullToRefresh(query.refetch);
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -94,8 +96,8 @@ export default function WaiterInvitesScreen() {
         refreshControl={
           <RefreshControl
             tintColor="#EAB54C"
-            refreshing={query.isRefetching}
-            onRefresh={() => query.refetch()}
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
           />
         }
       >

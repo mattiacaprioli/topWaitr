@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -6,11 +6,12 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pressable, Text, TextInput, View } from "@/tw";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/Avatar";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { toTimeString } from "@/lib/format";
@@ -42,10 +43,9 @@ function MessageBubble({ message, own }: { message: Message; own: boolean }) {
       </Text>
       <Text
         className={cn(
-          "mt-1 self-end text-[10px]",
+          "mt-1 self-end text-[10px] opacity-70",
           own ? "text-gold-ink" : "text-t4"
         )}
-        style={{ opacity: 0.7 }}
       >
         {toTimeString(new Date(message.created_at))}
       </Text>
@@ -84,15 +84,19 @@ export function ChatThread({ conversationId, userId }: Props) {
   const markRead = useMarkConversationRead(conversationId, userId);
   const markReadMutate = markRead.mutate;
 
-  // I messaggi già a schermo vengono marcati letti entrando (e rientrando).
-  useFocusEffect(
-    useCallback(() => {
-      markReadMutate();
-    }, [markReadMutate])
+  // Marca letto solo quando c'è davvero qualcosa da leggere (all'apertura o a
+  // ogni messaggio ricevuto): evita RPC/invalidazioni a vuoto. onSuccess del
+  // hook aggiorna read_at in cache, quindi hasUnread torna false e non ri-scatta.
+  const hasUnread = useMemo(
+    () => messages.some((m) => m.sender_id !== userId && m.read_at == null),
+    [messages, userId]
   );
+  useEffect(() => {
+    if (hasUnread) markReadMutate();
+  }, [hasUnread, markReadMutate]);
 
   // Canale realtime del thread: appende in cache i nuovi messaggi (dedupe per
-  // id, quindi l'eco dei propri invii è innocuo) e marca letti quelli altrui.
+  // id, quindi l'eco dei propri invii è innocuo).
   useEffect(() => {
     // postgres_changes non rigioca gli eventi persi: alla ri-sottoscrizione
     // (riconnessione dopo un buco / ritorno in foreground) rifacciamo il fetch
@@ -109,9 +113,8 @@ export function ChatThread({ conversationId, userId }: Props) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          const message = payload.new as Message;
-          appendMessageToCache(qc, message);
-          if (message.sender_id !== userId) markReadMutate();
+          // L'append aggiorna hasUnread; l'effetto sopra marca letto se serve.
+          appendMessageToCache(qc, payload.new as Message);
         }
       )
       .subscribe((status) => {
@@ -126,7 +129,7 @@ export function ChatThread({ conversationId, userId }: Props) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, userId, qc, markReadMutate]);
+  }, [conversationId, qc]);
 
   const canSend = text.trim().length > 0 && !send.isPending;
 
@@ -143,6 +146,31 @@ export function ChatThread({ conversationId, userId }: Props) {
   };
 
   const other = conversation.data?.other;
+
+  // Conversazione inesistente/senza accesso (es. tap su una notifica la cui
+  // conversazione è stata rimossa): stato chiaro invece di un thread morto.
+  const notFound = !conversationId || (conversation.isFetched && !conversation.data);
+  if (notFound) {
+    return (
+      <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
+        <View className="px-5">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={8}
+            className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+          >
+            <Icon name="chevL" size={22} color="#F8F4ED" />
+          </Pressable>
+        </View>
+        <View className="flex-1 items-center justify-center px-6">
+          <EmptyState
+            title="Conversazione non trovata"
+            subtitle="Questa conversazione non è più disponibile."
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>

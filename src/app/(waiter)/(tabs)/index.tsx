@@ -27,6 +27,7 @@ import {
 } from "@/features/reviews/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatDate, formatEuro, formatTime, shiftTotal } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
@@ -54,6 +55,14 @@ export default function WaiterHomeScreen() {
   const card = useWaiterPublicCard(waiterId).data;
   const reviews = useWaiterReviewsPreview(waiterId, 1).data ?? [];
   const unread = useUnreadCount(waiterId).data ?? 0;
+  const pull = usePullToRefresh(() =>
+    Promise.all([
+      upcomingQuery.refetch(),
+      assignedQuery.refetch(),
+      appsQuery.refetch(),
+      appsListQuery.refetch(),
+    ])
+  );
 
   const upcoming = upcomingQuery.data ?? [];
   const assigned = assignedQuery.data ?? [];
@@ -96,13 +105,8 @@ export default function WaiterHomeScreen() {
       refreshControl={
         <RefreshControl
           tintColor="#EAB54C"
-          refreshing={upcomingQuery.isRefetching}
-          onRefresh={() => {
-            upcomingQuery.refetch();
-            assignedQuery.refetch();
-            appsQuery.refetch();
-            appsListQuery.refetch();
-          }}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
         />
       }
     >

@@ -12,6 +12,7 @@ import {
   useMyApplicationsInfinite,
 } from "@/features/applications/hooks";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { cn } from "@/lib/cn";
 import {
   formatDate,
@@ -158,6 +159,9 @@ export default function WaiterApplicationsScreen() {
   const countsQuery = useMyApplicationCounts(waiterId);
   const counts = countsQuery.data ?? { total: 0, pending: 0, accepted: 0 };
   const apps = pagesQuery.data?.pages.flat() ?? [];
+  const pull = usePullToRefresh(() =>
+    Promise.all([pagesQuery.refetch(), countsQuery.refetch()])
+  );
 
   const segs: string[] = [];
   if (counts.pending > 0) segs.push(`${counts.pending} in attesa`);
@@ -261,11 +265,8 @@ export default function WaiterApplicationsScreen() {
           refreshControl={
             <RefreshControl
               tintColor="#EAB54C"
-              refreshing={pagesQuery.isRefetching && !pagesQuery.isFetchingNextPage}
-              onRefresh={() => {
-                pagesQuery.refetch();
-                countsQuery.refetch();
-              }}
+              refreshing={pull.refreshing}
+              onRefresh={pull.onRefresh}
             />
           }
         />

@@ -65,19 +65,21 @@ export function useMessagesInfinite(conversationId: string | undefined) {
  * Dedupe per id: l'echo realtime e l'onSuccess della mutation sono idempotenti.
  */
 export function appendMessageToCache(qc: QueryClient, message: Message) {
-  qc.setQueryData<InfiniteData<Message[]>>(
-    qk.chat.messages(message.conversation_id),
-    (data) => {
-      if (!data) return data;
-      if (data.pages.some((page) => page.some((m) => m.id === message.id))) {
-        return data;
-      }
-      return {
-        ...data,
-        pages: [[message, ...data.pages[0]], ...data.pages.slice(1)],
-      };
-    }
-  );
+  const key = qk.chat.messages(message.conversation_id);
+  const existing = qc.getQueryData<InfiniteData<Message[]>>(key);
+  if (!existing) {
+    // La query dei messaggi non è ancora in cache (INSERT realtime che corre
+    // col primo fetch): invalida così il messaggio non va perso.
+    qc.invalidateQueries({ queryKey: key });
+    return;
+  }
+  if (existing.pages.some((page) => page.some((m) => m.id === message.id))) {
+    return;
+  }
+  qc.setQueryData<InfiniteData<Message[]>>(key, {
+    ...existing,
+    pages: [[message, ...existing.pages[0]], ...existing.pages.slice(1)],
+  });
 }
 
 export function useSendMessage(conversationId: string, userId: string) {
@@ -92,11 +94,32 @@ export function useSendMessage(conversationId: string, userId: string) {
   });
 }
 
+/** Segna letti in cache i messaggi ricevuti, così `hasUnread` non ri-scatta. */
+function markReceivedReadInCache(
+  qc: QueryClient,
+  conversationId: string,
+  userId: string
+) {
+  const key = qk.chat.messages(conversationId);
+  const existing = qc.getQueryData<InfiniteData<Message[]>>(key);
+  if (!existing) return;
+  const now = new Date().toISOString();
+  qc.setQueryData<InfiniteData<Message[]>>(key, {
+    ...existing,
+    pages: existing.pages.map((page) =>
+      page.map((m) =>
+        m.sender_id !== userId && m.read_at == null ? { ...m, read_at: now } : m
+      )
+    ),
+  });
+}
+
 export function useMarkConversationRead(conversationId: string, userId: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () => markConversationRead(conversationId),
     onSuccess: () => {
+      markReceivedReadInCache(qc, conversationId, userId);
       qc.invalidateQueries({ queryKey: qk.chat.unread(userId) });
       qc.invalidateQueries({ queryKey: qk.chat.conversations(userId) });
       // La RPC marca letta anche la notifica 'new_message' della conversazione.

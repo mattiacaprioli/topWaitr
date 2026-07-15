@@ -13,6 +13,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useVenueStaff } from "@/features/staff/hooks";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
@@ -69,6 +70,7 @@ export default function ManagerStaffScreen() {
   const venue = venueQuery.data ?? null;
   const staffQuery = useVenueStaff(venue?.id);
   const staff = staffQuery.data ?? [];
+  const pull = usePullToRefresh(staffQuery.refetch);
 
   return (
     <ScrollView
@@ -82,8 +84,8 @@ export default function ManagerStaffScreen() {
       refreshControl={
         <RefreshControl
           tintColor="#EAB54C"
-          refreshing={staffQuery.isRefetching}
-          onRefresh={() => staffQuery.refetch()}
+          refreshing={pull.refreshing}
+          onRefresh={pull.onRefresh}
         />
       }
     >

@@ -1,10 +1,11 @@
-import { useState } from "react";
 import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { Pressable, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
+import { CountBadge } from "@/components/ui/CountBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { timeAgo } from "@/lib/format";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import type { ConversationListItem } from "./api";
 import { useConversations } from "./hooks";
 
@@ -44,13 +45,7 @@ function ConversationRow({
         <Text className="text-[11px] text-t4">
           {timeAgo(item.lastMessage?.created_at ?? item.created_at)}
         </Text>
-        {item.unreadCount > 0 ? (
-          <View className="h-4.5 min-w-4.5 items-center justify-center rounded-full bg-gold px-1">
-            <Text className="font-sans-bold text-[10px] text-gold-ink">
-              {item.unreadCount > 9 ? "9+" : String(item.unreadCount)}
-            </Text>
-          </View>
-        ) : null}
+        <CountBadge count={item.unreadCount} />
       </View>
     </Pressable>
   );
@@ -66,18 +61,7 @@ type Props = {
 export function ConversationList({ userId, onOpen, bottomInset = 24 }: Props) {
   const query = useConversations(userId);
   const items = query.data ?? [];
-
-  // Spinner legato solo al pull dell'utente: agganciarlo a isRefetching lo fa
-  // apparire (e su iOS incastrare) ad ogni invalidation realtime in background.
-  const [refreshing, setRefreshing] = useState(false);
-  async function onRefresh() {
-    setRefreshing(true);
-    try {
-      await query.refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }
+  const { refreshing, onRefresh } = usePullToRefresh(query.refetch);
 
   if (query.isError) {
     return (

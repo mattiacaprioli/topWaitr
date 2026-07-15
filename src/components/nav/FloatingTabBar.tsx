@@ -1,3 +1,4 @@
+import { CountBadge } from "@/components/ui/CountBadge";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { palette } from "@/constants/colors";
 import { FontFamily } from "@/constants/fonts";
@@ -76,16 +77,7 @@ export function FloatingTabBar({
           >
             <View>
               <Icon name={iconName} size={22} color={focused ? GOLD : INACTIVE} />
-              {badge > 0 ? (
-                <View
-                  className="absolute h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1"
-                  style={{ top: -5, right: -9 }}
-                >
-                  <Text className="font-sans-bold text-[9px] text-gold-ink">
-                    {badge > 9 ? "9+" : String(badge)}
-                  </Text>
-                </View>
-              ) : null}
+              <CountBadge count={badge} className="absolute -right-2.5 -top-1.5" />
             </View>
             <Text
               numberOfLines={1}

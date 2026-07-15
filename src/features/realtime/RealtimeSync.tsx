@@ -49,7 +49,10 @@ export function RealtimeSync({ userId }: { userId: string }) {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "messages" },
+        // Solo INSERT: gli UPDATE di read_at (fatti da mark_conversation_read)
+        // non cambiano lista/badge e altrimenti scatenerebbero una raffica di
+        // invalidazioni a ogni conversazione letta.
+        { event: "INSERT", schema: "public", table: "messages" },
         () => {
           // Solo lista conversazioni e badge: le pagine del thread aperto le
           // mantiene il canale per-conversazione in ChatThread (niente refetch).
