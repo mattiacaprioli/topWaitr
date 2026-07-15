@@ -15,6 +15,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   shift_assigned: "calendar",
   staff_invite: "users",
   staff_response: "users",
+  staff_removed: "close",
 };
 
 type Props = {

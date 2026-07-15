@@ -69,6 +69,8 @@ export const qk = {
     today: (venueId: string) => ["assignments", "today", venueId] as const,
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
+    mineHistory: (waiterId: string) =>
+      ["assignments", "mineHistory", waiterId] as const,
     mineForShift: (shiftId: string, waiterId: string) =>
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },

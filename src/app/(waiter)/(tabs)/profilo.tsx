@@ -21,10 +21,12 @@ import {
 } from "@/features/reviews/hooks";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
+import { useMyWorkHistory } from "@/features/assignments/history";
 import type { MyEmployer } from "@/features/staff/api";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { formatHours } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -134,6 +136,7 @@ export default function WaiterProfiloScreen() {
   const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
   const breakdown = useRatingBreakdown(userId).data;
   const employers = useMyEmployers(userId).data ?? [];
+  const history = useMyWorkHistory(userId);
   const reviewsCount = card?.rating_count ?? 0;
   const ratingLabel =
     reviewsCount > 0
@@ -331,12 +334,14 @@ export default function WaiterProfiloScreen() {
             <StatCard value={ratingLabel} label="★ media voto" />
             <StatCard value={String(reviewsCount)} label="recensioni" />
           </View>
-          <View className="rounded-3xl border border-border-2 bg-bg-card p-5">
-            <Text className="text-sm leading-5 text-t3">
-              Statistiche dettagliate (andamento del voto, puntualità, tempi di
-              risposta) in arrivo man mano che raccogli recensioni.
-            </Text>
+          <View className="flex-row gap-2.5">
+            <StatCard value={String(history.count)} label="turni svolti" />
+            <StatCard value={formatHours(history.totalHours)} label="ore totali" />
           </View>
+          <GhostButton
+            label="Vedi storico turni"
+            onPress={() => router.push("/(waiter)/storico")}
+          />
         </View>
       ) : null}
     </ScrollView>

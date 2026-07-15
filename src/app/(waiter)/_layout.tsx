@@ -11,6 +11,7 @@ export default function WaiterLayout() {
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="storico" options={{ headerShown: false }} />
       <Stack.Screen name="candidature" options={{ headerShown: false }} />
       <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
       <Stack.Screen name="esperienza/new" options={{ headerShown: false }} />

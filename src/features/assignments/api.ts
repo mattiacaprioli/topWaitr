@@ -294,6 +294,25 @@ export async function getMyAssignedUpcoming(
     .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
 }
 
+/** Waiter side: le assegnazioni passate (storico turni interni svolti), recenti prima. */
+export async function getMyAssignmentHistory(
+  waiterId: string
+): Promise<AssignmentWithShift[]> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      "*, staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
+    )
+    .eq("staff_member.waiter_id", waiterId)
+    .neq("status", "declined");
+  if (error) throw new Error(error.message);
+  const rows = (data as AssignmentWithShift[] | null) ?? [];
+  return rows
+    .filter((r) => r.shift != null && r.shift.date < today)
+    .sort((a, b) => b.shift!.date.localeCompare(a.shift!.date));
+}
+
 /** Waiter side: the waiter's assignment for a specific shift, if any. */
 export async function getMyAssignmentForShift(
   shiftId: string,

@@ -19,6 +19,7 @@ import { useMyAssignedUpcoming } from "@/features/assignments/hooks";
 import { useMyPendingInvites } from "@/features/staff/hooks";
 import { Pill } from "@/components/ui/Pill";
 import type { ShiftWithVenue } from "@/features/shifts/types";
+import type { Enums } from "@/types/database";
 import { reviewUrlFor } from "@/features/reviews/config";
 import {
   useWaiterPublicCard,
@@ -32,7 +33,12 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Linking, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type UpcomingItem = { key: string; shift: ShiftWithVenue; assigned: boolean };
+type UpcomingItem = {
+  key: string;
+  shift: ShiftWithVenue;
+  assigned: boolean;
+  status?: Enums<"assignment_status">;
+};
 
 export default function WaiterHomeScreen() {
   const router = useRouter();
@@ -54,7 +60,12 @@ export default function WaiterHomeScreen() {
   const upcomingItems: UpcomingItem[] = [
     ...assigned
       .filter((a) => a.shift != null)
-      .map((a) => ({ key: `asg-${a.id}`, shift: a.shift!, assigned: true })),
+      .map((a) => ({
+        key: `asg-${a.id}`,
+        shift: a.shift!,
+        assigned: true,
+        status: a.status,
+      })),
     ...upcoming
       .filter((a) => a.shift != null)
       .map((a) => ({ key: `app-${a.id}`, shift: a.shift!, assigned: false })),
@@ -195,7 +206,11 @@ export default function WaiterHomeScreen() {
                       </Text>
                     </View>
                     {item.assigned ? (
-                      <Pill label="Staff" variant="tag" />
+                      item.status === "confirmed" ? (
+                        <Pill label="Staff" variant="tag" />
+                      ) : (
+                        <Pill label="Da confermare" variant="pending" />
+                      )
                     ) : total != null ? (
                       <Text className="text-lg font-sans-bold text-gold">
                         {formatEuro(total)}

@@ -678,6 +678,7 @@ export type Database = {
         | "shift_assigned"
         | "staff_invite"
         | "staff_response"
+        | "staff_removed"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active"
@@ -820,6 +821,7 @@ export const Constants = {
         "shift_assigned",
         "staff_invite",
         "staff_response",
+        "staff_removed",
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],

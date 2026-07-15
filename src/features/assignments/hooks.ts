@@ -5,6 +5,7 @@ import {
   createInternalShift,
   getMyAssignedUpcoming,
   getMyAssignmentForShift,
+  getMyAssignmentHistory,
   getShiftAssignments,
   getShiftRoleRequirements,
   getStaffAssignments,
@@ -19,6 +20,14 @@ export function useMyAssignedUpcoming(waiterId: string | undefined) {
   return useQuery({
     queryKey: qk.assignments.mineUpcoming(waiterId ?? ""),
     queryFn: () => getMyAssignedUpcoming(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
+export function useMyAssignmentHistory(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.assignments.mineHistory(waiterId ?? ""),
+    queryFn: () => getMyAssignmentHistory(waiterId as string),
     enabled: !!waiterId,
   });
 }
