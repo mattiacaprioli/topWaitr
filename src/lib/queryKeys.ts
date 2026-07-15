@@ -20,6 +20,8 @@ export const qk = {
     all: ["shifts"] as const,
     open: () => ["shifts", "open"] as const,
     byVenue: (venueId: string) => ["shifts", "byVenue", venueId] as const,
+    past: (venueId: string) => ["shifts", "past", venueId] as const,
+    pastCount: (venueId: string) => ["shifts", "pastCount", venueId] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
   },
   applications: {

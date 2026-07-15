@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -35,6 +35,26 @@ import { computeCoverage } from "@/features/assignments/coverage";
 import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
+
+/** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
+function GuardScreen({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  return (
+    <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
+      <View className="px-5">
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          className="h-12 w-12 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+        >
+          <Icon name="chevL" size={22} color="#F8F4ED" />
+        </Pressable>
+      </View>
+      <View className="flex-1 items-center justify-center px-6">{children}</View>
+    </View>
+  );
+}
 
 const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   open: "Aperto",
@@ -362,28 +382,28 @@ export default function ShiftDetailScreen() {
 
   if (shiftQuery.isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-bg-0">
+      <GuardScreen>
         <ActivityIndicator color="#EAB54C" />
-      </View>
+      </GuardScreen>
     );
   }
 
   if (shiftQuery.isError) {
     return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
+      <GuardScreen>
         <QueryError onRetry={() => shiftQuery.refetch()} />
-      </View>
+      </GuardScreen>
     );
   }
 
   if (!shift) {
     return (
-      <View className="flex-1 bg-bg-0">
+      <GuardScreen>
         <EmptyState
           title="Turno non trovato"
           subtitle="Questo turno non è più disponibile."
         />
-      </View>
+      </GuardScreen>
     );
   }
 

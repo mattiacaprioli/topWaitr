@@ -17,7 +17,7 @@ import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { useAuth } from "@/lib/auth";
 import { formatTime } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
-import { useMyShifts } from "@/features/shifts/hooks";
+import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
 import { usePendingCount, useTodayStaff } from "@/features/applications/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
@@ -47,6 +47,7 @@ export default function ManagerHome() {
   const venue = venueQuery.data ?? null;
   const shiftsQuery = useMyShifts(venue?.id);
   const shifts = shiftsQuery.data ?? [];
+  const pastCount = useVenuePastShiftsCount(venue?.id).data ?? 0;
   const staffQuery = useTodayStaff(venue?.id);
   const todayStaff = staffQuery.data ?? [];
   const assignQuery = useTodayAssignments(venue?.id);
@@ -56,7 +57,6 @@ export default function ManagerHome() {
 
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = shifts.filter((s) => s.date >= today);
-  const past = shifts.filter((s) => s.date < today);
   const openCount = upcoming.filter(
     (s) => s.kind === "marketplace" && s.status === "open"
   ).length;
@@ -171,7 +171,7 @@ export default function ManagerHome() {
                 value={totalPos > 0 ? `${filled}/${totalPos}` : "—"}
                 label="posti coperti"
               />
-              <StatCard value={String(past.length)} label="turni svolti" />
+              <StatCard value={String(pastCount)} label="turni svolti" />
             </View>
           </View>
 

@@ -1,12 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
+  SHIFTS_PAGE_SIZE,
   createShift,
   getMyShifts,
   getOpenShifts,
   getShift,
   getShiftWithVenue,
+  getVenuePastShiftsCount,
+  getVenuePastShiftsPage,
   updateShift,
   updateShiftStatus,
 } from "./api";
@@ -15,6 +23,27 @@ export function useMyShifts(venueId: string | undefined) {
   return useQuery({
     queryKey: qk.shifts.byVenue(venueId ?? ""),
     queryFn: () => getMyShifts(venueId as string),
+    enabled: !!venueId,
+  });
+}
+
+/** Storico turni del locale — scroll infinito. */
+export function useVenuePastShifts(venueId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: qk.shifts.past(venueId ?? ""),
+    queryFn: ({ pageParam }) =>
+      getVenuePastShiftsPage(venueId as string, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < SHIFTS_PAGE_SIZE ? undefined : allPages.length,
+    enabled: !!venueId,
+  });
+}
+
+export function useVenuePastShiftsCount(venueId: string | undefined) {
+  return useQuery({
+    queryKey: qk.shifts.pastCount(venueId ?? ""),
+    queryFn: () => getVenuePastShiftsCount(venueId as string),
     enabled: !!venueId,
   });
 }

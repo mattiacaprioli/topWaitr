@@ -82,24 +82,29 @@ export default function VenueHoursScreen() {
     >
       <ScreenHeader eyebrow="Organico" title="Ore del mese" />
 
-      {/* Selettore mese */}
-      <View className="flex-row items-center justify-between">
+      {/* Selettore mese — pillola unica per non confondersi col back */}
+      <View className="self-center flex-row items-center rounded-full border border-border-2 bg-bg-1">
         <Pressable
           onPress={() => setMonth((m) => shiftMonth(m, -1))}
           hitSlop={8}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+          className="px-4 py-2.5"
         >
-          <Icon name="chevL" size={20} color="#F8F4ED" />
+          <Icon name="chevL" size={18} color="#EAB54C" />
         </Pressable>
-        <Text className="text-base font-sans-semibold text-t1">{label}</Text>
+        <Text
+          className="text-center text-base font-sans-semibold text-t1"
+          style={{ minWidth: 150 }}
+        >
+          {label}
+        </Text>
         <Pressable
           disabled={atCurrentMonth}
           onPress={() => setMonth((m) => shiftMonth(m, 1))}
           hitSlop={8}
-          className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
-          style={atCurrentMonth ? { opacity: 0.35 } : undefined}
+          className="px-4 py-2.5"
+          style={atCurrentMonth ? { opacity: 0.3 } : undefined}
         >
-          <Icon name="chevR" size={20} color="#F8F4ED" />
+          <Icon name="chevR" size={18} color="#EAB54C" />
         </Pressable>
       </View>
 
