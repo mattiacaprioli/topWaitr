@@ -7,7 +7,10 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import type { ApplicationWithShift } from "@/features/applications/api";
-import { useMyApplicationsList } from "@/features/applications/hooks";
+import {
+  useMyApplicationCounts,
+  useMyApplicationsInfinite,
+} from "@/features/applications/hooks";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
 import {
@@ -17,11 +20,11 @@ import {
   shiftTotal,
   timeAgo,
 } from "@/lib/format";
-import { Pressable, ScrollView, Text, View } from "@/tw";
+import { Pressable, Text, View } from "@/tw";
 import type { Enums } from "@/types/database";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, RefreshControl } from "react-native";
+import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Status = Enums<"application_status">;
@@ -151,19 +154,42 @@ export default function WaiterApplicationsScreen() {
   const waiterId = session!.user.id;
 
   const [filter, setFilter] = useState<Filter>("all");
-  const appsQuery = useMyApplicationsList(waiterId);
-  const apps = appsQuery.data ?? [];
-
-  const pendingCount = apps.filter((a) => a.status === "pending").length;
-  const acceptedCount = apps.filter((a) => a.status === "accepted").length;
-  const filtered =
-    filter === "all" ? apps : apps.filter((a) => a.status === filter);
+  const pagesQuery = useMyApplicationsInfinite(waiterId, filter);
+  const countsQuery = useMyApplicationCounts(waiterId);
+  const counts = countsQuery.data ?? { total: 0, pending: 0, accepted: 0 };
+  const apps = pagesQuery.data?.pages.flat() ?? [];
 
   const segs: string[] = [];
-  if (pendingCount > 0) segs.push(`${pendingCount} in attesa`);
-  if (acceptedCount > 0) segs.push(`${acceptedCount} accettate`);
+  if (counts.pending > 0) segs.push(`${counts.pending} in attesa`);
+  if (counts.accepted > 0) segs.push(`${counts.accepted} accettate`);
   const eyebrow =
-    segs.length > 0 ? segs.join(" · ") : `${apps.length} candidature`;
+    segs.length > 0 ? segs.join(" · ") : `${counts.total} candidature`;
+
+  const loading =
+    (pagesQuery.isLoading || countsQuery.isLoading) && apps.length === 0;
+
+  const chips = (
+    <View className="flex-row gap-2">
+      <FilterChip
+        label="Tutte"
+        count={counts.total}
+        active={filter === "all"}
+        onPress={() => setFilter("all")}
+      />
+      <FilterChip
+        label="In attesa"
+        count={counts.pending}
+        active={filter === "pending"}
+        onPress={() => setFilter("pending")}
+      />
+      <FilterChip
+        label="Accettate"
+        count={counts.accepted}
+        active={filter === "accepted"}
+        onPress={() => setFilter("accepted")}
+      />
+    </View>
+  );
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
@@ -171,15 +197,15 @@ export default function WaiterApplicationsScreen() {
         <ScreenHeader eyebrow={eyebrow} title="Le mie candidature" />
       </View>
 
-      {appsQuery.isLoading ? (
+      {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#EAB54C" />
         </View>
-      ) : appsQuery.isError ? (
+      ) : pagesQuery.isError ? (
         <View className="flex-1 justify-center px-6">
-          <QueryError onRetry={() => appsQuery.refetch()} />
+          <QueryError onRetry={() => pagesQuery.refetch()} />
         </View>
-      ) : apps.length === 0 ? (
+      ) : counts.total === 0 ? (
         <View className="px-5 pt-10" style={{ gap: 24 }}>
           <EmptyState
             title="Nessuna candidatura"
@@ -191,57 +217,58 @@ export default function WaiterApplicationsScreen() {
           />
         </View>
       ) : (
-        <ScrollView
-          className="flex-1"
+        <FlatList
+          style={{ flex: 1 }}
           contentContainerStyle={{
             paddingTop: 8,
             paddingHorizontal: 20,
             paddingBottom: insets.bottom + 24,
             gap: 16,
           }}
+          data={apps}
+          keyExtractor={(a) => a.id}
+          renderItem={({ item: app }) => (
+            <CandidaturaCard
+              app={app}
+              onOpen={() =>
+                app.shift
+                  ? router.push(`/(waiter)/shift/${app.shift.id}`)
+                  : undefined
+              }
+            />
+          )}
+          ListHeaderComponent={chips}
+          ListEmptyComponent={
+            pagesQuery.isLoading ? (
+              <ActivityIndicator color="#EAB54C" style={{ marginTop: 24 }} />
+            ) : (
+              <Text className="mt-8 text-center text-sm text-t3">
+                Nessuna candidatura in questo stato.
+              </Text>
+            )
+          }
+          ListFooterComponent={
+            pagesQuery.isFetchingNextPage ? (
+              <ActivityIndicator color="#EAB54C" style={{ marginTop: 8 }} />
+            ) : null
+          }
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (pagesQuery.hasNextPage && !pagesQuery.isFetchingNextPage) {
+              pagesQuery.fetchNextPage();
+            }
+          }}
           refreshControl={
             <RefreshControl
               tintColor="#EAB54C"
-              refreshing={appsQuery.isRefetching}
-              onRefresh={() => appsQuery.refetch()}
+              refreshing={pagesQuery.isRefetching && !pagesQuery.isFetchingNextPage}
+              onRefresh={() => {
+                pagesQuery.refetch();
+                countsQuery.refetch();
+              }}
             />
           }
-        >
-          <View className="flex-row gap-2">
-            <FilterChip
-              label="Tutte"
-              count={apps.length}
-              active={filter === "all"}
-              onPress={() => setFilter("all")}
-            />
-            <FilterChip
-              label="In attesa"
-              count={pendingCount}
-              active={filter === "pending"}
-              onPress={() => setFilter("pending")}
-            />
-            <FilterChip
-              label="Accettate"
-              count={acceptedCount}
-              active={filter === "accepted"}
-              onPress={() => setFilter("accepted")}
-            />
-          </View>
-
-          {filtered.length === 0 ? (
-            <Text className="mt-8 text-center text-sm text-t3">
-              Nessuna candidatura in questo stato.
-            </Text>
-          ) : (
-            filtered.map((app) => (
-              <CandidaturaCard
-                key={app.id}
-                app={app}
-                onOpen={() => router.push(`/(waiter)/shift/${app.shift!.id}`)}
-              />
-            ))
-          )}
-        </ScrollView>
+        />
       )}
     </View>
   );

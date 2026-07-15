@@ -7,6 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Icon } from "@/components/ui/Icon";
+import { InfoRow } from "@/components/ui/InfoRow";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -75,38 +76,6 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
   declined: "Rifiutato",
   no_show: "Assente",
 };
-
-/** Riga label/valore nella card info (come il dettaglio turno cameriere). */
-function InfoRow({
-  label,
-  value,
-  gold,
-  first,
-}: {
-  label: string;
-  value: string;
-  gold?: boolean;
-  first?: boolean;
-}) {
-  return (
-    <View
-      className={cn(
-        "flex-row items-center justify-between py-3.5",
-        !first && "border-t border-border"
-      )}
-    >
-      <Text className="shrink-0 text-sm text-t3">{label}</Text>
-      <Text
-        className={cn(
-          "ml-3 flex-1 text-right text-sm font-sans-semibold",
-          gold ? "text-gold" : "text-t1"
-        )}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
 
 /** Riga staff assegnato a un turno interno (vista ristoratore). */
 function AssignedRow({
@@ -521,7 +490,7 @@ export default function ShiftDetailScreen() {
           </Pressable>
         ) : null}
 
-        {!internal && shift.status !== "cancelled" ? (
+        {(!internal || !isPast) && shift.status !== "cancelled" ? (
           <Pressable
             disabled={busy}
             onPress={() => router.push(`/(manager)/shift/edit/${id}`)}

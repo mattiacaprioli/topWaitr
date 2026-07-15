@@ -13,11 +13,11 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
+import { InfoRow } from "@/components/ui/InfoRow";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ControlledInput } from "@/components/form/ControlledInput";
-import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
@@ -70,37 +70,6 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
   declined: "Rifiutato",
   no_show: "Assente",
 };
-
-function InfoRow({
-  label,
-  value,
-  gold,
-  first,
-}: {
-  label: string;
-  value: string;
-  gold?: boolean;
-  first?: boolean;
-}) {
-  return (
-    <View
-      className={cn(
-        "flex-row items-center justify-between py-3.5",
-        !first && "border-t border-border"
-      )}
-    >
-      <Text className="shrink-0 text-sm text-t3">{label}</Text>
-      <Text
-        className={cn(
-          "ml-3 flex-1 text-right text-sm font-sans-semibold",
-          gold ? "text-gold" : "text-t1"
-        )}
-      >
-        {value}
-      </Text>
-    </View>
-  );
-}
 
 export default function WaiterShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

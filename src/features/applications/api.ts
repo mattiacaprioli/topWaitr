@@ -125,6 +125,58 @@ export async function getMyApplicationsWithShift(
   return (data as ApplicationWithShift[] | null) ?? [];
 }
 
+export const APPLICATIONS_PAGE_SIZE = 20;
+
+export type ApplicationsFilter = "all" | "pending" | "accepted";
+
+/** Pagina di candidature del cameriere, filtro server-side ("Le mie candidature"). */
+export async function getMyApplicationsPage(
+  waiterId: string,
+  filter: ApplicationsFilter,
+  page: number
+): Promise<ApplicationWithShift[]> {
+  const from = page * APPLICATIONS_PAGE_SIZE;
+  let q = supabase
+    .from("applications")
+    .select("*, shift:shifts(*, venue:venues(*))")
+    .eq("waiter_id", waiterId);
+  if (filter !== "all") q = q.eq("status", filter);
+  const { data, error } = await q
+    .order("created_at", { ascending: false })
+    .range(from, from + APPLICATIONS_PAGE_SIZE - 1);
+  if (error) throw new Error(error.message);
+  return (data as ApplicationWithShift[] | null) ?? [];
+}
+
+export type ApplicationCounts = {
+  total: number;
+  pending: number;
+  accepted: number;
+};
+
+/** Conteggi per i chip filtro (head-count, indipendenti dalla paginazione). */
+export async function getMyApplicationCounts(
+  waiterId: string
+): Promise<ApplicationCounts> {
+  const base = () =>
+    supabase
+      .from("applications")
+      .select("*", { count: "exact", head: true })
+      .eq("waiter_id", waiterId);
+  const [total, pending, accepted] = await Promise.all([
+    base(),
+    base().eq("status", "pending"),
+    base().eq("status", "accepted"),
+  ]);
+  const firstError = total.error ?? pending.error ?? accepted.error;
+  if (firstError) throw new Error(firstError.message);
+  return {
+    total: total.count ?? 0,
+    pending: pending.count ?? 0,
+    accepted: accepted.count ?? 0,
+  };
+}
+
 /** Withdraw the waiter's own application (RLS: applications waiter own crud). */
 export async function cancelMyApplication(id: string): Promise<void> {
   const { error } = await supabase

@@ -92,6 +92,80 @@ export async function createInternalShift(input: {
   return shift;
 }
 
+/**
+ * Modifica completa di un turno interno: campi base, fabbisogno per ruolo e
+ * staff assegnato (diff: i nuovi ricevono la notifica via trigger, i rimossi
+ * vengono eliminati e il trigger risincronizza i coperti).
+ */
+export async function updateInternalShift(
+  shiftId: string,
+  input: {
+    title: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    description: string | null;
+    roleTargets: { role: string; count: number }[];
+    staffIds: string[];
+  }
+): Promise<void> {
+  const { roleTargets, staffIds, ...fields } = input;
+  const targets = roleTargets.filter((t) => t.count > 0);
+  const targetSum = targets.reduce((s, t) => s + t.count, 0);
+
+  // 1) Campi base (il trigger notify_on_shift_updated avvisa gli assegnati
+  //    se giorno/orario cambiano).
+  const { error: sErr } = await supabase
+    .from("shifts")
+    .update({
+      ...fields,
+      positions_total: Math.max(1, targetSum, staffIds.length),
+    })
+    .eq("id", shiftId);
+  if (sErr) throw new Error(sErr.message);
+
+  // 2) Fabbisogno per ruolo: replace completo (tabella piccola).
+  const { error: dErr } = await supabase
+    .from("shift_role_requirements")
+    .delete()
+    .eq("shift_id", shiftId);
+  if (dErr) throw new Error(dErr.message);
+  if (targets.length > 0) {
+    const { error: rErr } = await supabase
+      .from("shift_role_requirements")
+      .insert(targets.map((t) => ({ shift_id: shiftId, ...t })));
+    if (rErr) throw new Error(rErr.message);
+  }
+
+  // 3) Diff assegnazioni.
+  const { data: existing, error: eErr } = await supabase
+    .from("shift_assignments")
+    .select("id, staff_member_id")
+    .eq("shift_id", shiftId);
+  if (eErr) throw new Error(eErr.message);
+  const current = new Map((existing ?? []).map((a) => [a.staff_member_id, a.id]));
+
+  const toAdd = staffIds.filter((id) => !current.has(id));
+  if (toAdd.length > 0) {
+    const { error } = await supabase
+      .from("shift_assignments")
+      .insert(toAdd.map((id) => ({ shift_id: shiftId, staff_member_id: id })));
+    if (error) throw new Error(error.message);
+  }
+
+  const keep = new Set(staffIds);
+  const toRemove = (existing ?? [])
+    .filter((a) => !keep.has(a.staff_member_id))
+    .map((a) => a.id);
+  if (toRemove.length > 0) {
+    const { error } = await supabase
+      .from("shift_assignments")
+      .delete()
+      .in("id", toRemove);
+    if (error) throw new Error(error.message);
+  }
+}
+
 export type ShiftRoleRequirement = Tables<"shift_role_requirements">;
 
 /** Fabbisogno per ruolo di un turno. */

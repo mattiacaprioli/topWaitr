@@ -14,6 +14,7 @@ import {
   getVenueHoursSummary,
   setAssignmentPresence,
   updateAssignmentStatus,
+  updateInternalShift,
 } from "./api";
 
 export function useMyAssignedUpcoming(waiterId: string | undefined) {
@@ -86,6 +87,19 @@ export function useCreateInternalShift(venueId: string | undefined) {
         qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
         qc.invalidateQueries({ queryKey: qk.assignments.coverage(venueId) });
       }
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}
+
+/** Modifica completa di un turno interno; aggiorna tutte le viste manager. */
+export function useUpdateInternalShift(shiftId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof updateInternalShift>[1]) =>
+      updateInternalShift(shiftId, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.shifts.all });
       qc.invalidateQueries({ queryKey: qk.assignments.all });
     },
   });

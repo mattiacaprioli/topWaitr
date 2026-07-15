@@ -1,17 +1,26 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import {
+  APPLICATIONS_PAGE_SIZE,
   cancelMyApplication,
   createApplication,
   getApplications,
   getMyApplication,
+  getMyApplicationCounts,
   getMyApplications,
+  getMyApplicationsPage,
   getMyApplicationsWithShift,
   getMyUpcomingShifts,
   getPendingCount,
   getTodayStaff,
   updateApplicationStatus,
+  type ApplicationsFilter,
 } from "./api";
 
 export function useApplications(shiftId: string) {
@@ -75,6 +84,31 @@ export function useMyApplicationsList(waiterId: string | undefined) {
   });
 }
 
+/** "Le mie candidature" — scroll infinito con filtro server-side. */
+export function useMyApplicationsInfinite(
+  waiterId: string | undefined,
+  filter: ApplicationsFilter
+) {
+  return useInfiniteQuery({
+    queryKey: qk.applications.pageMine(waiterId ?? "", filter),
+    queryFn: ({ pageParam }) =>
+      getMyApplicationsPage(waiterId as string, filter, pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < APPLICATIONS_PAGE_SIZE ? undefined : allPages.length,
+    enabled: !!waiterId,
+  });
+}
+
+/** Conteggi per i chip filtro delle candidature. */
+export function useMyApplicationCounts(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.counts(waiterId ?? ""),
+    queryFn: () => getMyApplicationCounts(waiterId as string),
+    enabled: !!waiterId,
+  });
+}
+
 /** Withdraw a pending application, then refresh every waiter-facing view. */
 export function useCancelApplication() {
   const qc = useQueryClient();
@@ -95,8 +129,8 @@ export function useApply(shiftId: string, waiterId: string) {
     mutationFn: (message?: string) =>
       createApplication({ shift_id: shiftId, waiter_id: waiterId, message }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.applications.mine(shiftId, waiterId) });
-      qc.invalidateQueries({ queryKey: qk.applications.mineAll(waiterId) });
+      // Prefix: copre mine/mineAll/mineList + pagine e conteggi delle candidature.
+      qc.invalidateQueries({ queryKey: qk.applications.all });
       qc.invalidateQueries({ queryKey: qk.shifts.open() });
     },
   });

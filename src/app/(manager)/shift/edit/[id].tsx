@@ -9,6 +9,7 @@ import { useToast } from "@/providers/Toast";
 import { useShift, useUpdateShift } from "@/features/shifts/hooks";
 import { ShiftFormView } from "@/features/shifts/ShiftFormView";
 import { formToShiftFields, shiftToForm } from "@/features/shifts/form";
+import { InternalShiftEditForm } from "@/features/assignments/InternalShiftEditForm";
 import type { ShiftForm } from "@/features/shifts/schema";
 
 export default function EditShiftScreen() {
@@ -64,13 +65,17 @@ export default function EditShiftScreen() {
       <View className="px-6">
         <ScreenHeader eyebrow="Turno" title="Modifica turno" />
       </View>
-      <ShiftFormView
-        defaultValues={shiftToForm(shift)}
-        submitLabel="Salva modifiche"
-        pendingLabel="Salvataggio…"
-        pending={update.isPending}
-        onSubmit={onSubmit}
-      />
+      {shift.kind === "internal" ? (
+        <InternalShiftEditForm shift={shift} />
+      ) : (
+        <ShiftFormView
+          defaultValues={shiftToForm(shift)}
+          submitLabel="Salva modifiche"
+          pendingLabel="Salvataggio…"
+          pending={update.isPending}
+          onSubmit={onSubmit}
+        />
+      )}
     </View>
   );
 }

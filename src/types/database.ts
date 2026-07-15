@@ -677,6 +677,7 @@ export type Database = {
         | "new_message"
         | "shift_assigned"
         | "shift_cancelled"
+        | "shift_updated"
         | "staff_invite"
         | "staff_response"
         | "staff_removed"
@@ -821,6 +822,7 @@ export const Constants = {
         "new_message",
         "shift_assigned",
         "shift_cancelled",
+        "shift_updated",
         "staff_invite",
         "staff_response",
         "staff_removed",

@@ -32,6 +32,9 @@ export const qk = {
     mineAll: (waiterId: string) => ["applications", "mineAll", waiterId] as const,
     mineList: (waiterId: string) =>
       ["applications", "mineList", waiterId] as const,
+    pageMine: (waiterId: string, filter: string) =>
+      ["applications", "pageMine", waiterId, filter] as const,
+    counts: (waiterId: string) => ["applications", "counts", waiterId] as const,
     upcoming: (waiterId: string) =>
       ["applications", "upcoming", waiterId] as const,
     todayStaff: (venueId: string) =>
