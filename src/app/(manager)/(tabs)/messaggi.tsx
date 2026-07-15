@@ -1,12 +1,27 @@
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Display } from "@/components/ui/Display";
+import { Mono } from "@/components/ui/Mono";
+import { ConversationList } from "@/features/chat/ConversationList";
+import { useAuth } from "@/lib/auth";
 
 export default function ManagerMessaggiScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { session } = useAuth();
+  const userId = session!.user.id;
+
   return (
-    <View className="flex-1 items-center justify-center bg-bg-0 px-8">
-      <EmptyState
-        title="Messaggi in arrivo"
-        subtitle="La chat con i camerieri sarà disponibile a breve."
+    <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 12 }}>
+      <View className="px-5 pb-2">
+        <Mono gold>Chat</Mono>
+        <Display className="mt-1 text-4xl">Messaggi</Display>
+      </View>
+      <ConversationList
+        userId={userId}
+        onOpen={(id) => router.push(`/(manager)/chat/${id}`)}
+        bottomInset={insets.bottom + 96}
       />
     </View>
   );

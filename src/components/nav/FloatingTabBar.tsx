@@ -14,7 +14,8 @@ export type TabBarProps = Parameters<
 
 /**
  * Floating, rounded pill tab bar — full control over spacing/centering.
- * Shared across roles; pass an `icons` map (route name → IconName).
+ * Shared across roles; pass an `icons` map (route name → IconName) and,
+ * opzionalmente, `badges` (route name → conteggio non letti).
  */
 export function FloatingTabBar({
   state,
@@ -22,7 +23,11 @@ export function FloatingTabBar({
   navigation,
   insets,
   icons,
-}: TabBarProps & { icons: Record<string, IconName> }) {
+  badges,
+}: TabBarProps & {
+  icons: Record<string, IconName>;
+  badges?: Record<string, number>;
+}) {
   return (
     <View
       style={{
@@ -45,6 +50,7 @@ export function FloatingTabBar({
         const focused = state.index === index;
         const label = (options.title ?? route.name) as string;
         const iconName = icons[route.name] ?? "home";
+        const badge = badges?.[route.name] ?? 0;
 
         const onPress = () => {
           const event = navigation.emit({
@@ -68,7 +74,19 @@ export function FloatingTabBar({
               gap: 2,
             }}
           >
-            <Icon name={iconName} size={22} color={focused ? GOLD : INACTIVE} />
+            <View>
+              <Icon name={iconName} size={22} color={focused ? GOLD : INACTIVE} />
+              {badge > 0 ? (
+                <View
+                  className="absolute h-4 min-w-4 items-center justify-center rounded-full bg-gold px-1"
+                  style={{ top: -5, right: -9 }}
+                >
+                  <Text className="font-sans-bold text-[9px] text-gold-ink">
+                    {badge > 9 ? "9+" : String(badge)}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
             <Text
               numberOfLines={1}
               style={{

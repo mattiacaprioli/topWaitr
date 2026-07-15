@@ -29,6 +29,11 @@ export default function WaiterNotificationsScreen() {
       router.push("/(waiter)/inviti");
       return;
     }
+    // Per i messaggi related_id è la conversazione, non un turno.
+    if (n.type === "new_message") {
+      if (n.related_id) router.push(`/(waiter)/chat/${n.related_id}`);
+      return;
+    }
     // Turno annullato/rimozione dallo staff: non c'è più nulla da aprire
     // (la RLS nasconde i turni annullati al cameriere).
     if (n.type === "shift_cancelled" || n.type === "staff_removed") return;

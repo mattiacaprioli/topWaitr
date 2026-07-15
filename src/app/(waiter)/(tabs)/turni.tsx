@@ -216,6 +216,7 @@ export default function WaiterShiftsScreen() {
         paddingHorizontal: 20,
         paddingBottom: insets.bottom + 96,
         gap: 16,
+        flexGrow: 1,
       }}
       refreshControl={
         <RefreshControl
@@ -265,7 +266,7 @@ export default function WaiterShiftsScreen() {
       ) : null}
 
       {sorted.length === 0 ? (
-        <View className="mt-10">
+        <View className="flex-1 justify-center">
           <EmptyState
             title="Nessun turno disponibile"
             subtitle="Al momento non ci sono turni aperti. Torna più tardi."

@@ -1,5 +1,7 @@
 import { FloatingTabBar } from "@/components/nav/FloatingTabBar";
 import { Icon, type IconName } from "@/components/ui/Icon";
+import { useChatUnreadCount } from "@/features/chat/hooks";
+import { useAuth } from "@/lib/auth";
 import { Pressable, View } from "@/tw";
 import { LinearGradient } from "expo-linear-gradient";
 import { Tabs, useRouter } from "expo-router";
@@ -50,10 +52,15 @@ function QRFab() {
 }
 
 export default function WaiterTabsLayout() {
+  const { session } = useAuth();
+  const unread = useChatUnreadCount(session?.user.id).data ?? 0;
+
   return (
     <View style={{ flex: 1 }}>
       <Tabs
-        tabBar={(props) => <FloatingTabBar {...props} icons={ICONS} />}
+        tabBar={(props) => (
+          <FloatingTabBar {...props} icons={ICONS} badges={{ messaggi: unread }} />
+        )}
         screenOptions={{ headerShown: false }}
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />

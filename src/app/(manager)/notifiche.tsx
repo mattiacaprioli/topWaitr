@@ -29,6 +29,11 @@ export default function ManagerNotificationsScreen() {
       router.push("/(manager)/(tabs)/staff");
       return;
     }
+    // Per i messaggi related_id è la conversazione, non un turno.
+    if (n.type === "new_message") {
+      if (n.related_id) router.push(`/(manager)/chat/${n.related_id}`);
+      return;
+    }
     if (n.related_id) router.push(`/(manager)/shift/${n.related_id}`);
   };
 

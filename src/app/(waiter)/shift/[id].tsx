@@ -22,6 +22,7 @@ import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
+import { useStartConversation } from "@/features/chat/hooks";
 import {
   useApply,
   useCancelApplication,
@@ -88,6 +89,19 @@ export default function WaiterShiftDetailScreen() {
   const myAssignmentQuery = useMyAssignmentForShift(id, waiterId);
   const myAssignment = myAssignmentQuery.data ?? null;
   const respond = useRespondToAssignment();
+  const startConversation = useStartConversation();
+
+  function onContact() {
+    const ownerId = shift?.venue?.owner_id;
+    if (!ownerId) return;
+    startConversation.mutate(
+      { waiterId, managerId: ownerId, shiftId: id },
+      {
+        onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+      }
+    );
+  }
 
   const [withdrawVisible, setWithdrawVisible] = useState(false);
   const [declineVisible, setDeclineVisible] = useState(false);
@@ -393,6 +407,15 @@ export default function WaiterShiftDetailScreen() {
             )}
           </>
         )}
+
+        {shift.venue ? (
+          <GhostButton
+            className="mt-4"
+            label={startConversation.isPending ? "Apertura chat…" : "Contatta il locale"}
+            disabled={startConversation.isPending}
+            onPress={onContact}
+          />
+        ) : null}
       </ScrollView>
 
       <ConfirmModal

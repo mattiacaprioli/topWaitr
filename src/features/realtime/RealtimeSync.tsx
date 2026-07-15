@@ -47,6 +47,16 @@ export function RealtimeSync({ userId }: { userId: string }) {
           qc.invalidateQueries({ queryKey: qk.staff.all });
         }
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        () => {
+          // Solo lista conversazioni e badge: le pagine del thread aperto le
+          // mantiene il canale per-conversazione in ChatThread (niente refetch).
+          qc.invalidateQueries({ queryKey: qk.chat.conversationsAll });
+          qc.invalidateQueries({ queryKey: qk.chat.unreadAll });
+        }
+      )
       .subscribe();
 
     return () => {

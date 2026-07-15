@@ -12,7 +12,9 @@ import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
+import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
   useStaffMember,
@@ -29,8 +31,11 @@ function StaffEditForm({ member }: { member: StaffMember }) {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
+  const managerId = session!.user.id;
   const update = useUpdateStaffMember();
   const remove = useRemoveStaffMember();
+  const startConversation = useStartConversation();
   const busy = update.isPending || remove.isPending;
 
   const [name, setName] = useState(member.display_name);
@@ -62,6 +67,17 @@ function StaffEditForm({ member }: { member: StaffMember }) {
           router.back();
         },
         onError: () => toast.show("Impossibile salvare. Riprova.", "error"),
+      }
+    );
+  }
+
+  function onMessage() {
+    if (!waiterId) return;
+    startConversation.mutate(
+      { waiterId, managerId },
+      {
+        onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
       }
     );
   }
@@ -111,6 +127,19 @@ function StaffEditForm({ member }: { member: StaffMember }) {
               </View>
               <Icon name="chevR" size={18} color="#8c857a" />
             </View>
+          </Pressable>
+        ) : null}
+
+        {waiterId ? (
+          <Pressable
+            disabled={startConversation.isPending}
+            onPress={onMessage}
+            className="-mt-2 flex-row items-center justify-center gap-2 rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+          >
+            <Icon name="message" size={16} color="#EAB54C" />
+            <Text className="text-sm font-sans-semibold text-t1">
+              {startConversation.isPending ? "Apertura chat…" : "Invia messaggio"}
+            </Text>
           </Pressable>
         ) : null}
 

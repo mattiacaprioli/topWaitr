@@ -24,7 +24,9 @@ import {
   formatTime,
   shiftDurationHours,
 } from "@/lib/format";
+import { useAuth } from "@/lib/auth";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
+import { useStartConversation } from "@/features/chat/hooks";
 import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
 import {
   useSetAssignmentPresence,
@@ -81,9 +83,11 @@ const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
 function AssignedRow({
   assignment,
   onPress,
+  onMessage,
 }: {
   assignment: AssignmentWithStaff;
   onPress?: () => void;
+  onMessage?: () => void;
 }) {
   const sm = assignment.staff_member;
   const name = sm?.display_name ?? "Staff";
@@ -104,6 +108,15 @@ function AssignedRow({
           label={ASSIGN_STATUS_LABEL[assignment.status]}
           variant={assignment.status === "declined" ? "cancelled" : "neutral"}
         />
+        {onMessage ? (
+          <Pressable
+            hitSlop={8}
+            onPress={onMessage}
+            className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+          >
+            <Icon name="message" size={16} color="#EAB54C" />
+          </Pressable>
+        ) : null}
         {onPress ? <Icon name="chevR" size={18} color="#8c857a" /> : null}
       </View>
     </Card>
@@ -299,6 +312,9 @@ export default function ShiftDetailScreen() {
   const toast = useToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
+  const managerId = session!.user.id;
+  const startConversation = useStartConversation();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
@@ -347,6 +363,16 @@ export default function ShiftDetailScreen() {
       onSuccess: () => toast.show("Turno aggiornato"),
       onError: () => toast.show("Operazione non riuscita.", "error"),
     });
+  }
+
+  function onMessage(waiterId: string) {
+    startConversation.mutate(
+      { waiterId, managerId, shiftId: id },
+      {
+        onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+      }
+    );
   }
 
   if (shiftQuery.isLoading) {
@@ -580,6 +606,7 @@ export default function ShiftDetailScreen() {
                       ? () => router.push(`/(manager)/cameriere/${waiterId}`)
                       : undefined
                   }
+                  onMessage={waiterId ? () => onMessage(waiterId) : undefined}
                 />
               );
             })
@@ -631,6 +658,13 @@ export default function ShiftDetailScreen() {
                       variant={app.status}
                     />
                   </View>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() => onMessage(app.waiter_id)}
+                    className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+                  >
+                    <Icon name="message" size={16} color="#EAB54C" />
+                  </Pressable>
                   <Icon name="chevR" size={18} color="#8c857a" />
                 </Pressable>
 

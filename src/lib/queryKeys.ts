@@ -80,6 +80,19 @@ export const qk = {
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },
   waiterCard: (waiterId: string) => ["waiterCard", waiterId] as const,
+  chat: {
+    all: ["chat"] as const,
+    // Chiavi "larghe" usate da RealtimeSync: invalidano lista e badge senza
+    // toccare le pagine del thread aperto (mantenute dal canale per-thread).
+    conversationsAll: ["chat", "conversations"] as const,
+    conversations: (userId: string) => ["chat", "conversations", userId] as const,
+    conversation: (conversationId: string) =>
+      ["chat", "conversations", "detail", conversationId] as const,
+    messages: (conversationId: string) =>
+      ["chat", "messages", conversationId] as const,
+    unreadAll: ["chat", "unread"] as const,
+    unread: (userId: string) => ["chat", "unread", userId] as const,
+  },
   notifications: {
     all: ["notifications"] as const,
     list: (userId: string) => ["notifications", "list", userId] as const,

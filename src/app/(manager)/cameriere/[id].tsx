@@ -1,19 +1,38 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { ExperienceTimeline } from "@/components/ui/ExperienceTimeline";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { Mono } from "@/components/ui/Mono";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { WaiterReviewsList } from "@/features/reviews/WaiterReviewsList";
+import { useStartConversation } from "@/features/chat/hooks";
 import { useExperiences } from "@/features/experiences/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useWaiterProfile } from "@/features/waiterProfile/hooks";
+import { useAuth } from "@/lib/auth";
+import { useToast } from "@/providers/Toast";
 
 export default function WaiterProfileScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const toast = useToast();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { session } = useAuth();
+  const managerId = session!.user.id;
+  const startConversation = useStartConversation();
+
+  function onMessage() {
+    startConversation.mutate(
+      { waiterId: id, managerId },
+      {
+        onSuccess: (conv) => router.push(`/(manager)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+      }
+    );
+  }
 
   const card = useWaiterPublicCard(id).data;
   const profile = useWaiterProfile(id).data;
@@ -54,6 +73,12 @@ export default function WaiterProfileScreen() {
           <ExperienceTimeline items={experiences} />
         </View>
       ) : null}
+      <GhostButton
+        className="mt-1"
+        label={startConversation.isPending ? "Apertura chat…" : "Invia messaggio"}
+        disabled={startConversation.isPending}
+        onPress={onMessage}
+      />
     </View>
   );
 

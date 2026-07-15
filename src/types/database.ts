@@ -660,7 +660,12 @@ export type Database = {
           rating: number
         }[]
       }
+      is_my_assigned_shift: { Args: { p_shift: string }; Returns: boolean }
       leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
+      mark_conversation_read: {
+        Args: { p_conversation: string }
+        Returns: undefined
+      }
       respond_to_staff_invite: {
         Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
@@ -676,11 +681,11 @@ export type Database = {
         | "application_rejected"
         | "new_message"
         | "shift_assigned"
-        | "shift_cancelled"
-        | "shift_updated"
         | "staff_invite"
         | "staff_response"
         | "staff_removed"
+        | "shift_cancelled"
+        | "shift_updated"
       shift_kind: "marketplace" | "internal"
       shift_status: "open" | "closed" | "cancelled"
       staff_link_status: "pending" | "active"
@@ -821,11 +826,11 @@ export const Constants = {
         "application_rejected",
         "new_message",
         "shift_assigned",
-        "shift_cancelled",
-        "shift_updated",
         "staff_invite",
         "staff_response",
         "staff_removed",
+        "shift_cancelled",
+        "shift_updated",
       ],
       shift_kind: ["marketplace", "internal"],
       shift_status: ["open", "closed", "cancelled"],
