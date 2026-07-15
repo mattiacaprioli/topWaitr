@@ -186,14 +186,27 @@ export function ChatThread({ conversationId, userId }: Props) {
           >
             <Icon name="chevL" size={18} color="#F8F4ED" />
           </Pressable>
-          <Avatar
-            uri={other?.avatarUrl ?? undefined}
-            name={other?.name ?? "?"}
-            size={40}
-          />
-          <Text className="flex-1 text-lg font-sans-bold text-t1" numberOfLines={1}>
-            {other?.name ?? "Conversazione"}
-          </Text>
+          {other ? (
+            <>
+              <Avatar
+                uri={other.avatarUrl ?? undefined}
+                name={other.name}
+                size={40}
+              />
+              <Text
+                className="flex-1 text-lg font-sans-bold text-t1"
+                numberOfLines={1}
+              >
+                {other.name}
+              </Text>
+            </>
+          ) : (
+            // Placeholder neutro finché non arriva la controparte (niente "?").
+            <>
+              <View className="h-10 w-10 rounded-full bg-bg-2" />
+              <View className="h-4 w-40 rounded-full bg-bg-2" />
+            </>
+          )}
         </View>
 
         {query.isError ? (
