@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { usePathname } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { qk } from "@/lib/queryKeys";
@@ -13,6 +14,13 @@ import { useToast } from "@/providers/Toast";
 export function NotificationsListener({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const toast = useToast();
+  // Rotta corrente in un ref: serve nel callback realtime senza ri-sottoscrivere
+  // il canale ad ogni navigazione.
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     const channel = supabase
@@ -28,8 +36,17 @@ export function NotificationsListener({ userId }: { userId: string }) {
         (payload) => {
           qc.invalidateQueries({ queryKey: qk.notifications.all });
           if (payload.eventType === "INSERT") {
-            const title = (payload.new as { title?: string }).title;
-            if (title) toast.show(title, "info");
+            const n = payload.new as {
+              title?: string;
+              type?: string;
+              related_id?: string | null;
+            };
+            // Se stai già leggendo quella conversazione, niente toast.
+            const inThisChat =
+              n.type === "new_message" &&
+              !!n.related_id &&
+              pathnameRef.current === `/chat/${n.related_id}`;
+            if (n.title && !inThisChat) toast.show(n.title, "info");
           }
         }
       )

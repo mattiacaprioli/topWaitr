@@ -152,14 +152,17 @@ export async function getMyPendingInvites(
 
 /** Waiter: a venue they're active staff for (their "I tuoi locali"). */
 export type MyEmployer = StaffMember & {
-  venue: Pick<Tables<"venues">, "id" | "name" | "city" | "logo_url"> | null;
+  venue: Pick<
+    Tables<"venues">,
+    "id" | "name" | "city" | "logo_url" | "owner_id"
+  > | null;
 };
 
 /** Waiter: the venues where they are confirmed (active) staff. */
 export async function getMyEmployers(waiterId: string): Promise<MyEmployer[]> {
   const { data, error } = await supabase
     .from("staff_members")
-    .select("*, venue:venues(id, name, city, logo_url)")
+    .select("*, venue:venues(id, name, city, logo_url, owner_id)")
     .eq("waiter_id", waiterId)
     .eq("link_status", "active")
     .order("created_at", { ascending: true });

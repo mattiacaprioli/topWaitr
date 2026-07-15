@@ -20,6 +20,7 @@ import {
   useWaiterReviewsPreview,
 } from "@/features/reviews/hooks";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
+import { useStartConversation } from "@/features/chat/hooks";
 import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
 import { useMyWorkHistory } from "@/features/assignments/history";
 import type { MyEmployer } from "@/features/staff/api";
@@ -48,12 +49,32 @@ function InfoLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Un locale per cui il cameriere è staff, con azione "Lascia il locale". */
-function EmployerCard({ employer }: { employer: MyEmployer }) {
+/** Un locale per cui il cameriere è staff, con azioni "Scrivi"/"Lascia". */
+function EmployerCard({
+  employer,
+  waiterId,
+}: {
+  employer: MyEmployer;
+  waiterId: string;
+}) {
   const toast = useToast();
+  const router = useRouter();
   const leave = useLeaveVenue();
+  const startConversation = useStartConversation();
   const [confirmVisible, setConfirmVisible] = useState(false);
   const venueName = employer.venue?.name ?? "Locale";
+  const ownerId = employer.venue?.owner_id ?? null;
+
+  function onContact() {
+    if (!ownerId) return;
+    startConversation.mutate(
+      { waiterId, managerId: ownerId },
+      {
+        onSuccess: (conv) => router.push(`/(waiter)/chat/${conv.id}`),
+        onError: () => toast.show("Impossibile aprire la chat. Riprova.", "error"),
+      }
+    );
+  }
 
   function onConfirm() {
     leave.mutate(employer.id, {
@@ -88,15 +109,24 @@ function EmployerCard({ employer }: { employer: MyEmployer }) {
           gold={employer.employment_type === "fisso"}
         />
       </View>
-      <Pressable
-        onPress={() => setConfirmVisible(true)}
-        hitSlop={6}
-        className="mt-3 self-start"
-      >
-        <Text className="text-sm font-sans-semibold text-error">
-          Lascia il locale
-        </Text>
-      </Pressable>
+      <View className="mt-3 flex-row items-center gap-5">
+        {ownerId ? (
+          <Pressable
+            onPress={onContact}
+            disabled={startConversation.isPending}
+            hitSlop={6}
+          >
+            <Text className="text-sm font-sans-semibold text-gold">
+              {startConversation.isPending ? "Apertura…" : "Scrivi al locale"}
+            </Text>
+          </Pressable>
+        ) : null}
+        <Pressable onPress={() => setConfirmVisible(true)} hitSlop={6}>
+          <Text className="text-sm font-sans-semibold text-error">
+            Lascia il locale
+          </Text>
+        </Pressable>
+      </View>
 
       <ConfirmModal
         visible={confirmVisible}
@@ -228,7 +258,7 @@ export default function WaiterProfiloScreen() {
         <View className="gap-3">
           <Mono>I tuoi locali</Mono>
           {employers.map((e) => (
-            <EmployerCard key={e.id} employer={e} />
+            <EmployerCard key={e.id} employer={e} waiterId={userId} />
           ))}
         </View>
       ) : null}
