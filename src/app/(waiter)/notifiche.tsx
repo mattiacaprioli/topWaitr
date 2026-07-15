@@ -29,6 +29,9 @@ export default function WaiterNotificationsScreen() {
       router.push("/(waiter)/inviti");
       return;
     }
+    // Turno annullato/rimozione dallo staff: non c'è più nulla da aprire
+    // (la RLS nasconde i turni annullati al cameriere).
+    if (n.type === "shift_cancelled" || n.type === "staff_removed") return;
     if (n.related_id) router.push(`/(waiter)/shift/${n.related_id}`);
   };
 

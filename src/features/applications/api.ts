@@ -54,11 +54,13 @@ export async function getTodayStaff(venueId: string): Promise<TodayStaffRow[]> {
   const { data, error } = await supabase
     .from("applications")
     .select(
-      "*, waiter:profiles!applications_waiter_id_fkey(*, waiter_profile:waiter_profiles(*)), shift:shifts!inner(id,title,date,start_time,end_time,venue_id)"
+      "*, waiter:profiles!applications_waiter_id_fkey(*, waiter_profile:waiter_profiles(*)), shift:shifts!inner(id,title,date,start_time,end_time,venue_id,status)"
     )
     .eq("status", "accepted")
     .eq("shift.venue_id", venueId)
-    .eq("shift.date", today);
+    .eq("shift.date", today)
+    // I turni annullati non contano tra chi lavora oggi.
+    .neq("shift.status", "cancelled");
   if (error) throw new Error(error.message);
   const rows = (data as TodayStaffRow[] | null) ?? [];
   return rows.sort((a, b) =>

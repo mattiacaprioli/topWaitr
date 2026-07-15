@@ -68,7 +68,13 @@ export function useRemoveStaffMember() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => removeStaffMember(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.staff.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.staff.all });
+      // La rimozione cancella a cascata le sue assegnazioni e il trigger
+      // aggiorna i coperti dei turni: senza realtime resterebbero stali.
+      qc.invalidateQueries({ queryKey: qk.assignments.all });
+      qc.invalidateQueries({ queryKey: qk.shifts.all });
+    },
   });
 }
 

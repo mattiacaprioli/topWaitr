@@ -6,7 +6,7 @@ import {
   useState,
   type PropsWithChildren,
 } from "react";
-import Animated, { FadeInDown, FadeOutDown } from "react-native-reanimated";
+import Animated, { FadeInDown, FadeOutUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View, Text } from "@/tw";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -53,14 +53,14 @@ export function ToastProvider({ children }: PropsWithChildren) {
       {toast && v ? (
         <Animated.View
           key={toast.id}
-          entering={FadeInDown.springify().damping(18)}
-          exiting={FadeOutDown.duration(180)}
+          entering={FadeInDown.duration(220)}
+          exiting={FadeOutUp.duration(180)}
           pointerEvents="none"
           style={{
             position: "absolute",
             left: 20,
             right: 20,
-            bottom: insets.bottom + 24,
+            top: insets.top + 12,
             alignItems: "center",
           }}
         >

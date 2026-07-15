@@ -133,6 +133,8 @@ export async function getVenueCoverage(venueId: string): Promise<CoverageShift[]
     )
     .eq("venue_id", venueId)
     .eq("kind", "internal")
+    // Gli annullati non hanno fabbisogno da coprire.
+    .neq("status", "cancelled")
     .gte("date", today)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -340,6 +342,8 @@ export async function getTodayAssignments(
     )
     .eq("shift.venue_id", venueId)
     .eq("shift.date", today)
+    // I turni annullati non contano tra chi lavora oggi.
+    .neq("shift.status", "cancelled")
     .neq("status", "declined");
   if (error) throw new Error(error.message);
   const rows = (data as TodayAssignmentRow[] | null) ?? [];

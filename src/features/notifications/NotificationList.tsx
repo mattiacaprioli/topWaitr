@@ -13,6 +13,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   application_rejected: "close",
   new_message: "message",
   shift_assigned: "calendar",
+  shift_cancelled: "alert",
   staff_invite: "users",
   staff_response: "users",
   staff_removed: "close",

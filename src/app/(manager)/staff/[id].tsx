@@ -198,7 +198,7 @@ function StaffEditForm({ member }: { member: StaffMember }) {
       <ConfirmModal
         visible={confirmVisible}
         title="Rimuovere dallo staff?"
-        message={`${member.display_name} non sarà più nel tuo organico.`}
+        message={`${member.display_name} non sarà più nel tuo organico. Perderai anche lo storico di ore e presenze dei suoi turni (incluso l'export per il commercialista).`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}

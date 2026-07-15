@@ -60,8 +60,10 @@ export default function ManagerHome() {
   const openCount = upcoming.filter(
     (s) => s.kind === "marketplace" && s.status === "open"
   ).length;
-  const filled = upcoming.reduce((n, s) => n + s.positions_filled, 0);
-  const totalPos = upcoming.reduce((n, s) => n + s.positions_total, 0);
+  // Gli annullati non hanno posti da coprire: esclusi dal KPI.
+  const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
+  const filled = activeUpcoming.reduce((n, s) => n + s.positions_filled, 0);
+  const totalPos = activeUpcoming.reduce((n, s) => n + s.positions_total, 0);
 
   // "Chi lavora oggi": staff assegnato ai turni interni + camerieri accettati
   // sui turni marketplace di oggi, in un'unica lista.
