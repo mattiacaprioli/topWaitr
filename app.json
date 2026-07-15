@@ -8,9 +8,11 @@
     "scheme": "topwaitr",
     "userInterfaceStyle": "dark",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.topwaitr.app"
     },
     "android": {
+      "package": "com.topwaitr.app",
       "adaptiveIcon": {
         "backgroundColor": "#0C0907",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -45,7 +47,8 @@
         }
       ],
       "@sentry/react-native",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -9,6 +9,7 @@ import {
   useNotifications,
 } from "@/features/notifications/hooks";
 import type { Notification } from "@/features/notifications/api";
+import { routeForNotification } from "@/features/notifications/routing";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 
@@ -27,16 +28,8 @@ export default function ManagerNotificationsScreen() {
 
   const onOpen = (n: Notification) => {
     if (n.read_at == null) markRead.mutate(n.id);
-    if (n.type === "staff_response") {
-      router.push("/(manager)/(tabs)/staff");
-      return;
-    }
-    // Per i messaggi related_id è la conversazione, non un turno.
-    if (n.type === "new_message") {
-      if (n.related_id) router.push(`/(manager)/chat/${n.related_id}`);
-      return;
-    }
-    if (n.related_id) router.push(`/(manager)/shift/${n.related_id}`);
+    const href = routeForNotification("manager", n.type, n.related_id);
+    if (href) router.push(href);
   };
 
   return (

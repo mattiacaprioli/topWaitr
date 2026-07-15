@@ -8,6 +8,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { queryClient } from "@/lib/queryClient";
+import { unregisterCurrentPushToken } from "@/features/push/api";
 import type { Enums, Tables } from "@/types/database";
 
 type Profile = Tables<"profiles">;
@@ -172,6 +173,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }
 
   async function signOut() {
+    // De-registra il push token PRIMA del signOut: dopo, la RLS "own only"
+    // blocca la delete. Best-effort: non deve mai impedire il logout.
+    try {
+      await unregisterCurrentPushToken();
+    } catch {
+      // ignora: il cleanup dei token morti avviene comunque lato Edge Function.
+    }
     await supabase.auth.signOut();
   }
 

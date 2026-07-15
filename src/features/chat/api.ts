@@ -6,6 +6,9 @@ export const MESSAGES_PAGE_SIZE = 30;
 export type Conversation = Tables<"conversations">;
 export type Message = Tables<"messages">;
 
+/** Cursore keyset per la paginazione dei messaggi: (created_at, id) dell'ultimo (più vecchio) della pagina. */
+export type MessageCursor = { created_at: string; id: string };
+
 /**
  * Controparte della conversazione. La RLS di `profiles` non permette il join
  * diretto tra i partecipanti: l'identità del cameriere arriva dalla view
@@ -25,68 +28,27 @@ export type ConversationListItem = Conversation & {
 
 export type ConversationDetail = Conversation & { other: ChatCounterpart };
 
-async function fetchWaiterCards(
-  ids: string[]
-): Promise<Map<string, ChatCounterpart>> {
-  const out = new Map<string, ChatCounterpart>();
-  if (ids.length === 0) return out;
-  const { data, error } = await supabase
-    .from("waiter_public_cards")
-    .select("id, full_name, avatar_url")
-    .in("id", ids);
-  if (error) throw new Error(error.message);
-  for (const w of data ?? []) {
-    if (w.id) out.set(w.id, { name: w.full_name ?? "Cameriere", avatarUrl: w.avatar_url });
-  }
-  return out;
-}
-
-async function fetchVenueOwners(
-  ids: string[]
-): Promise<Map<string, ChatCounterpart>> {
-  const out = new Map<string, ChatCounterpart>();
-  if (ids.length === 0) return out;
-  const { data, error } = await supabase
-    .from("venues")
-    .select("owner_id, name, logo_url")
-    .in("owner_id", ids);
-  if (error) throw new Error(error.message);
-  for (const v of data ?? []) {
-    if (!out.has(v.owner_id)) {
-      out.set(v.owner_id, { name: v.name, avatarUrl: v.logo_url });
-    }
-  }
-  return out;
-}
-
 /**
  * Controparte per OGNI conversazione (chiave = id conversazione). La stessa
  * persona può essere cameriere in una conversazione e proprietario di un locale
- * in un'altra: si risolve per lato della conversazione, non per profilo.
+ * in un'altra: si risolve per lato della conversazione, non per profilo. La
+ * risoluzione (nome/avatar) è delegata al DB (`get_chat_counterparts` →
+ * `chat_counterpart`), stessa fonte del trigger `notify_on_new_message`.
  */
 async function getCounterparts(
-  userId: string,
   conversations: Conversation[]
 ): Promise<Map<string, ChatCounterpart>> {
-  const waiterIds = new Set<string>();
-  const managerIds = new Set<string>();
-  for (const c of conversations) {
-    if (c.waiter_id !== userId) waiterIds.add(c.waiter_id);
-    if (c.manager_id !== userId) managerIds.add(c.manager_id);
-  }
-
-  const [byWaiter, byManager] = await Promise.all([
-    fetchWaiterCards([...waiterIds]),
-    fetchVenueOwners([...managerIds]),
-  ]);
-
   const out = new Map<string, ChatCounterpart>();
-  for (const c of conversations) {
-    const other =
-      c.waiter_id === userId
-        ? byManager.get(c.manager_id)
-        : byWaiter.get(c.waiter_id);
-    if (other) out.set(c.id, other);
+  if (conversations.length === 0) return out;
+  const { data, error } = await supabase.rpc("get_chat_counterparts", {
+    p_conversations: conversations.map((c) => c.id),
+  });
+  if (error) throw new Error(error.message);
+  for (const row of data ?? []) {
+    out.set(row.conversation_id, {
+      name: row.name ?? FALLBACK_COUNTERPART.name,
+      avatarUrl: row.avatar_url,
+    });
   }
   return out;
 }
@@ -112,7 +74,7 @@ export async function getConversations(
   if (error) throw new Error(error.message);
 
   const rows = data ?? [];
-  const others = await getCounterparts(userId, rows);
+  const others = await getCounterparts(rows);
   return rows
     .map(({ last, unread, ...conversation }) => ({
       ...conversation,
@@ -129,8 +91,7 @@ export async function getConversations(
 
 /** Singola conversazione con controparte (header del thread). */
 export async function getConversation(
-  conversationId: string,
-  userId: string
+  conversationId: string
 ): Promise<ConversationDetail | null> {
   const { data, error } = await supabase
     .from("conversations")
@@ -139,7 +100,7 @@ export async function getConversation(
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return null;
-  const others = await getCounterparts(userId, [data]);
+  const others = await getCounterparts([data]);
   return {
     ...data,
     other: others.get(data.id) ?? FALLBACK_COUNTERPART,
@@ -191,18 +152,30 @@ export async function getOrCreateConversation(params: {
   throw new Error(error.message);
 }
 
-/** Pagina di messaggi, dal più recente (per la FlatList inverted). */
+/**
+ * Pagina di messaggi, dal più recente (per la FlatList inverted). Paginazione
+ * **keyset** su (created_at, id): niente riga di confine duplicata come con
+ * l'offset, e robusta anche se il thread cresce molto. `cursor = null` = prima
+ * pagina.
+ */
 export async function getMessagesPage(
   conversationId: string,
-  page: number
+  cursor: MessageCursor | null
 ): Promise<Message[]> {
-  const from = page * MESSAGES_PAGE_SIZE;
-  const { data, error } = await supabase
+  let query = supabase
     .from("messages")
     .select("*")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
-    .range(from, from + MESSAGES_PAGE_SIZE - 1);
+    .order("id", { ascending: false })
+    .limit(MESSAGES_PAGE_SIZE);
+  if (cursor) {
+    // (created_at, id) < (cursor.created_at, cursor.id) — tie-break su id.
+    query = query.or(
+      `created_at.lt."${cursor.created_at}",and(created_at.eq."${cursor.created_at}",id.lt.${cursor.id})`
+    );
+  }
+  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return data ?? [];
 }

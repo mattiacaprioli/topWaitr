@@ -227,6 +227,35 @@ export type Database = {
         }
         Relationships: []
       }
+      push_tokens: {
+        Row: {
+          platform: string | null
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          platform?: string | null
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          platform?: string | null
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           comment: string | null
@@ -644,6 +673,13 @@ export type Database = {
       }
     }
     Functions: {
+      chat_counterpart: {
+        Args: { p_is_manager: boolean; p_user: string }
+        Returns: {
+          avatar_url: string
+          name: string
+        }[]
+      }
       find_waiter_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -651,6 +687,14 @@ export type Database = {
           city: string
           full_name: string
           id: string
+        }[]
+      }
+      get_chat_counterparts: {
+        Args: { p_conversations: string[] }
+        Returns: {
+          avatar_url: string
+          conversation_id: string
+          name: string
         }[]
       }
       get_rating_breakdown: {
@@ -664,6 +708,10 @@ export type Database = {
       leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
       mark_conversation_read: {
         Args: { p_conversation: string }
+        Returns: undefined
+      }
+      register_push_token: {
+        Args: { p_platform: string; p_token: string }
         Returns: undefined
       }
       respond_to_staff_invite: {

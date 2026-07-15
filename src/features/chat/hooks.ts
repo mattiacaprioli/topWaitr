@@ -17,6 +17,7 @@ import {
   markConversationRead,
   sendMessage,
   type Message,
+  type MessageCursor,
 } from "./api";
 
 export function useConversations(userId: string | undefined) {
@@ -34,7 +35,7 @@ export function useConversation(
 ) {
   return useQuery({
     queryKey: qk.chat.conversation(conversationId ?? ""),
-    queryFn: () => getConversation(conversationId as string, userId as string),
+    queryFn: () => getConversation(conversationId as string),
     enabled: !!conversationId && !!userId,
   });
 }
@@ -53,9 +54,12 @@ export function useMessagesInfinite(conversationId: string | undefined) {
     queryKey: qk.chat.messages(conversationId ?? ""),
     queryFn: ({ pageParam }) =>
       getMessagesPage(conversationId as string, pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < MESSAGES_PAGE_SIZE ? undefined : allPages.length,
+    initialPageParam: null as MessageCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < MESSAGES_PAGE_SIZE) return undefined;
+      const oldest = lastPage[lastPage.length - 1];
+      return { created_at: oldest.created_at, id: oldest.id };
+    },
     enabled: !!conversationId,
   });
 }
