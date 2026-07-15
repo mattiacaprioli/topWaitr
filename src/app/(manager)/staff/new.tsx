@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
+import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
@@ -69,13 +70,15 @@ export default function StaffNewScreen() {
   const [mode, setMode] = useState<Mode>("storico");
   const add = useAddStaffMember();
 
-  // Camerieri già in organico (attivi o invitati) — per escluderli.
+  // Camerieri già in organico (attivi o invitati) — per escluderli,
+  // distinguendo l'invito ancora in attesa dalla presenza effettiva.
   const staffQuery = useVenueStaff(venueId);
-  const existing = new Set(
+  const existingStatus = new Map<string, Enums<"staff_link_status">>(
     (staffQuery.data ?? [])
-      .map((s) => s.waiter_id)
-      .filter((id): id is string => !!id)
+      .filter((s): s is typeof s & { waiter_id: string } => !!s.waiter_id)
+      .map((s) => [s.waiter_id, s.link_status])
   );
+  const existing = new Set(existingStatus.keys());
 
   // Dallo storico
   const workedQuery = useWorkedWithWaiters(venueId);
@@ -93,7 +96,7 @@ export default function StaffNewScreen() {
   const [found, setFound] = useState<WaiterLookup | null>(null);
   const [searched, setSearched] = useState(false);
   const [inviteType, setInviteType] = useState<Enums<"employment_type">>("fisso");
-  const alreadyInStaff = found ? existing.has(found.id) : false;
+  const foundStatus = found ? (existingStatus.get(found.id) ?? null) : null;
 
   function onAdded(msg: string) {
     toast.show(msg);
@@ -309,7 +312,19 @@ export default function StaffNewScreen() {
 
             {searched ? (
               found ? (
-                alreadyInStaff ? (
+                foundStatus === "pending" ? (
+                  <Card className="rounded-3xl border-border-2 p-5">
+                    <View className="flex-row items-center gap-3">
+                      <View className="flex-1">
+                        <Text className="text-sm text-t2">
+                          Hai già invitato{" "}
+                          {found.full_name ?? "questo cameriere"}.
+                        </Text>
+                      </View>
+                      <Pill label="In attesa di risposta" variant="pending" />
+                    </View>
+                  </Card>
+                ) : foundStatus === "active" ? (
                   <Card className="rounded-3xl border-border-2 p-5">
                     <Text className="text-sm text-t2">
                       {found.full_name ?? "Questo cameriere"} è già nel tuo
