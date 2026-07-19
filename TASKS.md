@@ -59,6 +59,17 @@ Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **o
 - **iOS**: build solo **simulatore** (profilo `development` ha `ios.simulator: true`) → niente push su iOS finché non c'è un account Apple Developer + build su device. Aggiunto `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` (warning EAS, servirà in M8).
 - **⚠️ Sentry rompeva la build iOS**: il plugin `@sentry/react-native` esegue `sentry-cli` nello step "Run fastlane" e fallisce con *"An organization ID or slug is required"* se mancano organization/project. Il warning che compare in locale a ogni comando expo **non è cosmetico**. Fix: `env: { "SENTRY_DISABLE_AUTO_UPLOAD": "true" }` su tutti i profili in `eas.json` (`Sentry.init` è già un no-op senza `EXPO_PUBLIC_SENTRY_DSN`). Da rimuovere quando il progetto Sentry sarà configurato. La build **Android non era affetta** (fallisce solo il path fastlane/iOS).
 - **Esito build (19/07)**: Android APK ✅ + iOS simulatore ✅ (dopo il fix Sentry). Installazione: `npx eas-cli build:run --platform ios|android --profile development`. Il dev client **sostituisce Expo Go** → chiude il rebuild pendente per `expo-print`/`expo-sharing`.
+- **Profilo `preview` = build standalone** (bundle JS dentro l'APK, niente Metro): è quella da usare per far provare l'app o testare le push in modo realistico. Il `development` invece **richiede `yarn start` + stessa Wi-Fi**. Dimensioni indicative: preview 114 MB, development 260 MB. Rimossi i `channel` da preview/production (`expo-updates` non è installato → erano privi di significato; rimetterli se si adotterà EAS Update per gli OTA).
+- **⚠️ `versionCode` duplicato**: development e preview uscivano entrambe con `versionCode 1` → Android **non tratta l'APK come aggiornamento** e l'installazione non sostituisce quella esistente (si continua ad aprire la build vecchia, sintomo: compare la schermata "Development servers" del dev client). Fix: `autoIncrement: true` anche su `preview`. Se ricapita: **disinstallare** l'app prima di installare.
+
+### ✅ M7 PUSH VERIFICATE END-TO-END su device fisico (2026-07-19)
+Test su Android reale (account cameriere `capriolimattia1994@gmail.com`), tutti superati:
+1. **Token registrato**: `ExponentPushToken[...]` in `push_tokens` (platform `android`) → `google-services.json` e la RPC `register_push_token` funzionano.
+2. **Invio diretto Expo API**: ticket `ok` **e receipt `ok`** → la service account key FCM V1 è corretta. ⚠️ Il **ticket non basta** come verifica: gli errori FCM (`MismatchSenderId`, `InvalidCredentials`) compaiono solo nella **receipt** (`POST /--/api/v2/push/getReceipts`). Notifica ricevuta sul telefono.
+3. **Catena completa** (INSERT su `notifications` → trigger → `pg_net` → Edge Function → Expo): `net._http_response` = `200 {"sent":1,"removed":0}` in ~60ms.
+4. **Filtro preferenze**: con `notification_prefs = {"messages": false}`, una `new_message` **non genera alcuna chiamata HTTP** mentre una `shift_assigned` sì; **entrambe le notifiche in-app restano create**. Comportamento esatto voluto.
+- Gotcha di debug: `pg_net` invia **dopo il COMMIT** → interrogare `net._http_response` nella stessa transazione dell'INSERT mostra ancora il conteggio vecchio. Ri-interrogare dopo.
+- Dati di test ripuliti (notifiche `Test%` cancellate, `notification_prefs` riportate a `{}`).
 
 ---
 
