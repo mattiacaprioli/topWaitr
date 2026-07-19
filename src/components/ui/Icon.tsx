@@ -26,7 +26,8 @@ export type IconName =
   | "qr"
   | "send"
   | "download"
-  | "upload";
+  | "upload"
+  | "lock";
 
 type Props = {
   name: IconName;
@@ -132,6 +133,12 @@ export function Icon({
       )}
       {name === "shield" && (
         <Path {...p} d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3zM9 12l2 2 4-4" />
+      )}
+      {name === "lock" && (
+        <>
+          <Rect {...p} x={4.5} y={10.5} width={15} height={10} rx={2.5} />
+          <Path {...p} d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+        </>
       )}
       {name === "settings" && (
         <>

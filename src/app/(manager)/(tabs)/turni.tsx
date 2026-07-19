@@ -11,6 +11,8 @@ import { Mono } from "@/components/ui/Mono";
 import { QueryError } from "@/components/ui/QueryError";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { ProBadge } from "@/features/plan/ProLock";
+import { useProGate } from "@/features/plan/hooks";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useMyVenue } from "@/features/venues/hooks";
@@ -21,6 +23,7 @@ export default function ManagerShiftsScreen() {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const userId = session!.user.id;
+  const { isPro, gate } = useProGate();
 
   const venueQuery = useMyVenue(userId);
   const venue = venueQuery.data ?? null;
@@ -85,7 +88,7 @@ export default function ManagerShiftsScreen() {
 
       <Card
         className="rounded-3xl border-border-2 p-4"
-        onPress={() => router.push("/(manager)/copertura")}
+        onPress={gate(() => router.push("/(manager)/copertura"))}
       >
         <View className="flex-row items-center gap-3">
           <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
@@ -99,7 +102,11 @@ export default function ManagerShiftsScreen() {
               Fabbisogno per ruolo e turni scoperti
             </Text>
           </View>
-          <Icon name="chevR" size={18} color="#8c857a" />
+          {isPro ? (
+            <Icon name="chevR" size={18} color="#8c857a" />
+          ) : (
+            <ProBadge />
+          )}
         </View>
       </Card>
 

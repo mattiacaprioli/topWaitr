@@ -1,12 +1,17 @@
+import { Card } from "@/components/ui/Card";
 import { GhostButton } from "@/components/ui/GhostButton";
+import { Icon } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { NotificationSettings } from "@/features/notifications/NotificationSettings";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { useAuth } from "@/lib/auth";
-import { ScrollView, View } from "@/tw";
+import { Pressable, ScrollView, Text, View } from "@/tw";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ManagerSettingsScreen() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { signOut } = useAuth();
 
   return (
@@ -24,7 +29,31 @@ export default function ManagerSettingsScreen() {
           flexGrow: 1,
         }}
       >
-        <NotificationSettings />
+        <View className="gap-2">
+          <SectionHeader title="Preferenze" />
+          <Card className="p-0">
+            <Pressable
+              onPress={() => router.push("/(manager)/impostazioni-notifiche")}
+              className="flex-row items-center gap-3 px-4 py-3.5"
+            >
+              <View className="h-9 w-9 items-center justify-center rounded-full bg-bg-2">
+                <Icon name="bell" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-[15px] font-sans-semibold text-t1">
+                  Notifiche
+                </Text>
+                <Text className="mt-0.5 text-[13px] text-t3">
+                  Scegli quali notifiche push ricevere
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#6A6358" />
+            </Pressable>
+          </Card>
+        </View>
+
+        <DevPlanToggle />
+
         <View style={{ marginTop: "auto" }}>
           <GhostButton label="Esci" onPress={signOut} />
         </View>

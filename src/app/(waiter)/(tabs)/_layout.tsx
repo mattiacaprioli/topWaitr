@@ -11,7 +11,6 @@ const ICONS: Record<string, IconName> = {
   index: "home",
   turni: "search",
   messaggi: "message",
-  pro: "sparkle",
   profilo: "user",
 };
 
@@ -66,7 +65,6 @@ export default function WaiterTabsLayout() {
         <Tabs.Screen name="index" options={{ title: "Home" }} />
         <Tabs.Screen name="turni" options={{ title: "Turni" }} />
         <Tabs.Screen name="messaggi" options={{ title: "Messaggi" }} />
-        <Tabs.Screen name="pro" options={{ title: "Pro" }} />
         <Tabs.Screen name="profilo" options={{ title: "Profilo" }} />
       </Tabs>
       <QRFab />

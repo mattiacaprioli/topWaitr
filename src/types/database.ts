@@ -199,6 +199,7 @@ export type Database = {
           notification_prefs: Json
           onboarding_complete: boolean
           phone: string | null
+          plan: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
         }
@@ -212,6 +213,7 @@ export type Database = {
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
+          plan?: string
           role: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }
@@ -225,6 +227,7 @@ export type Database = {
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
+          plan?: string
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
         }

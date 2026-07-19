@@ -140,7 +140,7 @@ export default function OnboardingScreen() {
             {[
               { icon: "qr" as const, label: "Mostra il QR al primo cliente" },
               { icon: "upload" as const, label: "Carica altre certificazioni" },
-              { icon: "sparkle" as const, label: "Completa il piano Pro" },
+              { icon: "star" as const, label: "Raccogli le tue prime recensioni" },
             ].map((row, i) => (
               <View
                 key={row.label}

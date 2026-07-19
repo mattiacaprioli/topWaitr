@@ -12,6 +12,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/cn";
+import { PlanCard } from "@/features/plan/ProLock";
 import { useMyVenue } from "@/features/venues/hooks";
 import type { Venue } from "@/features/venues/api";
 
@@ -148,6 +149,8 @@ export default function ManagerProfiloScreen() {
             label="Modifica locale"
             onPress={() => router.push("/(manager)/venue")}
           />
+
+          <PlanCard />
 
           <CompletenessCard
             venue={venue}

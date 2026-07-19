@@ -14,6 +14,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
+import { ProUpsellCard } from "@/features/plan/ProLock";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatTime } from "@/lib/format";
@@ -174,6 +175,9 @@ export default function ManagerHome() {
               <StatCard value={String(pastCount)} label="turni svolti" />
             </View>
           </View>
+
+          {/* Upsell Pro — visibile solo agli utenti Free */}
+          <ProUpsellCard />
 
           {/* Chi lavora oggi */}
           {workers.length > 0 ? (

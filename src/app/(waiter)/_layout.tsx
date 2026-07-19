@@ -18,6 +18,10 @@ export default function WaiterLayout() {
       <Stack.Screen name="esperienza/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="qr" options={{ headerShown: false }} />
       <Stack.Screen name="impostazioni" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="impostazioni-notifiche"
+        options={{ headerShown: false }}
+      />
       <Stack.Screen name="recensioni" options={{ headerShown: false }} />
       <Stack.Screen name="notifiche" options={{ headerShown: false }} />
       <Stack.Screen name="inviti" options={{ headerShown: false }} />

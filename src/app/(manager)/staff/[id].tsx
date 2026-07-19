@@ -22,6 +22,8 @@ import {
 } from "@/features/staff/hooks";
 import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
 import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
+import { ProLockedCard } from "@/features/plan/ProLock";
+import { useIsPro } from "@/features/plan/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
 import type { StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
@@ -33,6 +35,7 @@ function StaffEditForm({ member }: { member: StaffMember }) {
   const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const managerId = session!.user.id;
+  const isPro = useIsPro();
   const update = useUpdateStaffMember();
   const remove = useRemoveStaffMember();
   const startConversation = useStartConversation();
@@ -143,12 +146,21 @@ function StaffEditForm({ member }: { member: StaffMember }) {
           </Pressable>
         ) : null}
 
-        <StaffHoursSection staffMemberId={member.id} />
+        {isPro ? (
+          <>
+            <StaffHoursSection staffMemberId={member.id} />
 
-        <StaffPerformanceSection
-          staffMemberId={member.id}
-          waiterId={member.waiter_id}
-        />
+            <StaffPerformanceSection
+              staffMemberId={member.id}
+              waiterId={member.waiter_id}
+            />
+          </>
+        ) : (
+          <ProLockedCard
+            title="Ore e performance"
+            subtitle="Ore lavorate, affidabilità e statistiche di questo membro."
+          />
+        )}
 
         <Input
           label="Nome"
