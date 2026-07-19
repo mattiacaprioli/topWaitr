@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView, Platform } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -93,7 +93,7 @@ export default function WaiterProfileEditScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
     >
       <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
         <View className="px-5 pb-3">

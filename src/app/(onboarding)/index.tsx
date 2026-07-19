@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -168,7 +167,7 @@ export default function OnboardingScreen() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
     >
       <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
         {/* Header: indietro + barra di avanzamento */}

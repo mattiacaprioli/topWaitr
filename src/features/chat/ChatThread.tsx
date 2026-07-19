@@ -1,10 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  ActivityIndicator,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
+import { ActivityIndicator, FlatList, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { toTimeString } from "@/lib/format";
 import { qk } from "@/lib/queryKeys";
+import { useKeyboardVisible } from "@/lib/useKeyboardVisible";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/providers/Toast";
 import type { Message } from "./api";
@@ -65,6 +61,7 @@ export function ChatThread({ conversationId, userId }: Props) {
   const qc = useQueryClient();
   const toast = useToast();
   const [text, setText] = useState("");
+  const keyboardVisible = useKeyboardVisible();
 
   const conversation = useConversation(conversationId, userId);
   const query = useMessagesInfinite(conversationId);
@@ -174,10 +171,10 @@ export function ChatThread({ conversationId, userId }: Props) {
 
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      {/* "padding" anche su Android: con l'edge-to-edge di SDK 54+ adjustResize
+          non ridimensiona più la finestra, quindi senza behavior la tastiera
+          copre composer e ultimi messaggi. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <View className="flex-row items-center gap-3 border-b border-border px-5 pb-3">
           <Pressable
             onPress={() => router.back()}
@@ -261,7 +258,9 @@ export function ChatThread({ conversationId, userId }: Props) {
 
         <View
           className="flex-row items-end gap-2 border-t border-border px-4 pt-3"
-          style={{ paddingBottom: insets.bottom + 12 }}
+          // A tastiera aperta l'inset inferiore è coperto: tenerlo lascerebbe
+          // un buco vuoto tra composer e tastiera.
+          style={{ paddingBottom: keyboardVisible ? 12 : insets.bottom + 12 }}
         >
           <TextInput
             className="max-h-28 flex-1 rounded-[14px] border border-border bg-bg-1 px-4 py-3 font-sans text-[16px] text-t1"

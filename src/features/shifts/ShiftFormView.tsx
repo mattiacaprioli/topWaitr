@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView } from "react-native";
 import { ScrollView } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { ControlledPicker } from "@/components/form/ControlledPicker";
@@ -31,7 +31,7 @@ export function ShiftFormView({
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
     >
       <ScrollView
         className="flex-1 bg-bg-0"

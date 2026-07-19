@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from "react";
-import { KeyboardAvoidingView, Platform } from "react-native";
+import { KeyboardAvoidingView } from "react-native";
 import { useRouter } from "expo-router";
 import Slider from "@react-native-community/slider";
 import { Pressable, ScrollView, Text, TextInput, View } from "@/tw";
@@ -107,7 +107,7 @@ export function ExtraShiftForm({ venueId, header }: Props) {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior="padding"
     >
       <ScrollView
         className="flex-1 bg-bg-0"
