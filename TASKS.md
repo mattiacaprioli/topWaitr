@@ -57,6 +57,8 @@ Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **o
 - **Keystore Android**: generato da EAS (remote credentials). ⚠️ `eas build` **non genera il keystore in `--non-interactive`**: la prima volta serve una pty con stdin aperto (`{ printf '\n'; sleep N; } | script -q /dev/null npx eas-cli build ...`), poi le build non-interattive funzionano.
 - **⚠️ BLOCCANTE per la push Android — FCM V1 non configurato**: Expo richiede (a) `google-services.json` in root + `android.googleServicesFile` in `app.json`, (b) la **service account key** Firebase caricata su EAS (`eas credentials` → Android → Google Service Account → FCM V1). Senza, l'app non ottiene il token FCM e `getExpoPushTokenAsync` fallisce → **la build Android attuale non può ricevere push** (per tutto il resto è un dev client valido). Richiede azione manuale nella Firebase Console → poi **rebuild Android**. La service account key è gitignorata (`google-service-account*.json`, `firebase-adminsdk*.json`); `google-services.json` può essere committato.
 - **iOS**: build solo **simulatore** (profilo `development` ha `ios.simulator: true`) → niente push su iOS finché non c'è un account Apple Developer + build su device. Aggiunto `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` (warning EAS, servirà in M8).
+- **⚠️ Sentry rompeva la build iOS**: il plugin `@sentry/react-native` esegue `sentry-cli` nello step "Run fastlane" e fallisce con *"An organization ID or slug is required"* se mancano organization/project. Il warning che compare in locale a ogni comando expo **non è cosmetico**. Fix: `env: { "SENTRY_DISABLE_AUTO_UPLOAD": "true" }` su tutti i profili in `eas.json` (`Sentry.init` è già un no-op senza `EXPO_PUBLIC_SENTRY_DSN`). Da rimuovere quando il progetto Sentry sarà configurato. La build **Android non era affetta** (fallisce solo il path fastlane/iOS).
+- **Esito build (19/07)**: Android APK ✅ + iOS simulatore ✅ (dopo il fix Sentry). Installazione: `npx eas-cli build:run --platform ios|android --profile development`. Il dev client **sostituisce Expo Go** → chiude il rebuild pendente per `expo-print`/`expo-sharing`.
 
 ---
 
@@ -65,7 +67,7 @@ Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **o
 - [ ] **Deploy `web-review/`** su static host + impostare `EXPO_PUBLIC_REVIEW_SITE_URL` (il fulcro recensioni non è raggiungibile dai clienti finché non è online).
 - [x] ~~**`yarn db:types`**~~ — rigenerati il 15/07 sera (aggiunti `is_my_assigned_shift` + `mark_conversation_read`).
 - [ ] (dati di test) la venue **"Trattoria da Gino (TEST)"** è intestata al profilo **waiter** Mattia Caprioli: da ripulire per evitare stranezze (es. "Contatta il locale" su un suo turno creerebbe una conversazione con se stesso).
-- [ ] **Rebuild dev client** se non già fatto (aggiunti `expo-print` + `expo-sharing`, nativi).
+- [x] ~~**Rebuild dev client**~~ ✅ (19/07) — dev client Android+iOS buildati, includono `expo-print`/`expo-sharing`/`expo-notifications`.
 - [x] ~~(piccola) `InfoRow` duplicata~~ — già estratta in `components/ui/InfoRow.tsx` (verificato 16/07).
 - [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled` e l'export su dispositivo.
 
