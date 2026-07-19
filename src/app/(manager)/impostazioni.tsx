@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
+import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
@@ -53,6 +54,7 @@ export default function ManagerSettingsScreen() {
         </View>
 
         <DevPlanToggle />
+        <DevIntroReset />
 
         <View style={{ marginTop: "auto" }}>
           <GhostButton label="Esci" onPress={signOut} />

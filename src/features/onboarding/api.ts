@@ -112,3 +112,16 @@ export async function uploadCertification(
 
   return path;
 }
+
+/**
+ * Segna che l'utente ha visto l'intro di primo utilizzo (carosello di valore).
+ * Distinto da `onboarding_complete` (wizard di setup profilo del cameriere).
+ * La RLS "profiles: own read/write" (id = auth.uid()) consente l'update.
+ */
+export async function markIntroSeen(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ intro_seen: true })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+}

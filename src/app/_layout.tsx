@@ -22,6 +22,7 @@ import { AppProviders } from "@/providers/AppProviders";
 import { NotificationsListener } from "@/features/notifications/NotificationsListener";
 import { PushRegistrar } from "@/features/push/PushRegistrar";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
+import { IntroOverlay } from "@/features/onboarding/IntroOverlay";
 
 SplashScreen.preventAutoHideAsync();
 SystemUI.setBackgroundColorAsync("#0C0907");
@@ -89,7 +90,7 @@ function RootNavigator() {
   const waiterReady = isWaiter && !!profile?.onboarding_complete;
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
       {session && profile ? (
         <>
           <NotificationsListener userId={session.user.id} />
@@ -118,7 +119,8 @@ function RootNavigator() {
         <Stack.Screen name="(dev)/components" options={{ title: "Design System" }} />
       ) : null}
       </Stack>
-    </>
+      {session && profile ? <IntroOverlay /> : null}
+    </View>
   );
 }
 

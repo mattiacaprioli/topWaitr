@@ -101,6 +101,15 @@ Ricavo previsto dal **ristoratore** (gestione personale); il cameriere potrebbe 
 - **Cameriere**: rimossa la **tab Pro** (era dal lato sbagliato → 4 tab) + `pro.tsx`; riga onboarding "Completa il piano Pro" → "Raccogli le tue prime recensioni".
 - Icona `lock` aggiunta. Verificato: eslint + bundle iOS (`expo export`) ok; tsc lasciato alla CI (locale >10min).
 - ⚠️ Questo commit include anche un **refactor delle impostazioni notifiche** (schermate dedicate `impostazioni-notifiche` per entrambi i ruoli, `NotificationSettings` estratto) trovato già nel tree non committato e intrecciato sui file manager.
+- **TODO Pro (futuro, con la monetizzazione)**: schermata **"Benvenuto in Pro"** al passaggio free→pro (conferma valore + attivazione funzioni). NON costruita ora perché **non esiste l'evento di upgrade** (tutti 'pro' di default) → sarebbe codice morto. Architettura già pronta: riusare `IntroCarousel` con un set `PRO_INTRO_SLIDES` in `introContent.ts` + un flag dedicato, agganciato quando arriva Stripe.
+
+### Sessione 2026-07-20 — Onboarding educativo (intro di primo utilizzo) ✅
+Carosello di **valore per ruolo**, mostrato una volta al primo avvio. Distinto dal wizard di setup profilo cameriere (`onboarding_complete`) e dal welcome pre-login.
+- **Gate**: colonna `profiles.intro_seen` (bool, default false; migration `20260720100000_profiles_intro_seen.sql`). Cross-device.
+- **Componente condiviso** `src/features/onboarding/`: `IntroCarousel.tsx` (full-screen, skippabile, dots), `IntroOverlay.tsx` (overlay absolute nel **root `_layout.tsx`** sopra lo Stack → nessun impatto typed-routes; cameriere lo vede dopo il wizard, ristoratore al primo ingresso), `api.ts markIntroSeen`, `DevIntroReset.tsx` (**solo `__DEV__`**, "Rivedi intro" in entrambe le impostazioni).
+- ⚠️ **MANUTENZIONE (regola)**: tutta la copy dell'onboarding vive in **`src/features/onboarding/introContent.ts`** (`INTRO_SLIDES` per ruolo), con header di avviso. **Quando cambi/aggiungi/togli una feature, aggiorna quelle slide** o l'onboarding mente. Stesso file ospiterà `PRO_INTRO_SLIDES` per il "benvenuto in Pro" futuro.
+- La schermata **QR** è già auto-esplicativa (guida contestuale già presente) → non toccata. Coach-mark/spotlight e checklist "primi passi" ristoratore = **fuori scope**, nel backlog.
+- Verificato: **tsc + eslint verdi** (tsc ora ~6s a caldo, incremental — vedi memory).
 
 ---
 
@@ -113,6 +122,6 @@ Ricavo previsto dal **ristoratore** (gestione personale); il cameriere potrebbe 
 - **`getMyShifts` è solo futuri/oggi**; lo storico ristoratore passa da `useVenuePastShifts` (infinite) + `useVenuePastShiftsCount`.
 - **RLS shifts**: "read marketplace or assigned" (authenticated). I turni annullati sono invisibili al cameriere → le viste si puliscono da sole, ma serve la notifica `shift_cancelled` per avvisarlo.
 - **Typed routes**: dopo una nuova rotta, `.expo/types/router.d.ts` si rigenera solo col dev server Metro (`npx expo start`), non con `expo export`.
-- **tsc** locale lento col dev server attivo; CI = verifica autorevole. Comandi: `npx tsc --noEmit`, `yarn lint`, `npx expo export --platform ios`.
+- **tsc** locale: RISOLTO il run lento (20/07) con `incremental: true` in tsconfig (cache in `.expo/cache/tsconfig.tsbuildinfo`, gitignored). A caldo ~1-5s; il primo run (o dopo aver toccato `src/tw`/tipi globali) resta ~5min perché riverifica tutto (esplosione tipi react-native-css, ~3.7M). ⚠️ Le 3 soppressioni TS2590 in `src/tw/index.tsx` sono `@ts-ignore` (non `@ts-expect-error`): l'errore è non deterministico con la cache incrementale. Comandi: `npx tsc --noEmit`, `yarn lint`, `npx expo export --platform ios`.
 - **Realtime publication**: notifications, messages, applications, shifts, shift_assignments, staff_members (`shift_role_requirements` esclusa di proposito: cambia solo alla creazione). `RealtimeSync` sottoscrive senza filtri colonna → riceve anche i DELETE.
 - **Progetto Supabase**: `rmlobxjlqlpixkvrzmfg` (eu-central-1).

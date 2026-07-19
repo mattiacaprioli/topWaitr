@@ -196,6 +196,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          intro_seen: boolean
           notification_prefs: Json
           onboarding_complete: boolean
           phone: string | null
@@ -210,6 +211,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          intro_seen?: boolean
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
@@ -224,6 +226,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          intro_seen?: boolean
           notification_prefs?: Json
           onboarding_complete?: boolean
           phone?: string | null
