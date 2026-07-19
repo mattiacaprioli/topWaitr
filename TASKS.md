@@ -90,7 +90,17 @@ Test su Android reale (account cameriere `capriolimattia1994@gmail.com`), tutti 
 - **Staff (evoluzioni)**: invito via **QR/codice** (oltre email); **modifica turni interni** dopo la creazione (oggi per aggiungere un assegnato serve ricreare il turno — pesa sulla copertura); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario**.
 - **Scalabilità (follow-up)**: paginazione **candidature** (i chip contano sull'intero set → servono query count separate).
 - **Recensioni**: verifica "via scontrino" (`verified`/`status`/`receipt_ref` predisposti) + moderazione; badge di eccellenza (da `reviews.tags`); statistiche/andamento rating.
-- **Parte economica** (futura, non MVP): abbonamento/piano Business con Stripe → gating della gestione personale (campo `plan` + hook `usePlan()` + lock sugli entry point `/ore`, `/copertura`, sezioni in `staff/[id]`).
+- **Parte economica** (futura, non MVP): **telaio Pro COSTRUITO** (19/07, vedi sotto) senza prezzi; manca solo il modello di monetizzazione + Stripe + flip del default `plan` a 'free'.
+
+### Sessione 2026-07-19 — Telaio monetizzazione Pro ✅
+Ricavo previsto dal **ristoratore** (gestione personale); il cameriere potrebbe avere vantaggi in futuro → stesso interruttore. Modello di prezzo **ancora da definire**: costruito il *telaio*, nessun prezzo/tier/Stripe.
+- **Entitlement**: colonna `profiles.plan` (text, check free|pro, **default 'pro'** → oggi tutti sbloccati; si monetizza cambiando il default a 'free'). Un solo campo per entrambi i ruoli. Migration `20260719120000_profiles_plan.sql`.
+- **Modulo** `src/features/plan/`: `hooks.ts` (`useIsPro`/`useProGate`/`PAYWALL_ROUTE`), `ProLock.tsx` (`ProBadge`, `ProLockedCard`, `PlanCard`, `ProUpsellCard`), `devOverride.ts` + `DevPlanToggle.tsx` (**solo `__DEV__`**: simula Free/Pro per vedere i lucchetti senza cambiare il DB).
+- **Lucchetti** "visibile + badge → paywall" sulle 3 funzioni Pro: copertura ([turni.tsx]), ore ([staff.tsx]), ore+performance ([staff/[id].tsx]). Paywall soft `(manager)/pro.tsx` (valore, **niente prezzo**, CTA "Sono interessato"→toast).
+- **Discovery**: `ProUpsellCard` in Home ristoratore (solo Free) + `PlanCard` nel Profilo (sempre).
+- **Cameriere**: rimossa la **tab Pro** (era dal lato sbagliato → 4 tab) + `pro.tsx`; riga onboarding "Completa il piano Pro" → "Raccogli le tue prime recensioni".
+- Icona `lock` aggiunta. Verificato: eslint + bundle iOS (`expo export`) ok; tsc lasciato alla CI (locale >10min).
+- ⚠️ Questo commit include anche un **refactor delle impostazioni notifiche** (schermate dedicate `impostazioni-notifiche` per entrambi i ruoli, `NotificationSettings` estratto) trovato già nel tree non committato e intrecciato sui file manager.
 
 ---
 
