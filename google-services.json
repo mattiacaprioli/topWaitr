@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "973489674949",
+    "project_id": "topwaitr",
+    "storage_bucket": "topwaitr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:973489674949:android:c2eed609c57b7cea912eac",
+        "android_client_info": {
+          "package_name": "com.topwaitr.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBE2YkWZ7ctjWBt3GOsE2SgByNFA7jXz2o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

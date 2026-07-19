@@ -17,6 +17,7 @@
     },
     "android": {
       "package": "com.topwaitr.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0C0907",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
