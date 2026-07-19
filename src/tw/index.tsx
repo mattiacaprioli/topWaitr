@@ -20,7 +20,7 @@ import {
 export const Link = (
   props: React.ComponentProps<typeof RouterLink> & { className?: string }
 ) => {
-  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
+  // @ts-ignore (non @ts-expect-error: il TS2590 "union too complex" di useCssElement è non deterministico — con la build incrementale a volte non scatta e la soppressione risulterebbe unused, TS2578). Runtime corretto, wrapper verbatim.
   return useCssElement(RouterLink, props, { className: "style" });
 };
 
@@ -60,7 +60,7 @@ export const ScrollView = (
     contentContainerClassName?: string;
   }
 ) => {
-  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
+  // @ts-ignore (non @ts-expect-error: il TS2590 "union too complex" di useCssElement è non deterministico — con la build incrementale a volte non scatta e la soppressione risulterebbe unused, TS2578). Runtime corretto, wrapper verbatim.
   return useCssElement(RNScrollView, props, {
     className: "style",
     contentContainerClassName: "contentContainerStyle",
@@ -92,7 +92,7 @@ export const AnimatedScrollView = (
     contentContainerClassName?: string;
   }
 ) => {
-  // @ts-expect-error react-native-css useCssElement overloads yield a union too complex for TS (TS2590); runtime is correct. Verbatim wrapper code.
+  // @ts-ignore (non @ts-expect-error: il TS2590 "union too complex" di useCssElement è non deterministico — con la build incrementale a volte non scatta e la soppressione risulterebbe unused, TS2578). Runtime corretto, wrapper verbatim.
   return useCssElement(Animated.ScrollView, props, {
     className: "style",
     contentClassName: "contentContainerStyle",
