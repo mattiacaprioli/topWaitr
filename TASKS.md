@@ -85,8 +85,8 @@ Test su Android reale (account cameriere `capriolimattia1994@gmail.com`), tutti 
 ## 🧭 Backlog / Roadmap
 
 - ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up possibili: toast soppresso se sei già nel thread, entry point da EmployerCard nel profilo waiter (serve `owner_id` in `getMyEmployers`), indicatore "sta scrivendo" (broadcast channel).
-- ~~**M7 — Push notifications**~~ ✅ codice fatto (16/07, vedi sopra): `push_tokens` + trigger `pg_net` → Edge Function `push` (`expo-server-sdk`) + `expo-notifications`. **Manca solo la parte operativa**: `eas init`/build, secret Vault + `supabase secrets set`, `functions deploy`, test su device. Follow-up: receipt-check a 15 min (cleanup completo token), badge iOS.
-- **M8 — Store submission** (EAS Build/Submit).
+- ~~**M7 — Push notifications**~~ ✅ **COMPLETO e verificato end-to-end su device Android (19/07)**: `push_tokens` + trigger `pg_net` → Edge Function `push` (`expo-server-sdk`) + `expo-notifications`; EAS/build/FCM/deploy operativi. Follow-up (non bloccanti): receipt-check a 15 min (cleanup completo token), badge iOS, **push iOS mai testate** (serve account Apple Developer).
+- **M8 — Store submission** (EAS Build/Submit) — **prossima milestone**. Precondizioni: (Android) build `production` AAB + account Google Play Console (25$ una tantum) + scheda store; (iOS) account Apple Developer (99$/anno) → build su device + push iOS + submit. Prima: rimuovere dati di test, icone/splash finali, privacy policy (richiesta per le notifiche + login).
 - **Staff (evoluzioni)**: invito via **QR/codice** (oltre email); **modifica turni interni** dopo la creazione (oggi per aggiungere un assegnato serve ricreare il turno — pesa sulla copertura); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario**.
 - **Scalabilità (follow-up)**: paginazione **candidature** (i chip contano sull'intero set → servono query count separate).
 - **Recensioni**: verifica "via scontrino" (`verified`/`status`/`receipt_ref` predisposti) + moderazione; badge di eccellenza (da `reviews.tags`); statistiche/andamento rating.
