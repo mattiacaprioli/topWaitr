@@ -1,0 +1,38 @@
+name: Deploy web-review to Pages
+
+# Pubblica la cartella statica web-review/ su GitHub Pages.
+# Il sito di recensione (Componente B) è indipendente dall'app Expo: HTML/CSS/JS
+# puri, nessuno step di build. Serve solo caricare la cartella come artifact Pages.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web-review/**"
+      - ".github/workflows/deploy-web-review.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un solo deploy Pages alla volta; non annullare quello in corso.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web-review
+      - id: deployment
+        uses: actions/deploy-pages@v4
