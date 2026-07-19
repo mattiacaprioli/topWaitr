@@ -8,6 +8,7 @@
       "developmentClient": true,
       "distribution": "internal",
       "environment": "development",
+      "env": { "SENTRY_DISABLE_AUTO_UPLOAD": "true" },
       "android": { "buildType": "apk" },
       "ios": { "simulator": true }
     },
@@ -15,12 +16,14 @@
       "distribution": "internal",
       "environment": "preview",
       "channel": "preview",
+      "env": { "SENTRY_DISABLE_AUTO_UPLOAD": "true" },
       "android": { "buildType": "apk" }
     },
     "production": {
       "autoIncrement": true,
       "environment": "production",
-      "channel": "production"
+      "channel": "production",
+      "env": { "SENTRY_DISABLE_AUTO_UPLOAD": "true" }
     }
   },
   "submit": {

@@ -1,0 +1,95 @@
+# topWaitr — Tasks & Roadmap
+
+Tracker delle attività. Aggiornato: **2026-07-15**.
+Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **organizzare i turni col proprio staff**; il **marketplace** ("cerco un extra") è secondario/occasionale. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — il marketplace/recensioni resta l'esca gratuita.
+
+---
+
+## ✅ Fatto
+
+### Fondamenta (milestone M0–M5)
+- Setup Expo SDK 56, schema Supabase + RLS, design system (NativeWind/AURA), auth + navigazione (Stack.Protected per ruolo), flusso ristoratore (locale, pubblica turno, gestisci candidature), flusso cameriere (home, trova turni, candidature, profilo).
+- **Recensioni** (fulcro): cliente finale → cameriere via sito separato `web-review/`; reputazione portabile (rating/recensioni), QR, lista scalabile.
+- **Notifiche in-app + realtime** (`NotificationsListener`) e **onboarding cameriere**.
+
+### Sessione 2026-07-11/12
+- **Home ristoratore ricca + tab bar**: `(manager)/(tabs)` (Home/Turni/Messaggi/Staff/Profilo), `FloatingTabBar` condivisa, dashboard con KPI reali.
+- **Staff interno + turni a due modalità** (misto: scheda con o senza account): tab Staff (organico), toggle "Chiamo il mio staff"/"Cerco un extra", turni interni fuori dal feed, conferma/rifiuto lato cameriere.
+- **Invito per email** (richiesta → accetta/rifiuta, "I tuoi locali" + dimissioni), **realtime turni/organico** (`RealtimeSync`), coerenza UI (header custom ovunque, `ConfirmModal` al posto degli Alert).
+
+### Sessione 2026-07-14/15
+- **UI "Copri un turno"** rifatta stile prototipo: chip ruolo/giorno/badge, slider compenso, `DayPicker`/`TimeField`/`SelectChip`, toggle a card.
+- **Gestione personale (4 fasi complete)** — candidata al piano a pagamento:
+  - **F1 Ore & presenze + export**: a turno interno concluso il gestore segna Presente/Assente (`no_show`) e corregge le ore (`worked_hours`); schermata `/ore` (riepilogo mensile) + **export PDF/CSV** per il commercialista (`expo-print`+`expo-sharing`, `src/lib/export.ts`).
+  - **F2 Performance staff**: turni svolti, ore totali, **affidabilità** (assenze/rifiuti), rating clienti se collegato — in `staff/[id]`.
+  - **F3 Copertura/fabbisogno per ruolo** (solo turni interni): tabella `shift_role_requirements`, fabbisogno nel form ("2 Cameriere + 1 Sommelier"), sezione Copertura nel dettaglio, card "X/Y coperti", schermata `/copertura` con alert "manca N"; trigger `sync_internal_positions_filled` corregge il conteggio coperti (prima congelato).
+  - **F4 Chiarezza dipendente**: `/storico` "Le mie ore" (storico turni + monte ore, senza euro), statistiche reali nel profilo, pill **"Da confermare"** in home sugli assegnati non confermati.
+- **Notifiche**: `staff_removed` (il ristoratore ti rimuove) e `shift_cancelled` (turno annullato → avvisa assegnati attivi + candidati accettati; prima spariva in silenzio).
+- **Audit coerenza aggiornamenti** (cascate/trigger/invalidazioni/realtime) → verificato ok il flusso rimozione staff end-to-end; fix: turni annullati esclusi da "Chi lavora oggi"/copertura/KPI; avviso **perdita storico ore** nel ConfirmModal di rimozione; invalidazioni extra su remove.
+- **Scalabilità liste**: storico ristoratore **paginato** (scroll infinito, 20/pagina) + tab Turni in `FlatList`; storico cameriere virtualizzato; KPI "turni svolti" via count. ⚠️ `getMyShifts` ora ritorna **solo turni futuri/oggi**.
+- **Sicurezza RLS**: policy `shifts` ristretta — marketplace per gli autenticati, **interni solo agli assegnati** (`is_my_assigned_shift` DEFINER); anon non legge più i turni.
+- **Rifiniture UI**: "Turno non trovato" con back + centrato (waiter+manager), selettore mese a pillola in `/ore`, messaggio corretto per invito **pending** ("In attesa di risposta") in `staff/new`.
+
+### Sessione 2026-07-15 (sera) — M6 Chat realtime ✅
+- **DB** (`20260715180000_chat.sql`, applicata via MCP): indice unico `conversations(waiter_id, manager_id)` (una conversazione per coppia, stile WhatsApp; `shift_id` = contesto primo contatto) + consolidamento dupes; RPC DEFINER `mark_conversation_read` (la policy `messages: sender update` blocca il destinatario su `read_at`; marca letta anche la notifica); trigger `notify_on_new_message` con **dedupe** (max 1 notifica non letta per utente+conversazione); publication realtime `messages` (idempotente).
+- **App**: modulo `src/features/chat/` (api/hooks/schema + `ConversationList` + `ChatThread` condivisi), tab Messaggi attivi in entrambi i ruoli, `chat/[id]` per gruppo, badge non letti su `FloatingTabBar`, handler `messages` in `RealtimeSync`, canale realtime per-thread in `ChatThread` (cache-append, niente refetch).
+- **Identità controparte**: MAI join su `profiles` (RLS) — cameriere via `waiter_public_cards`, ristoratore via `venues` (nome/logo del locale).
+- **Entry point**: "Contatta il locale" (waiter shift/[id]), icona messaggio su candidature e staff assegnato (manager shift/[id]), "Invia messaggio" in cameriere/[id] e staff/[id].
+- **Fix inclusi**: routing notifiche `new_message` → `chat/[id]` (prima finiva su "Turno non trovato"); nome mittente nel trigger deciso dal **lato conversazione**, non dal possesso di una venue (bug emerso col profilo waiter che possiede la venue di test); RefreshControl pilotato solo dal pull (su iOS `isRefetching` da invalidation realtime lo incastrava); empty state centrati (Messaggi + Trova turni); header tab senza back.
+- **Audit + fix post-review (15/07 sera)**: (1) recupero messaggi persi durante un buco realtime — refetch di `qk.chat.messages` alla ri-sottoscrizione del canale; (2) dedupe per id nel flatten delle pagine (l'offset+prepend duplicava la riga di confine); (3) race INSERT vs pagina 0 in `appendMessageToCache` (invalida se cache vuota); (4) `RealtimeSync` sui messaggi solo su INSERT (stop raffica di invalidazioni dagli UPDATE di `read_at`); (6) conversazioni vuote escluse dalla lista (`messages!inner`); (7) identità controparte risolta per-conversazione + query in `Promise.all`; (9) stato "Conversazione non trovata" + `markRead` solo quando ci sono non-letti; (10) primitivo condiviso `CountBadge` (era duplicato 4×, con clamp "9+" mancante in turni); (5) hook condiviso `usePullToRefresh` applicato a tutte le liste con RefreshControl (chat, notifiche×2, inviti, candidature, turni×2, staff, home×2) — fix di convenzione dell'anti-pattern `refreshing={isRefetching}`.
+- **Rimandato (audit #8)**: la regola "come si chiama un partecipante" è duplicata tra il trigger SQL (`venues.name`/`profiles.full_name`) e `api.ts getCounterparts` (`venues`/`waiter_public_cards`). Non è un bug live ma due fonti di verità: valutare una view/funzione DB unica. Anche `getMessagesPage` resta a offset (dedupe copre il sintomo) — keyset (`created_at`,`id`) sarebbe più robusto se i thread crescono molto. → **Entrambi risolti il 16/07** (vedi sotto).
+
+### Sessione 2026-07-16 — M7 Push notifications ✅
+- **Push OS (Expo)**: nuovo modulo `src/features/push/` (`register.ts` = permessi + Expo token, `api.ts` = `savePushToken`/`unregisterCurrentPushToken`, `PushRegistrar.tsx`). Token salvato nella nuova tabella `push_tokens` via RPC `register_push_token` (upsert sul token → gestisce il riuso device). `PushRegistrar` montato in `_layout.tsx` accanto a `NotificationsListener` (gate `session && profile`, `role` dal profilo); `setNotificationHandler` **sopprime il banner in foreground** (il toast realtime copre già → niente doppia notifica); deep-link al tap via `addNotificationResponseReceivedListener` + `getLastNotificationResponseAsync` (apertura da app uccisa). De-registrazione token in `auth.tsx signOut` **prima** di `supabase.auth.signOut()` (dopo, la RLS blocca la delete).
+- **Dispatch DB (un solo choke point)**: trigger `AFTER INSERT` su `public.notifications` → `notify_push_on_notification()` (`20260716100100_push_dispatch.sql`) → `pg_net` `net.http_post` → Edge Function `push`. Copre **tutti i 10 tipi** senza toccare i 7 trigger esistenti. Auth via secret condiviso in **Vault** (`push_hook_secret`, header `x-push-secret`); guard `v_secret is null → return new` → trigger **inerte** finché non configurato.
+- **Edge Function** `supabase/functions/push/index.ts` (Deno, `expo-server-sdk`): verifica `x-push-secret`, legge i token via `service_role` (bypassa RLS), invia in chunk, rimuove i token `DeviceNotRegistered`. Deploy: `supabase functions deploy push --no-verify-jwt`.
+- **Config**: `app.json` → plugin `expo-notifications`, `ios.bundleIdentifier`/`android.package` = `com.topwaitr.app`. Installato `expo-notifications ~56.0.21`. `tsconfig.json` esclude `supabase/functions` (codice Deno, non fa parte del tsc dell'app).
+- **Routing condiviso**: nuovo `src/features/notifications/routing.ts` `routeForNotification(role, type, relatedId)` — fonte unica usata dai due `notifiche.tsx` (`onOpen`) e dal tap sulle push.
+- **Polish**: (1) `InfoRow` condiviso — risultava **già estratto** (`components/ui/InfoRow.tsx`), voce chiusa; (2) chat **keyset pagination** su `(created_at, id)` (`getMessagesPage(cursor)`/`useMessagesInfinite` + indice `messages_conversation_created_id_idx`); (3) **audit #8 risolto** — fonte unica DB `chat_counterpart` / `get_chat_counterparts` (migration `20260716110000`) usata sia dal trigger `notify_on_new_message` sia dal client (`getCounterparts` ora **una sola** RPC; rimossi `fetchWaiterCards`/`fetchVenueOwners`).
+- **Preferenze push per categoria** (Impostazioni): colonna `profiles.notification_prefs jsonb` (opt-out, `{}` = tutto attivo) + funzione DB `notification_category(type)` (Messaggi / Candidature e turni / Staff). Il filtro è **nel trigger** `notify_push_on_notification` (salta la `net.http_post` per le categorie mute) → l'Edge Function resta invariata e **l'in-app resta sempre creata**. UI condivisa `NotificationSettings` (switch RN) montata in `impostazioni.tsx` (cameriere + ristoratore), stato ottimistico + `refreshProfile`. Modulo `src/features/notifications/preferences.ts` (categorie + `saveNotificationPrefs`).
+- **DB**: le 5 migration (idempotenti/additive) applicate sul progetto dev via **MCP `execute_sql`**; i file restano canonici per `db push` in CI (re-apply idempotente, nessun conflitto). Types rigenerati (`push_tokens`, `register_push_token`, `chat_counterpart`, `get_chat_counterparts`, `profiles.notification_prefs`, `notification_category`). `tsc`/`lint` verdi (solo l'edge Deno esce dal tsc, escluso apposta).
+- **DA FARE prima del test live** (richiede la prima build): `eas init` → `extra.eas.projectId` in `app.json`; secret Vault (`select vault.create_secret('<rnd>','push_hook_secret')`) **+** `supabase secrets set PUSH_HOOK_SECRET=<rnd>`; `supabase functions deploy push --no-verify-jwt`; `eas build --profile development` (iOS: Apple Developer + APNs; Android: FCM) e test su **dispositivo fisico** (no simulatore, no Expo Go).
+
+### Sessione 2026-07-19 — Setup EAS + deploy push ✅ (manca FCM)
+- **Progetto EAS creato**: `@tiaxd94/topWaitr` (`projectId` in `app.json`, `owner: tiaxd94` — serve perché l'account ha accesso a più org). Aggiunto `expo-dev-client` (il profilo `development` ha `developmentClient: true` ma il pacchetto mancava). `eas.json`: `environment` per profilo + `android.buildType: apk`.
+- **Env var su EAS**: `EXPO_PUBLIC_SUPABASE_URL` / `_ANON_KEY` / `_REVIEW_SITE_URL` create come *plaintext* su development+preview+production. ⚠️ Il `.env` è gitignored → **non arriva alla build**: ogni nuova `EXPO_PUBLIC_*` va aggiunta anche con `eas env:create`, altrimenti la build compila ma l'app non raggiunge Supabase.
+- **Push backend LIVE**: secret Vault `push_hook_secret` generato **dentro Postgres** (`vault.create_secret(encode(gen_random_bytes(32),'hex'), ...)`) e allineato con `supabase secrets set PUSH_HOOK_SECRET=...`; `supabase functions deploy push --no-verify-jwt` fatto. Smoke test: senza header → **401**, con header → **200 `{"sent":0}`**. Il trigger non è più inerte: da ora ogni INSERT in `notifications` chiama la function.
+- **Keystore Android**: generato da EAS (remote credentials). ⚠️ `eas build` **non genera il keystore in `--non-interactive`**: la prima volta serve una pty con stdin aperto (`{ printf '\n'; sleep N; } | script -q /dev/null npx eas-cli build ...`), poi le build non-interattive funzionano.
+- **⚠️ BLOCCANTE per la push Android — FCM V1 non configurato**: Expo richiede (a) `google-services.json` in root + `android.googleServicesFile` in `app.json`, (b) la **service account key** Firebase caricata su EAS (`eas credentials` → Android → Google Service Account → FCM V1). Senza, l'app non ottiene il token FCM e `getExpoPushTokenAsync` fallisce → **la build Android attuale non può ricevere push** (per tutto il resto è un dev client valido). Richiede azione manuale nella Firebase Console → poi **rebuild Android**. La service account key è gitignorata (`google-service-account*.json`, `firebase-adminsdk*.json`); `google-services.json` può essere committato.
+- **iOS**: build solo **simulatore** (profilo `development` ha `ios.simulator: true`) → niente push su iOS finché non c'è un account Apple Developer + build su device. Aggiunto `ios.infoPlist.ITSAppUsesNonExemptEncryption: false` (warning EAS, servirà in M8).
+
+---
+
+## 🔜 In sospeso — prossimi passi immediati
+
+- [ ] **Deploy `web-review/`** su static host + impostare `EXPO_PUBLIC_REVIEW_SITE_URL` (il fulcro recensioni non è raggiungibile dai clienti finché non è online).
+- [x] ~~**`yarn db:types`**~~ — rigenerati il 15/07 sera (aggiunti `is_my_assigned_shift` + `mark_conversation_read`).
+- [ ] (dati di test) la venue **"Trattoria da Gino (TEST)"** è intestata al profilo **waiter** Mattia Caprioli: da ripulire per evitare stranezze (es. "Contatta il locale" su un suo turno creerebbe una conversazione con se stesso).
+- [ ] **Rebuild dev client** se non già fatto (aggiunti `expo-print` + `expo-sharing`, nativi).
+- [x] ~~(piccola) `InfoRow` duplicata~~ — già estratta in `components/ui/InfoRow.tsx` (verificato 16/07).
+- [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled` e l'export su dispositivo.
+
+## 🧭 Backlog / Roadmap
+
+- ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up possibili: toast soppresso se sei già nel thread, entry point da EmployerCard nel profilo waiter (serve `owner_id` in `getMyEmployers`), indicatore "sta scrivendo" (broadcast channel).
+- ~~**M7 — Push notifications**~~ ✅ codice fatto (16/07, vedi sopra): `push_tokens` + trigger `pg_net` → Edge Function `push` (`expo-server-sdk`) + `expo-notifications`. **Manca solo la parte operativa**: `eas init`/build, secret Vault + `supabase secrets set`, `functions deploy`, test su device. Follow-up: receipt-check a 15 min (cleanup completo token), badge iOS.
+- **M8 — Store submission** (EAS Build/Submit).
+- **Staff (evoluzioni)**: invito via **QR/codice** (oltre email); **modifica turni interni** dopo la creazione (oggi per aggiungere un assegnato serve ricreare il turno — pesa sulla copertura); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario**.
+- **Scalabilità (follow-up)**: paginazione **candidature** (i chip contano sull'intero set → servono query count separate).
+- **Recensioni**: verifica "via scontrino" (`verified`/`status`/`receipt_ref` predisposti) + moderazione; badge di eccellenza (da `reviews.tags`); statistiche/andamento rating.
+- **Parte economica** (futura, non MVP): abbonamento/piano Business con Stripe → gating della gestione personale (campo `plan` + hook `usePlan()` + lock sugli entry point `/ore`, `/copertura`, sezioni in `staff/[id]`).
+
+---
+
+## ⚙️ Note tecniche (da ricordare)
+
+- **Advisor Supabase**: i WARN `authenticated_security_definer_function_executable` su `find_waiter_by_email`, `respond_to_staff_invite`, `leave_venue`, `is_my_assigned_shift`, `mark_conversation_read` **e ora `register_push_token` / `get_chat_counterparts`** sono **intenzionali** (devono essere DEFINER e chiamabili per gli autenticati). Non spostarle in schema `private`. (`chat_counterpart` invece è helper interno: revoke da tutti, chiamata solo dai DEFINER.) + WARN leaked-password (solo piano Pro).
+- **Push (M7)**: un solo trigger `AFTER INSERT` su `notifications` (`notify_push_on_notification`) fa da choke point per **tutti** i tipi → non aggiungere invii push nei singoli trigger. Usa `pg_net` (async, post-commit) + secret in **Vault** (`push_hook_secret`). La Edge Function `push` **non** è nel deploy CI (`db push` fa solo le migration): va `supabase functions deploy` a parte, e i suoi secrets (`PUSH_HOOK_SECRET`, `EXPO_ACCESS_TOKEN` opz.) con `supabase secrets set`. Test push **solo su dev build + device fisico** (no Expo Go/simulatore). ⚠️ `expo-notifications` è rimosso da Expo Go (SDK 53) → in Expo Go le sue API lanciano: `PushRegistrar`/`register.ts` fanno **no-op** se `Constants.executionEnvironment === ExecutionEnvironment.StoreClient` (altrimenti crash di `_layout` all'avvio). Le funzioni pg_net stanno nello schema `net` (`net.http_post` — verificato); l'estensione è registrata in `public` → advisor `extension_in_public` (WARN cosmetico, accettato: non rilocare a caldo per non spostare i member object).
+- **Migration**: forward-only su `main`; la CI (`.github/workflows/supabase.yml`) fa `supabase db push` al push che tocca `supabase/migrations/**` (secrets `SUPABASE_ACCESS_TOKEN`/`SUPABASE_DB_PASSWORD`). Se una migration viene applicata via MCP/SQL editor, **rinominare il file locale** al timestamp registrato dal remoto, altrimenti `db push` si blocca (successo il 15/07 con `20260712142024_waiter_experiences`).
+- **Regola ore staff** (`src/features/assignments/hours.ts`): `ore = declined/no_show ? 0 : (worked_hours ?? durata pianificata)`; conteggi mensili = solo turni con data passata.
+- **`getMyShifts` è solo futuri/oggi**; lo storico ristoratore passa da `useVenuePastShifts` (infinite) + `useVenuePastShiftsCount`.
+- **RLS shifts**: "read marketplace or assigned" (authenticated). I turni annullati sono invisibili al cameriere → le viste si puliscono da sole, ma serve la notifica `shift_cancelled` per avvisarlo.
+- **Typed routes**: dopo una nuova rotta, `.expo/types/router.d.ts` si rigenera solo col dev server Metro (`npx expo start`), non con `expo export`.
+- **tsc** locale lento col dev server attivo; CI = verifica autorevole. Comandi: `npx tsc --noEmit`, `yarn lint`, `npx expo export --platform ios`.
+- **Realtime publication**: notifications, messages, applications, shifts, shift_assignments, staff_members (`shift_role_requirements` esclusa di proposito: cambia solo alla creazione). `RealtimeSync` sottoscrive senza filtri colonna → riceve anche i DELETE.
+- **Progetto Supabase**: `rmlobxjlqlpixkvrzmfg` (eu-central-1).
