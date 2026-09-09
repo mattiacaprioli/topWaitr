@@ -52,7 +52,12 @@ export default function WaiterQRScreen() {
       // schermata non si rompe se non è ancora nella build (serve un rebuild).
       // Usa l'API legacy: saveToLibraryAsync dal path principale è deprecata.
       const MediaLibrary = await import("expo-media-library/legacy");
-      const perm = await MediaLibrary.requestPermissionsAsync();
+      // writeOnly + solo 'photo': qui si salva e basta, mai letta la galleria.
+      // Senza questo il modulo chiede accesso in lettura a foto, video e audio —
+      // che con la Photo and Video Permissions policy di Google Play va
+      // giustificato e per un'app di turni non è giustificabile.
+      // ⚠️ L'API legacy vuole argomenti POSIZIONALI, non l'oggetto dei doc.
+      const perm = await MediaLibrary.requestPermissionsAsync(true, ["photo"]);
       if (!perm.granted) {
         toast.show("Concedi l'accesso alle foto per salvare", "error");
         return;
