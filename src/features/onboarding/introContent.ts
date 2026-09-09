@@ -43,7 +43,7 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
     {
       icon: "search",
       title: "Serve un extra? Trovalo",
-      body: "Pubblica un turno sul marketplace e ricevi candidature dai camerieri.",
+      body: "Pubblica un turno sul marketplace e ricevi candidature dai professionisti.",
     },
     {
       icon: "sparkle",

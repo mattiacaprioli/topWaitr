@@ -30,7 +30,7 @@ function CompletenessCard({ venue, onEdit }: { venue: Venue; onEdit: () => void 
   const items = [
     { label: "Città", done: !!venue.city },
     { label: "Indirizzo", done: !!venue.address },
-    { label: "Tipo di cucina", done: !!venue.cuisine_type },
+    { label: "Tipo di attività", done: !!venue.cuisine_type },
     { label: "Descrizione", done: !!venue.description },
   ];
   const completed = items.filter((i) => i.done).length;
@@ -111,7 +111,7 @@ export default function ManagerProfiloScreen() {
         <View className="mt-4">
           <EmptyState
             title="Configura il tuo locale"
-            subtitle="Aggiungi le informazioni del tuo ristorante per iniziare a pubblicare turni."
+            subtitle="Aggiungi le informazioni del tuo locale per iniziare a pubblicare turni."
           />
           <GoldButton
             className="mt-2"
@@ -161,7 +161,7 @@ export default function ManagerProfiloScreen() {
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
               <Mono>Il tuo locale</Mono>
               {venue.cuisine_type ? (
-                <InfoLine label="Cucina" value={venue.cuisine_type} />
+                <InfoLine label="Attività" value={venue.cuisine_type} />
               ) : null}
               {venue.address ? (
                 <InfoLine label="Indirizzo" value={venue.address} />

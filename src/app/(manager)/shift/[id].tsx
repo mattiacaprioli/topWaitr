@@ -623,7 +623,7 @@ export default function ShiftDetailScreen() {
           ) : applications.length === 0 ? (
             <EmptyState
               title="Nessuna candidatura"
-              subtitle="Quando un cameriere si candida lo vedrai qui."
+              subtitle="Quando qualcuno si candida lo vedrai qui."
             />
           ) : (
             applications.map((app) => (
@@ -706,7 +706,7 @@ export default function ShiftDetailScreen() {
     <ConfirmModal
       visible={cancelVisible}
       title="Annullare il turno?"
-      message="Il turno verrà annullato e i camerieri non lo vedranno più."
+      message="Il turno verrà annullato e i professionisti non lo vedranno più."
       confirmLabel="Annulla turno"
       cancelLabel="Indietro"
       destructive

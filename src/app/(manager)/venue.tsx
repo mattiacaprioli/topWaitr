@@ -89,7 +89,7 @@ export default function VenueScreen() {
         <ScreenHeader eyebrow="Locale" title="Il tuo locale" />
 
         <Text className="text-base text-t2">
-          Queste informazioni saranno visibili ai camerieri sui tuoi turni.
+          Queste informazioni saranno visibili ai professionisti sui tuoi turni.
         </Text>
 
         <ControlledInput
@@ -113,8 +113,10 @@ export default function VenueScreen() {
         <ControlledInput
           control={control}
           name="cuisine_type"
-          label="Tipo di cucina"
-          placeholder="Italiana, pizzeria…"
+          // La colonna resta `cuisine_type` per non migrare il DB: l'etichetta
+          // è neutra perché un hotel o un'agenzia eventi non ha una "cucina".
+          label="Tipo di attività"
+          placeholder="Ristorante, hotel, catering, discoteca…"
         />
         <ControlledInput
           control={control}

@@ -109,7 +109,7 @@ export default function WaiterInvitesScreen() {
           <View className="mt-16">
             <EmptyState
               title="Nessuna richiesta"
-              subtitle="Quando un ristoratore ti invita nel suo staff lo vedrai qui."
+              subtitle="Quando un locale ti invita nel suo staff lo vedrai qui."
             />
           </View>
         ) : (

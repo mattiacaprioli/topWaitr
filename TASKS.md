@@ -97,6 +97,15 @@ Prima sessione dopo ~7 settimane di stop (ultimo lavoro sul codice: 20/07).
   - **Deploy fatto** (09/09): `npx supabase functions deploy delete-account` (senza `--no-verify-jwt`, al contrario di `push`). ⚠️ **Nessun workflow CI deploya le Edge Function** — `supabase.yml` fa solo `db push`: vanno sempre deployate a mano.
   - Smoke test: senza header → 401 platform; JWT malformato → 401 platform; **con la chiave anon → 401 `{"error":"invalid token"}` dal codice**. Quest'ultimo è il caso che conta: la chiave anon è pubblica ed è un JWT valido del progetto, quindi supera `verify_jwt` e arriva all'handler. La sicurezza sta nel ricavare l'utente da `auth.getUser()` e non da un id nel body, non in `verify_jwt`.
 
+### Sessione 2026-09-09 (2) — Apertura ad altri locali ✅
+Estensione del posizionamento oltre la ristorazione: catering, hotel, discoteche, pub, agenzie di eventi. Il settore degli "extra" a chiamata è lo stesso, il motore del prodotto non cambia.
+- **Scoperta**: «Locale» era **già** il termine standard (72 occorrenze contro 2 di «ristorante», ed erano la stessa stringa duplicata). Il vocabolario che limitava davvero era quello delle **persone**: `cameriere` (66) e `ristoratore` (23) — di cui però 33 in commenti e 5 in path di rotta, quindi ~24 stringhe utente reali.
+- **Glossario** (non inventato: già usato dal signup, «Sono un professionista» / «Gestisco un locale»): utente cameriere → **professionista**; controparte → **locale**. ⚠️ I nomi interni restano `waiter`/`manager` (enum DB, rotte `cameriere/[id]`, tipi): rinominarli non darebbe alcun vantaggio e romperebbe typed-routes e RLS.
+- **Ruoli** da 6 a 14: aggiunti Cuoco, Aiuto cuoco, Lavapiatti, Receptionist, Guardarobiere, Facchino, Allestitore, Steward. ⚠️ **Solo in coda, mai rinominare né riordinare**: `staff_members.role` e `shift_role_requirements.role` si confrontano per stringa esatta, quindi un rename scollegherebbe in silenzio la copertura di tutti i turni già creati.
+- **`RoleRequirementsField`**: il fabbisogno per ruolo disegnava una riga con +/− per **ogni** ruolo — accettabile con 6, un muro con 14. Ora è **additivo** (solo i ruoli richiesti + «Aggiungi ruolo»). Il blocco era duplicato identico in `StaffShiftForm` e `InternalShiftEditForm`: estratto in un componente condiviso.
+- **`cuisine_type`**: colonna invariata (niente migrazione), etichetta neutra «Tipo di attività» — un hotel non ha un tipo di cucina.
+- Allineati anche `AGENTS.md` (con la regola sul vocabolario) e le pagine legali. `introContent.ts` era già neutro tranne una riga.
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati

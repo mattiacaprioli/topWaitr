@@ -154,7 +154,7 @@ export default function ManagerStaffScreen() {
           ) : staff.length === 0 ? (
             <EmptyState
               title="Nessuno nello staff"
-              subtitle="Aggiungi i tuoi camerieri per assegnarli ai turni."
+              subtitle="Aggiungi il tuo personale per assegnarlo ai turni."
             />
           ) : (
             <View className="gap-3">

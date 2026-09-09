@@ -307,8 +307,8 @@ export default function WaiterProfiloScreen() {
             ) : (
               <View className="gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
                 <Text className="text-sm leading-5 text-t3">
-                  Aggiungi i tuoi lavori passati per farti notare dai
-                  ristoratori.
+                  Aggiungi i tuoi lavori passati per farti notare da chi
+                  cerca personale.
                 </Text>
                 <GoldButton
                   label="Aggiungi esperienza"

@@ -148,7 +148,7 @@ export default function ManagerHome() {
         <View className="mt-6">
           <EmptyState
             title="Configura il tuo locale"
-            subtitle="Aggiungi le informazioni del tuo ristorante per iniziare a pubblicare turni."
+            subtitle="Aggiungi le informazioni del tuo locale per iniziare a pubblicare turni."
           />
           <GoldButton
             className="mt-2"

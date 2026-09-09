@@ -387,14 +387,14 @@ export default function WaiterShiftDetailScreen() {
               control={control}
               name="message"
               label="Messaggio (facoltativo)"
-              placeholder="Presentati al ristoratore…"
+              placeholder="Presentati al locale…"
               multiline
               numberOfLines={4}
               className="h-28"
               textAlignVertical="top"
             />
             <Text className="mt-3 text-xs leading-4 text-t3">
-              Candidandoti, il ristoratore potrà vedere il tuo profilo e
+              Candidandoti, il locale potrà vedere il tuo profilo e
               accettarti.
             </Text>
             <GoldButton
@@ -431,7 +431,7 @@ export default function WaiterShiftDetailScreen() {
       <ConfirmModal
         visible={declineVisible}
         title="Rifiutare il turno?"
-        message="Il ristoratore verrà avvisato."
+        message="Il locale verrà avvisato."
         confirmLabel="Rifiuta"
         destructive
         pending={respond.isPending}

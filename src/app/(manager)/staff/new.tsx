@@ -215,7 +215,7 @@ export default function StaffNewScreen() {
           ) : candidates.length === 0 ? (
             <EmptyState
               title="Nessun candidato"
-              subtitle="Qui compaiono i camerieri che hanno già lavorato da te e non sono ancora nel tuo staff. Usa «Manuale» o «Invita»."
+              subtitle="Qui compaiono i professionisti che hanno già lavorato da te e non sono ancora nel tuo staff. Usa «Manuale» o «Invita»."
             />
           ) : (
             <View className="gap-3">
@@ -292,7 +292,7 @@ export default function StaffNewScreen() {
         ) : (
           <View className="gap-5">
             <Input
-              label="Email del cameriere"
+              label="Email del professionista"
               value={email}
               onChangeText={(t) => {
                 setEmail(t);
@@ -318,7 +318,7 @@ export default function StaffNewScreen() {
                       <View className="flex-1">
                         <Text className="text-sm text-t2">
                           Hai già invitato{" "}
-                          {found.full_name ?? "questo cameriere"}.
+                          {found.full_name ?? "questa persona"}.
                         </Text>
                       </View>
                       <Pill label="In attesa di risposta" variant="pending" />
@@ -327,7 +327,7 @@ export default function StaffNewScreen() {
                 ) : foundStatus === "active" ? (
                   <Card className="rounded-3xl border-border-2 p-5">
                     <Text className="text-sm text-t2">
-                      {found.full_name ?? "Questo cameriere"} è già nel tuo
+                      {found.full_name ?? "Questa persona"} è già nel tuo
                       staff.
                     </Text>
                   </Card>
@@ -362,13 +362,13 @@ export default function StaffNewScreen() {
                 )
               ) : (
                 <EmptyState
-                  title="Nessun cameriere trovato"
-                  subtitle="Controlla che l'email sia esatta e che abbia un account cameriere su topWaitr."
+                  title="Nessun profilo trovato"
+                  subtitle="Controlla che l'email sia esatta e che abbia un account da professionista su topWaitr."
                 />
               )
             ) : (
               <Text className="text-xs leading-4 text-t3">
-                Inserisci l&apos;email esatta del cameriere. Riceverà una
+                Inserisci l&apos;email esatta della persona. Riceverà una
                 richiesta e, se accetta, entrerà nel tuo organico.
               </Text>
             )}

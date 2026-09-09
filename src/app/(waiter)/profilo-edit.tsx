@@ -185,7 +185,7 @@ export default function WaiterProfileEditScreen() {
                   control={control}
                   name="bio"
                   label="Bio · come ti presenti"
-                  placeholder="Raccontati ai ristoratori…"
+                  placeholder="Raccontati a chi cerca personale…"
                   multiline
                   numberOfLines={4}
                   maxLength={BIO_MAX}

@@ -6,7 +6,9 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 # topWaitr
 
-Marketplace di turni per la ristorazione (mercato italiano). I **camerieri** trovano e si candidano ai turni pubblicati dai **ristoratori**. Niente Stripe nel MVP.
+Marketplace di turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. I **professionisti** trovano e si candidano ai turni pubblicati dai **locali**. Niente Stripe nel MVP.
+
+⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **locale** (non "ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (enum DB, rotte, tipi): non rinominarli.
 
 ## Stack
 | Categoria | Tecnologia |
