@@ -1,0 +1,22 @@
+-- Toglie `profiles_id_fkey` (public.profiles.id -> auth.users.id, ON DELETE CASCADE).
+--
+-- PERCHÉ: la cancellazione account (20260909200000) lascia di proposito una
+-- lapide anonima in `profiles`, perché conversazioni, locali, turni e
+-- assegnazioni la referenziano. Con la FK in CASCADE, l'istante in cui la Edge
+-- Function cancella l'utente da auth.users il profilo sparirebbe e si
+-- porterebbe dietro a cascata anche `venues` -> `shifts` -> `shift_assignments`:
+-- cioè lo storico ore di TUTTI i dipendenti di quel locale, che non hanno
+-- chiesto nulla. La lapide non può sopravvivere finché questa FK esiste.
+--
+-- Non è una forzatura rispetto all'impianto del progetto: qui non ci sono mai
+-- stati trigger su auth.users, il profilo viene creato dall'app in
+-- ensureProfile() con `id = auth.uid()` e le RLS filtrano sempre su auth.uid(),
+-- quindi l'integrità non dipendeva da questo vincolo.
+--
+-- ⚠️ CONSEGUENZA OPERATIVA: da ora cancellare un utente dalla dashboard Supabase
+-- NON ripulisce più il profilo, e lascia una riga con nome, telefono e bio
+-- ancora leggibili. Per cancellare un account si deve passare dalla Edge
+-- Function `delete-account` (o chiamare `public.delete_account(uuid)` prima di
+-- rimuovere l'utente), altrimenti i dati personali restano nel database.
+
+alter table public.profiles drop constraint if exists profiles_id_fkey;

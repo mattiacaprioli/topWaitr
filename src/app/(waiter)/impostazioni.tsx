@@ -3,6 +3,7 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -54,8 +55,9 @@ export default function WaiterSettingsScreen() {
 
         <DevIntroReset />
 
-        <View style={{ marginTop: "auto" }}>
+        <View style={{ marginTop: "auto" }} className="gap-6">
           <GhostButton label="Esci" onPress={signOut} />
+          <DeleteAccountSection />
         </View>
       </ScrollView>
     </View>
