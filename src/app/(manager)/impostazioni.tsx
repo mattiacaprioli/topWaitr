@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
+import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevPlanToggle } from "@/features/plan/DevPlanToggle";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
@@ -55,6 +56,8 @@ export default function ManagerSettingsScreen() {
         </View>
 
         <DevPlanToggle />
+        <LegalLinks />
+
         <DevIntroReset />
 
         <View style={{ marginTop: "auto" }} className="gap-6">

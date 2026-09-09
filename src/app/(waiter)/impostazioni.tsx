@@ -4,6 +4,7 @@ import { Icon } from "@/components/ui/Icon";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { DeleteAccountSection } from "@/features/account/DeleteAccountSection";
+import { LegalLinks } from "@/features/account/LegalLinks";
 import { DevIntroReset } from "@/features/onboarding/DevIntroReset";
 import { useAuth } from "@/lib/auth";
 import { Pressable, ScrollView, Text, View } from "@/tw";
@@ -52,6 +53,8 @@ export default function WaiterSettingsScreen() {
             </Pressable>
           </Card>
         </View>
+
+        <LegalLinks />
 
         <DevIntroReset />
 
