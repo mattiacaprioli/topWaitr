@@ -7,7 +7,7 @@
 -- tutto ciò che vi punta — conversazioni, turni, locali — continua a funzionare,
 -- senza rendere nullable nessuna colonna e senza toccare RLS.
 -- ⚠️ Perché la lapide sopravviva serve anche la migration successiva
--- (20260909200100), che toglie `profiles_id_fkey`: quella FK verso auth.users è
+-- (20260909195333), che toglie `profiles_id_fkey`: quella FK verso auth.users è
 -- ON DELETE CASCADE, quindi cancellare l'utente di autenticazione porterebbe via
 -- il profilo e, a cascata, locali/turni/assegnazioni.
 --
