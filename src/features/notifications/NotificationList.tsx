@@ -15,6 +15,7 @@ const TYPE_ICON: Record<Enums<"notification_type">, IconName> = {
   shift_assigned: "calendar",
   shift_cancelled: "alert",
   shift_updated: "clock",
+  shift_unassigned: "close",
   staff_invite: "users",
   staff_response: "users",
   staff_removed: "close",

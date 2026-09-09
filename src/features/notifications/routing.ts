@@ -21,7 +21,14 @@ export function routeForNotification(
     if (type === "new_message") {
       return relatedId ? `/(waiter)/chat/${relatedId}` : null;
     }
-    if (type === "shift_cancelled" || type === "staff_removed") return null;
+    // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura
+    // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
+    if (
+      type === "shift_cancelled" ||
+      type === "staff_removed" ||
+      type === "shift_unassigned"
+    )
+      return null;
     return relatedId ? `/(waiter)/shift/${relatedId}` : null;
   }
 
