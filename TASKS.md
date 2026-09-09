@@ -94,7 +94,8 @@ Prima sessione dopo ~7 settimane di stop (ultimo lavoro sul codice: 20/07).
   - ⚠️ **Toppa necessaria a `chat_counterpart`**: la vetrina `waiter_public_cards` ora filtra i cancellati, quindi il ramo cameriere non restituiva **alcuna riga** e il `left join lateral` in `get_chat_counterparts` dava nome `NULL` — la controparte avrebbe visto una conversazione senza nome.
   - Pezzi: migration `20260909195210` + `20260909195333`; Edge Function `supabase/functions/delete-account/` (ricava l'utente dal **JWT**, mai da un id nel body → nessuno può cancellare l'account altrui); modulo `src/features/account/` con `DeleteAccountSection` condivisa dalle due schermate impostazioni; pagina `web-review/elimina-account.html` per l'URL richiesto da Play Console.
   - Verificato con 12 invarianti in una transazione con `rollback`: profilo anonimizzato e fuori dalla vetrina, scheda staff **conservata** e slegata, invito pending rimosso, nome in chat "Utente eliminato", locale conservato e chiuso, turno futuro annullato, **turno passato intatto**.
-  - **DA FARE**: `supabase functions deploy delete-account --project-ref rmlobxjlqlpixkvrzmfg` (senza `--no-verify-jwt`: qui il JWT serve). Finché non è deployata, il pulsante in app fallisce con un toast.
+  - **Deploy fatto** (09/09): `npx supabase functions deploy delete-account` (senza `--no-verify-jwt`, al contrario di `push`). ⚠️ **Nessun workflow CI deploya le Edge Function** — `supabase.yml` fa solo `db push`: vanno sempre deployate a mano.
+  - Smoke test: senza header → 401 platform; JWT malformato → 401 platform; **con la chiave anon → 401 `{"error":"invalid token"}` dal codice**. Quest'ultimo è il caso che conta: la chiave anon è pubblica ed è un JWT valido del progetto, quindi supera `verify_jwt` e arriva all'handler. La sicurezza sta nel ricavare l'utente da `auth.getUser()` e non da un id nel body, non in `verify_jwt`.
 
 ---
 
@@ -114,7 +115,7 @@ Prima sessione dopo ~7 settimane di stop (ultimo lavoro sul codice: 20/07).
 - **M8 — Store submission** (EAS Build/Submit) — **milestone in corso**. Precondizioni: (Android) build `production` AAB + account Google Play Console (25$ una tantum) + scheda store; (iOS) account Apple Developer (99$/anno) → build su device + push iOS + submit. Stato dei prerequisiti che non dipendono dagli account:
   - [x] **Icone e splash** ✅ (09/09) — erano ancora gli asset di scaffold Expo. Vedi sessione sotto.
   - [~] **Privacy policy** (09/09): titolare definito (**Mattia Caprioli**, ditta individuale in forfettario, senza indirizzo postale — il GDPR chiede un recapito effettivo, non necessariamente quello postale), data e conservazione backup compilate, sezione 6 riscritta per descrivere la cancellazione **realmente implementata** (⚠️ prima dichiarava recensioni "conservate anonimizzate" mentre il codice le **elimina**), sezione 7 aggiornata col self-service. Aggiunta `web-review/elimina-account.html` e i link in-app (`LegalLinks` nelle impostazioni dei due ruoli). **Mancano solo 2 valori: `[P.IVA]` e `[EMAIL DI CONTATTO]` (×4).**
-  - [x] **Cancellazione account** ✅ (09/09) — era **assente** e per entrambi gli store è obbligatoria. Vedi sessione sotto. ⚠️ Resta da fare il **deploy** della Edge Function.
+  - [x] **Cancellazione account** ✅ (09/09) — era **assente** e per entrambi gli store è obbligatoria. Edge Function **deployata e verificata**. Vedi sessione sotto.
   - [x] **Permessi Android** ✅ (09/09) — chiedeva `READ_MEDIA_VIDEO`/`AUDIO` senza usarli.
   - [ ] **Scheda store**: descrizione, screenshot, categoria, content rating.
   - [ ] **Pulizia dati di test** sul progetto Supabase.
