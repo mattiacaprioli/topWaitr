@@ -1,6 +1,8 @@
 # topWaitr — Tasks & Roadmap
 
-Tracker delle attività. Aggiornato: **2026-07-15**.
+Tracker delle attività. Aggiornato: **2026-09-09**.
+
+> ⚠️ **Regola**: questo file è il tracker autorevole, ma il 2026-09-09 si è scoperto che tre voci del backlog erano già state implementate senza che nessuno le spuntasse (modifica turni interni, entry point chat da EmployerCard, paginazione candidature). **Aggiornare questo file nello stesso commit della feature**, altrimenti il backlog manda a lavorare su cose già fatte.
 Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **organizzare i turni col proprio staff**; il **marketplace** ("cerco un extra") è secondario/occasionale. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — il marketplace/recensioni resta l'esca gratuita.
 
 ---
@@ -71,6 +73,19 @@ Test su Android reale (account cameriere `capriolimattia1994@gmail.com`), tutti 
 - Gotcha di debug: `pg_net` invia **dopo il COMMIT** → interrogare `net._http_response` nella stessa transazione dell'INSERT mostra ancora il conteggio vecchio. Ri-interrogare dopo.
 - Dati di test ripuliti (notifiche `Test%` cancellate, `notification_prefs` riportate a `{}`).
 
+### Sessione 2026-09-09 — Branding + notifica di revoca turno ✅
+Prima sessione dopo ~7 settimane di stop (ultimo lavoro sul codice: 20/07).
+- **Icona e splash topWaitr** (prerequisito M8): gli asset erano ancora quelli di scaffold — `icon.png` era l'icona blu di Expo e `splash-icon.png` **byte-identico** a `expo-logo.png`. Il mark è lo stesso di `src/components/ui/Logo.tsx` (punto + archi concentrici, oro `#EAB54C` su fondo caldo come `LogoBadge`), **centrato sul punto e non sul bounding box** (la geometria è concentrica: centrarla sull'inchiostro sbilancia la composizione). L'arco tenue è passato da opacità `0.55` a `0.72` perché a 48px nel launcher spariva in una macchia indistinguibile dal fondo. `icon.png` e `android-icon-background.png` **senza canale alpha** (l'App Store rifiuta le icone con trasparenza); foreground e monochrome dentro la zona sicura adaptive (620px < 682px). Sorgente vettoriale in `assets/images/icon.svg`.
+  - ⚠️ **Due bug che rendevano l'icona invisibile**: `ios.icon` puntava a `./assets/expo.icon`, un bundle Icon Composer col **simbolo Expo**, che ha la precedenza sull'icona top-level → su iOS si sarebbe spedito il logo Expo comunque. E l'immagine dello splash era dichiarata **solo dentro `android`** → su iOS il launch screen era un rettangolo nero. Entrambi corretti in `app.json`.
+  - `assets/expo.icon/` è rimasta su disco ma non è più referenziata: si può cancellare.
+  - ⚠️ `npx expo config` **riscrive da solo** gli script `ios`/`android` in `package.json` da `expo start --…` a `expo run:…` (rileva `expo-dev-client`). Non committarlo: `run:*` fa un build nativo locale e contraddice i comandi documentati, visto che con CNG `/ios` e `/android` sono gitignorati.
+- **Notifica `shift_unassigned`**: rimuovendo un assegnato dalla modifica turno, la riga spariva **in silenzio**. Peggio: la policy `shifts` passa da `is_my_assigned_shift()`, quindi la delete gli toglie anche il permesso di *leggere* il turno → chi aveva la schermata aperta vedeva "Turno non trovato". Stesso buco già chiuso per `staff_removed` e `shift_cancelled`.
+  - Migration `20260909193300` (valore enum, file a sé: Postgres non lo lascia usare nella stessa transazione che lo aggiunge) + `20260909193312` (trigger `notify_on_assignment_removed`).
+  - ⚠️ Il trigger è `AFTER DELETE` su una tabella con **due FK `on delete cascade`**, quindi scatta anche quando nessuno ha revocato niente. Le guardie sfruttano il fatto che in un cascade la riga padre è già sparita quando il trigger gira: assegnazione già rifiutata → niente; membro senza account o cancellato → niente (c'è `staff_removed`); turno eliminato o annullato → niente (c'è `notify_on_shift_cancelled`); turno passato → niente; delete innescata dal cameriere stesso → niente.
+  - `related_id` è **null di proposito** e `routeForNotification` ritorna `null`: la notifica non è tappabile perché il turno non è più leggibile. `notification_category` cade nel ramo `else` → categoria "shifts", nessuna migration extra per le preferenze push.
+  - Verificato sul progetto dev con **8 scenari in una transazione con `rollback`**: 2 notifiche attese su 8 delete, zero residui, **zero push spedite** (il rollback annulla anche la coda `pg_net`). Non testata dal vivo la guardia sull'auto-rimozione: via MCP `auth.uid()` è `null`.
+- **Riallineamento di questo tracker**: verificate sul codice tutte le voci aperte del backlog; tre risultavano già fatte (vedi sotto).
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati
@@ -80,15 +95,19 @@ Test su Android reale (account cameriere `capriolimattia1994@gmail.com`), tutti 
 - [x] ~~(dati di test) la venue **"Trattoria da Gino (TEST)"** intestata al waiter Mattia~~ ✅ (19/07) — rimossa (cascade: 4 turni + 1 candidatura; 0 conversazioni/notifiche collegate); onboarding di Giuseppe (manager di test) portato a `true`. Modello dati ora coerente: Mattia/Atesh camerieri puri, Giuseppe unico manager. Nota: i restanti dati di test **non inquinano** i nuovi utenti (turni marketplace tutti passati → fuori dal feed; interni/venue isolati dalla RLS). Wipe completo eventuale = prima dello store vero.
 - [x] ~~**Rebuild dev client**~~ ✅ (19/07) — dev client Android+iOS buildati, includono `expo-print`/`expo-sharing`/`expo-notifications`.
 - [x] ~~(piccola) `InfoRow` duplicata~~ — già estratta in `components/ui/InfoRow.tsx` (verificato 16/07).
-- [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled` e l'export su dispositivo.
+- [x] ~~Verifica live a due account~~ — in larga parte coperta dai test manuali del 14-15/07 (Giuseppe/Mattia: staff, inviti, turni, ore, notifiche); resta da provare dal vivo la notifica `shift_cancelled`, la nuova `shift_unassigned` (in particolare la guardia sull'auto-rimozione, non testabile via MCP perché `auth.uid()` è `null`) e l'export su dispositivo.
 
 ## 🧭 Backlog / Roadmap
 
-- ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up possibili: toast soppresso se sei già nel thread, entry point da EmployerCard nel profilo waiter (serve `owner_id` in `getMyEmployers`), indicatore "sta scrivendo" (broadcast channel).
+- ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up: ~~entry point da EmployerCard nel profilo waiter~~ ✅ **già fatto** (verificato 09/09: `owner_id` c'è in `getMyEmployers`, `(waiter)/(tabs)/profilo.tsx` apre la chat dalla card del locale). Restano aperti: toast soppresso se sei già nel thread, indicatore "sta scrivendo" (broadcast channel).
 - ~~**M7 — Push notifications**~~ ✅ **COMPLETO e verificato end-to-end su device Android (19/07)**: `push_tokens` + trigger `pg_net` → Edge Function `push` (`expo-server-sdk`) + `expo-notifications`; EAS/build/FCM/deploy operativi. Follow-up (non bloccanti): receipt-check a 15 min (cleanup completo token), badge iOS, **push iOS mai testate** (serve account Apple Developer).
-- **M8 — Store submission** (EAS Build/Submit) — **prossima milestone**. Precondizioni: (Android) build `production` AAB + account Google Play Console (25$ una tantum) + scheda store; (iOS) account Apple Developer (99$/anno) → build su device + push iOS + submit. Prima: rimuovere dati di test, icone/splash finali, privacy policy (richiesta per le notifiche + login).
-- **Staff (evoluzioni)**: invito via **QR/codice** (oltre email); **modifica turni interni** dopo la creazione (oggi per aggiungere un assegnato serve ricreare il turno — pesa sulla copertura); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario**.
-- **Scalabilità (follow-up)**: paginazione **candidature** (i chip contano sull'intero set → servono query count separate).
+- **M8 — Store submission** (EAS Build/Submit) — **milestone in corso**. Precondizioni: (Android) build `production` AAB + account Google Play Console (25$ una tantum) + scheda store; (iOS) account Apple Developer (99$/anno) → build su device + push iOS + submit. Stato dei prerequisiti che non dipendono dagli account:
+  - [x] **Icone e splash** ✅ (09/09) — erano ancora gli asset di scaffold Expo. Vedi sessione sotto.
+  - [ ] **Privacy policy**: `web-review/privacy.html` è online e accurata nei contenuti, ma ha 3 placeholder aperti — `[TITOLARE]`, `[EMAIL DI CONTATTO]`, dati fiscali. Serve decidere persona fisica o P.IVA. Entrambi gli store esigono l'URL.
+  - [ ] **Scheda store**: descrizione, screenshot, categoria, content rating.
+  - [ ] **Pulizia dati di test** sul progetto Supabase.
+- **Staff (evoluzioni)**: ~~**modifica turni interni** dopo la creazione~~ ✅ **già fatta** dal 15/07 (commit `641005e`): `InternalShiftEditForm` in `(manager)/shift/edit/[id].tsx` copre giorno, orari, fabbisogno per ruolo, aggiunta/rimozione assegnati e note — la voce era rimasta aperta per errore. Restano aperti: invito via **QR/codice** (oltre email); valutare **soft-delete** dei membri per non perdere lo storico ore alla rimozione; vista **agenda/calendario**.
+- ~~**Scalabilità (follow-up)**: paginazione **candidature**~~ ✅ **già fatta** (verificato 09/09): `useMyApplicationsInfinite` + filtro server-side, e i chip usano `getMyApplicationCounts` con head-count `count: "exact"` **indipendenti dalla paginazione** — cioè esattamente la riserva che la voce sollevava.
 - **Geolocalizzazione (futura, richiesta dall'utente 20/07 — "prima o poi")**: oggi la città è testo manuale, nessun GPS. Quando si aggiunge (es. `expo-location` per turni vicini / distanza): ⚠️ **aggiornare la privacy policy** (`web-review/privacy.html` dichiara "nessuna geolocalizzazione precisa") + permessi `NSLocationWhenInUse`/`ACCESS_FINE_LOCATION` in `app.json` + base giuridica consenso. La privacy policy è **documento vivo**: come le slide onboarding, va aggiornata quando cambia cosa raccoglie l'app.
 - **Recensioni**: verifica "via scontrino" (`verified`/`status`/`receipt_ref` predisposti) + moderazione; badge di eccellenza (da `reviews.tags`); statistiche/andamento rating.
 - **Parte economica** (futura, non MVP): **telaio Pro COSTRUITO** (19/07, vedi sotto) senza prezzi; manca solo il modello di monetizzazione + Stripe + flip del default `plan` a 'free'.
