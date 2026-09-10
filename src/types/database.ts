@@ -706,11 +706,51 @@ export type Database = {
           name: string
         }[]
       }
+      get_chat_unread_count: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {
           cnt: number
           rating: number
+        }[]
+      }
+      get_staff_performance: {
+        Args: { p_staff_member: string }
+        Returns: {
+          declined_count: number
+          month_hours: number
+          month_shifts: number
+          no_show_count: number
+          past_total: number
+          total_hours: number
+          worked_count: number
+        }[]
+      }
+      get_staff_worked_shifts: {
+        Args: { p_limit?: number; p_staff_member: string }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          id: string
+          shift_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          title: string
+          worked_hours: number
+        }[]
+      }
+      get_venue_hours_summary: {
+        Args: { p_from: string; p_to: string; p_venue: string }
+        Returns: {
+          display_name: string
+          hours: number
+          role: string
+          shifts_count: number
+          staff_member_id: string
         }[]
       }
       get_waiter_public_card: {
@@ -723,6 +763,15 @@ export type Database = {
           primary_role: string
           rating_avg: number
           rating_count: number
+        }[]
+      }
+      get_worked_with_waiters: {
+        Args: { p_venue: string }
+        Returns: {
+          avatar_url: string
+          full_name: string
+          id: string
+          primary_role: string
         }[]
       }
       is_my_assigned_shift: { Args: { p_shift: string }; Returns: boolean }
@@ -742,6 +791,10 @@ export type Database = {
       respond_to_staff_invite: {
         Args: { p_accept: boolean; p_staff_id: string }
         Returns: undefined
+      }
+      shift_duration_hours: {
+        Args: { p_end: string; p_start: string }
+        Returns: number
       }
     }
     Enums: {

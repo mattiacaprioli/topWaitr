@@ -5,8 +5,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatHours } from "@/lib/format";
-import { useStaffAssignments } from "@/features/assignments/hooks";
-import { assignmentHours, isWorked } from "@/features/assignments/hours";
+import { useStaffPerformance } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 
 /** Performance di un membro: turni svolti, ore totali, affidabilità, rating clienti. */
@@ -17,21 +16,16 @@ export function StaffPerformanceSection({
   staffMemberId: string;
   waiterId: string | null;
 }) {
-  const query = useStaffAssignments(staffMemberId);
-  const assignments = query.data ?? [];
+  const query = useStaffPerformance(staffMemberId);
+  const perf = query.data ?? null;
   const card = useWaiterPublicCard(waiterId ?? undefined).data ?? null;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const past = assignments.filter((a) => a.shift != null && a.shift.date < today);
-  const worked = past.filter((a) => isWorked(a.status));
-  const noShow = past.filter((a) => a.status === "no_show").length;
-  const declined = past.filter((a) => a.status === "declined").length;
-  const totalPast = past.length;
-  const reliability = totalPast > 0 ? worked.length / totalPast : null;
-  const totalHours = worked.reduce(
-    (sum, a) => sum + assignmentHours(a.status, a.worked_hours, a.shift),
-    0
-  );
+  const totalPast = perf?.past_total ?? 0;
+  const workedCount = perf?.worked_count ?? 0;
+  const noShow = perf?.no_show_count ?? 0;
+  const declined = perf?.declined_count ?? 0;
+  const reliability = totalPast > 0 ? workedCount / totalPast : null;
+  const totalHours = perf?.total_hours ?? 0;
 
   return (
     <View className="gap-3">
@@ -52,7 +46,7 @@ export function StaffPerformanceSection({
           ) : null}
 
           <View className="flex-row gap-3">
-            <StatCard value={String(worked.length)} label="turni svolti" />
+            <StatCard value={String(workedCount)} label="turni svolti" />
             <StatCard value={formatHours(totalHours)} label="ore totali" />
           </View>
 

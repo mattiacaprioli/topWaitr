@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import type { Enums } from "@/types/database";
 import {
   APPLICATIONS_PAGE_SIZE,
@@ -16,6 +17,7 @@ import {
   getMyApplications,
   getMyApplicationsPage,
   getMyApplicationsWithShift,
+  getMyServicesCount,
   getMyUpcomingShifts,
   getPendingCount,
   getTodayStaff,
@@ -23,10 +25,16 @@ import {
   type ApplicationsFilter,
 } from "./api";
 
-export function useApplications(shiftId: string) {
+/**
+ * Candidature di un turno. `enabled` serve perché un turno è `internal` **xor**
+ * `marketplace`: la schermata di dettaglio le chiedeva entrambe, quindi una
+ * delle due query era sempre a vuoto.
+ */
+export function useApplications(shiftId: string, enabled = true) {
   return useQuery({
     queryKey: qk.applications.byShift(shiftId),
     queryFn: () => getApplications(shiftId),
+    enabled,
   });
 }
 
@@ -45,6 +53,7 @@ export function usePendingCount(venueId: string | undefined) {
     queryKey: qk.applications.pendingByVenue(venueId ?? ""),
     queryFn: () => getPendingCount(venueId as string),
     enabled: !!venueId,
+    staleTime: BADGE_STALE_TIME,
   });
 }
 
@@ -97,6 +106,16 @@ export function useMyApplicationsInfinite(
     getNextPageParam: (lastPage, allPages) =>
       lastPage.length < APPLICATIONS_PAGE_SIZE ? undefined : allPages.length,
     enabled: !!waiterId,
+  });
+}
+
+/** Numero di servizi svolti (home professionista): solo il conteggio. */
+export function useMyServicesCount(waiterId: string | undefined) {
+  return useQuery({
+    queryKey: qk.applications.servicesCount(waiterId ?? ""),
+    queryFn: () => getMyServicesCount(waiterId as string),
+    enabled: !!waiterId,
+    staleTime: BADGE_STALE_TIME,
   });
 }
 

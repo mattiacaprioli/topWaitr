@@ -94,7 +94,7 @@ function RootNavigator() {
       {session && profile ? (
         <>
           <NotificationsListener userId={session.user.id} />
-          <RealtimeSync userId={session.user.id} />
+          <RealtimeSync userId={session.user.id} role={profile.role} />
           <PushRegistrar role={profile.role} />
         </>
       ) : null}

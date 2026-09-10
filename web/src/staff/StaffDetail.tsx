@@ -4,8 +4,10 @@ import {
   useRemoveStaffMember,
   useUpdateStaffMember,
 } from "@/features/staff/hooks";
-import { useStaffAssignments } from "@/features/assignments/hooks";
-import { assignmentHours, isWorked } from "@/features/assignments/hours";
+import {
+  useStaffPerformance,
+  useStaffWorkedShifts,
+} from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
 import { formatDate, formatHours, formatTime, toDateString } from "@/lib/format";
@@ -163,24 +165,21 @@ function Performance({
   staffMemberId: string;
   waiterId: string | null;
 }) {
-  const query = useStaffAssignments(staffMemberId);
+  // Totali dal database; la lista sono solo le ultime righe, già limitate.
+  const perfQuery = useStaffPerformance(staffMemberId);
+  const recentQuery = useStaffWorkedShifts(staffMemberId);
   const card = useWaiterPublicCard(waiterId ?? undefined).data ?? null;
 
-  if (query.isLoading) return <Spinner />;
+  if (perfQuery.isLoading || recentQuery.isLoading) return <Spinner />;
 
-  const assignments = query.data ?? [];
-  const today = toDateString(new Date());
-  const past = assignments.filter((a) => a.shift != null && a.shift.date < today);
-  const worked = past.filter((a) => isWorked(a.status));
-  const noShow = past.filter((a) => a.status === "no_show").length;
-  const declined = past.filter((a) => a.status === "declined").length;
-  const totalPast = past.length;
-  const reliability = totalPast > 0 ? worked.length / totalPast : null;
-  const totalHours = worked.reduce(
-    (sum, a) => sum + assignmentHours(a.status, a.worked_hours, a.shift),
-    0
-  );
-  const recent = worked.slice(0, 6);
+  const perf = perfQuery.data ?? null;
+  const totalPast = perf?.past_total ?? 0;
+  const workedCount = perf?.worked_count ?? 0;
+  const noShow = perf?.no_show_count ?? 0;
+  const declined = perf?.declined_count ?? 0;
+  const reliability = totalPast > 0 ? workedCount / totalPast : null;
+  const totalHours = perf?.total_hours ?? 0;
+  const recent = recentQuery.data ?? [];
 
   return (
     <section className="flex flex-col gap-3">
@@ -214,7 +213,7 @@ function Performance({
 
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-4">
-          <p className="font-mono text-2xl text-t1">{worked.length}</p>
+          <p className="font-mono text-2xl text-t1">{workedCount}</p>
           <p className="mt-1 text-xs text-t3">turni svolti</p>
         </Card>
         <Card className="p-4">
@@ -263,18 +262,13 @@ function Performance({
                 )}
               >
                 <span className="text-t2">
-                  {a.shift ? formatDate(a.shift.date) : "—"}
-                  {a.shift ? (
-                    <span className="ml-2 font-mono text-xs text-t4">
-                      {formatTime(a.shift.start_time)}–
-                      {formatTime(a.shift.end_time)}
-                    </span>
-                  ) : null}
+                  {formatDate(a.date)}
+                  <span className="ml-2 font-mono text-xs text-t4">
+                    {formatTime(a.start_time)}–{formatTime(a.end_time)}
+                  </span>
                 </span>
                 <span className="font-mono text-xs text-t1">
-                  {formatHours(
-                    assignmentHours(a.status, a.worked_hours, a.shift)
-                  )}
+                  {formatHours(a.hours)}
                 </span>
               </div>
             ))}

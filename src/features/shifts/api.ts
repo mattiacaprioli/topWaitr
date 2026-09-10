@@ -90,6 +90,18 @@ export async function getVenuePastShiftsCount(venueId: string): Promise<number> 
   return count ?? 0;
 }
 
+/**
+ * Quanti turni al massimo tiene il feed marketplace. È l'unica query dell'app
+ * che cresce con la piattaforma invece che con l'utente: senza tetto, il giorno
+ * in cui ci sono mille locali attivi ogni professionista se li scarica tutti a
+ * ogni apertura. Il tetto è il turno più vicino nel tempo, che è anche l'unico
+ * che qualcuno guarda davvero.
+ *
+ * TODO quando il feed diventerà lungo: scroll infinito (keyset su date +
+ * start_time) e/o filtro per città, sul modello di `getVenuePastShiftsPage`.
+ */
+export const OPEN_SHIFTS_LIMIT = 100;
+
 /** Open, non-past shifts across all venues — the waiter's marketplace feed. */
 export async function getOpenShifts(): Promise<ShiftWithVenue[]> {
   const today = new Date().toISOString().slice(0, 10);
@@ -100,7 +112,8 @@ export async function getOpenShifts(): Promise<ShiftWithVenue[]> {
     .eq("kind", "marketplace")
     .gte("date", today)
     .order("date", { ascending: true })
-    .order("start_time", { ascending: true });
+    .order("start_time", { ascending: true })
+    .limit(OPEN_SHIFTS_LIMIT);
   if (error) throw new Error(error.message);
   return (data as ShiftWithVenue[] | null) ?? [];
 }

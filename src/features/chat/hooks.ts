@@ -7,6 +7,7 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import {
   MESSAGES_PAGE_SIZE,
   getChatUnreadCount,
@@ -44,8 +45,9 @@ export function useConversation(
 export function useChatUnreadCount(userId: string | undefined) {
   return useQuery({
     queryKey: qk.chat.unread(userId ?? ""),
-    queryFn: () => getChatUnreadCount(userId as string),
+    queryFn: () => getChatUnreadCount(),
     enabled: !!userId,
+    staleTime: BADGE_STALE_TIME,
   });
 }
 

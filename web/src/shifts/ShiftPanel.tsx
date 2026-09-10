@@ -248,8 +248,10 @@ function InternalForm({
 }) {
   const venue = useVenue();
   const staffQuery = useVenueStaff(venue.id);
-  const assignmentsQuery = useShiftAssignments(shift?.id ?? "");
-  const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "");
+  // In creazione non c'è ancora un turno: senza `enabled` il pannello faceva
+  // due query con id vuoto ogni volta che si apriva.
+  const assignmentsQuery = useShiftAssignments(shift?.id ?? "", !!shift?.id);
+  const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "", !!shift?.id);
   const create = useCreateInternalShifts(venue.id);
   const update = useUpdateInternalShift(shift?.id ?? "");
   const status = useUpdateShiftStatus(shift?.id ?? "", venue.id);

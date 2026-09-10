@@ -12,7 +12,9 @@ import {
   getMyAssignmentHistory,
   getShiftAssignments,
   getShiftRoleRequirements,
-  getStaffAssignments,
+  STAFF_RECENT_SHIFTS,
+  getStaffPerformance,
+  getStaffWorkedShifts,
   getTodayAssignments,
   getVenueCoverage,
   getVenueHoursSummary,
@@ -58,10 +60,12 @@ export function useRespondToAssignment() {
   });
 }
 
-export function useShiftAssignments(shiftId: string) {
+/** `enabled`: ha senso solo sui turni interni (vedi `useApplications`). */
+export function useShiftAssignments(shiftId: string, enabled = true) {
   return useQuery({
     queryKey: qk.assignments.byShift(shiftId),
     queryFn: () => getShiftAssignments(shiftId),
+    enabled,
   });
 }
 
@@ -160,10 +164,12 @@ export function useUpdateInternalShift(shiftId: string) {
   });
 }
 
-export function useShiftRoleRequirements(shiftId: string) {
+/** `enabled`: ha senso solo sui turni interni (vedi `useApplications`). */
+export function useShiftRoleRequirements(shiftId: string, enabled = true) {
   return useQuery({
     queryKey: qk.assignments.roleReqs(shiftId),
     queryFn: () => getShiftRoleRequirements(shiftId),
+    enabled,
   });
 }
 
@@ -187,10 +193,23 @@ export function useUpdateAssignmentStatus(shiftId: string) {
   });
 }
 
-export function useStaffAssignments(staffMemberId: string | undefined) {
+/** Statistiche aggregate di un membro dell'organico (le calcola il database). */
+export function useStaffPerformance(staffMemberId: string | undefined) {
   return useQuery({
-    queryKey: qk.assignments.byStaff(staffMemberId ?? ""),
-    queryFn: () => getStaffAssignments(staffMemberId as string),
+    queryKey: qk.assignments.staffPerformance(staffMemberId ?? ""),
+    queryFn: () => getStaffPerformance(staffMemberId as string),
+    enabled: !!staffMemberId,
+  });
+}
+
+/** Ultimi turni svolti di un membro, ordinati e limitati dal database. */
+export function useStaffWorkedShifts(
+  staffMemberId: string | undefined,
+  limit = STAFF_RECENT_SHIFTS
+) {
+  return useQuery({
+    queryKey: qk.assignments.staffWorked(staffMemberId ?? "", limit),
+    queryFn: () => getStaffWorkedShifts(staffMemberId as string, limit),
     enabled: !!staffMemberId,
   });
 }

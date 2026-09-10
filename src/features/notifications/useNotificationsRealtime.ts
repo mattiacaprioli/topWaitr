@@ -10,6 +10,32 @@ export type IncomingNotification = {
 };
 
 /**
+ * Domini da rinfrescare quando arriva una notifica di quel tipo.
+ *
+ * È il canale notifiche a tenere aggiornato il professionista: essendo
+ * filtrato per `user_id`, riceve solo ciò che lo riguarda davvero. Prima
+ * `RealtimeSync` sottoscriveva `shifts`, `shift_assignments` e `staff_members`
+ * senza filtro per ottenere lo stesso risultato, svegliando ogni client a ogni
+ * modifica della piattaforma. La notifica c'è già: usarla come segnale costa
+ * zero sottoscrizioni in più.
+ *
+ * `new_message` manca di proposito: la lista chat e il badge li aggiorna il
+ * canale su `messages`, che porta anche il contenuto.
+ */
+const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
+  application_received: [qk.applications.all],
+  application_accepted: [qk.applications.all],
+  application_rejected: [qk.applications.all],
+  shift_assigned: [qk.assignments.all],
+  shift_unassigned: [qk.assignments.all],
+  shift_cancelled: [qk.assignments.all, qk.shifts.all],
+  shift_updated: [qk.assignments.all, qk.shifts.all],
+  staff_invite: [qk.staff.all],
+  staff_response: [qk.staff.all],
+  staff_removed: [qk.staff.all, qk.assignments.all],
+};
+
+/**
  * Canale realtime delle notifiche dell'utente: invalida le query a ogni
  * cambiamento e segnala i nuovi arrivi tramite `onNotify`.
  *
@@ -56,6 +82,10 @@ export function useNotificationsRealtime({
           qc.invalidateQueries({ queryKey: qk.notifications.all });
           if (payload.eventType !== "INSERT") return;
           const n = payload.new as IncomingNotification;
+          // Una notifica nuova segnala che è cambiato qualcosa nel suo dominio.
+          for (const queryKey of DOMAINS_BY_TYPE[n.type ?? ""] ?? []) {
+            qc.invalidateQueries({ queryKey });
+          }
           // Se stai già leggendo quella conversazione, niente avviso.
           const inThisChat =
             n.type === "new_message" &&

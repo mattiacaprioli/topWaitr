@@ -207,13 +207,18 @@ export async function markConversationRead(
   if (error) throw new Error(error.message);
 }
 
-/** Messaggi non letti totali (badge tab Messaggi). La RLS limita ai propri. */
-export async function getChatUnreadCount(userId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("messages")
-    .select("*", { count: "exact", head: true })
-    .is("read_at", null)
-    .neq("sender_id", userId);
+/**
+ * Messaggi non letti totali (badge tab Messaggi).
+ *
+ * Era un `count: 'exact'` su tutta `messages` senza filtro per conversazione:
+ * l'unico indice utile non era applicabile e la policy "messages: participants
+ * read" veniva valutata riga per riga — su una schermata sempre montata. La RPC
+ * fa il join su `conversations` e conta lì.
+ *
+ * L'utente non serve più come argomento: la funzione usa `auth.uid()`.
+ */
+export async function getChatUnreadCount(): Promise<number> {
+  const { data, error } = await supabase.rpc("get_chat_unread_count");
   if (error) throw new Error(error.message);
-  return count ?? 0;
+  return data ?? 0;
 }

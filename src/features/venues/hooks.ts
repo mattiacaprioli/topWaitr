@@ -2,10 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import { getMyVenue, saveVenue, type VenueInput } from "./api";
 
+/** Passare `""` come ownerId tiene la query spenta (usato da RealtimeSync per i camerieri). */
 export function useMyVenue(ownerId: string) {
   return useQuery({
     queryKey: qk.venues.mine(ownerId),
     queryFn: () => getMyVenue(ownerId),
+    enabled: !!ownerId,
   });
 }
 

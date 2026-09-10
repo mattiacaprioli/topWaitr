@@ -5,6 +5,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
   SHIFTS_PAGE_SIZE,
@@ -59,6 +60,7 @@ export function useVenuePastShiftsCount(venueId: string | undefined) {
     queryKey: qk.shifts.pastCount(venueId ?? ""),
     queryFn: () => getVenuePastShiftsCount(venueId as string),
     enabled: !!venueId,
+    staleTime: BADGE_STALE_TIME,
   });
 }
 

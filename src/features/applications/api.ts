@@ -97,13 +97,24 @@ export async function getMyUpcomingShifts(
     .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
 }
 
-/** All of the waiter's applications (to gate the apply CTA across the shift list). */
-export async function getMyApplications(waiterId: string): Promise<Application[]> {
+/** Stato della candidatura per turno: quanto basta al CTA della lista turni. */
+export type MyApplicationStatus = Pick<Application, "shift_id" | "status">;
+
+/**
+ * All of the waiter's applications (to gate the apply CTA across the shift list).
+ *
+ * Due sole colonne: il chiamante ne costruisce una mappa `shift_id → status`,
+ * il resto della riga (messaggio, date, id) non lo guarda nessuno. Niente
+ * `order`: c'è un UNIQUE su (shift_id, waiter_id), quindi la mappa non ha
+ * duplicati da arbitrare e l'ordinamento sarebbe solo un sort in più.
+ */
+export async function getMyApplications(
+  waiterId: string
+): Promise<MyApplicationStatus[]> {
   const { data, error } = await supabase
     .from("applications")
-    .select("*")
-    .eq("waiter_id", waiterId)
-    .order("created_at", { ascending: false });
+    .select("shift_id, status")
+    .eq("waiter_id", waiterId);
   if (error) throw new Error(error.message);
   return data ?? [];
 }
@@ -123,6 +134,24 @@ export async function getMyApplicationsWithShift(
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return (data as ApplicationWithShift[] | null) ?? [];
+}
+
+/**
+ * "Servizi" della home professionista: candidature accettate su turni ormai
+ * passati. Era calcolato scaricando `getMyApplicationsWithShift` — tutte le
+ * candidature con turno e locale annidati, senza limite — per poi contarne
+ * alcune in JS. Qui torna solo il numero.
+ */
+export async function getMyServicesCount(waiterId: string): Promise<number> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { count, error } = await supabase
+    .from("applications")
+    .select("id, shift:shifts!inner(date)", { count: "exact", head: true })
+    .eq("waiter_id", waiterId)
+    .eq("status", "accepted")
+    .lt("shift.date", today);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
 }
 
 export const APPLICATIONS_PAGE_SIZE = 20;
@@ -154,26 +183,27 @@ export type ApplicationCounts = {
   accepted: number;
 };
 
-/** Conteggi per i chip filtro (head-count, indipendenti dalla paginazione). */
+/**
+ * Conteggi per i chip filtro (indipendenti dalla paginazione).
+ *
+ * Erano tre `count: 'exact'` in parallelo sulla stessa tabella e sullo stesso
+ * filtro: tre passate per tre numeri. Una sola lettura della colonna `status`
+ * — un valore corto per riga, coperto da `applications_waiter_status_idx` —
+ * li produce tutti e tre.
+ */
 export async function getMyApplicationCounts(
   waiterId: string
 ): Promise<ApplicationCounts> {
-  const base = () =>
-    supabase
-      .from("applications")
-      .select("*", { count: "exact", head: true })
-      .eq("waiter_id", waiterId);
-  const [total, pending, accepted] = await Promise.all([
-    base(),
-    base().eq("status", "pending"),
-    base().eq("status", "accepted"),
-  ]);
-  const firstError = total.error ?? pending.error ?? accepted.error;
-  if (firstError) throw new Error(firstError.message);
+  const { data, error } = await supabase
+    .from("applications")
+    .select("status")
+    .eq("waiter_id", waiterId);
+  if (error) throw new Error(error.message);
+  const rows = data ?? [];
   return {
-    total: total.count ?? 0,
-    pending: pending.count ?? 0,
-    accepted: accepted.count ?? 0,
+    total: rows.length,
+    pending: rows.filter((r) => r.status === "pending").length,
+    accepted: rows.filter((r) => r.status === "accepted").length,
   };
 }
 

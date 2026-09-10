@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
+import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import {
   getNotifications,
   getUnreadCount,
@@ -21,6 +22,7 @@ export function useUnreadCount(userId: string | undefined) {
     queryKey: qk.notifications.unread(userId ?? ""),
     queryFn: () => getUnreadCount(userId as string),
     enabled: !!userId,
+    staleTime: BADGE_STALE_TIME,
   });
 }
 

@@ -4,27 +4,21 @@ import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatDate, formatHours, formatTime } from "@/lib/format";
-import { useStaffAssignments } from "@/features/assignments/hooks";
-import { assignmentHours, isWorked } from "@/features/assignments/hours";
+import {
+  useStaffPerformance,
+  useStaffWorkedShifts,
+} from "@/features/assignments/hooks";
 
 /** Ore & presenze di un membro dell'organico (turni interni già svolti). */
 export function StaffHoursSection({ staffMemberId }: { staffMemberId: string }) {
-  const query = useStaffAssignments(staffMemberId);
-  const assignments = query.data ?? [];
+  // Totali dal database; la lista sono solo le ultime righe, già limitate.
+  const perfQuery = useStaffPerformance(staffMemberId);
+  const recentQuery = useStaffWorkedShifts(staffMemberId);
+  const query = { isLoading: perfQuery.isLoading || recentQuery.isLoading };
 
-  const today = new Date().toISOString().slice(0, 10);
-  const monthPrefix = today.slice(0, 7); // "YYYY-MM"
-
-  // Turni conclusi e svolti (non rifiutati/assenti).
-  const worked = assignments.filter(
-    (a) => a.shift != null && a.shift.date < today && isWorked(a.status)
-  );
-  const thisMonth = worked.filter((a) => a.shift!.date.startsWith(monthPrefix));
-  const monthHours = thisMonth.reduce(
-    (sum, a) => sum + assignmentHours(a.status, a.worked_hours, a.shift),
-    0
-  );
-  const recent = worked.slice(0, 6);
+  const monthHours = perfQuery.data?.month_hours ?? 0;
+  const monthShifts = perfQuery.data?.month_shifts ?? 0;
+  const recent = recentQuery.data ?? [];
 
   return (
     <View className="gap-3">
@@ -36,7 +30,7 @@ export function StaffHoursSection({ staffMemberId }: { staffMemberId: string }) 
         <>
           <View className="flex-row gap-3">
             <StatCard value={formatHours(monthHours)} label="ore questo mese" />
-            <StatCard value={String(thisMonth.length)} label="turni questo mese" />
+            <StatCard value={String(monthShifts)} label="turni questo mese" />
           </View>
 
           {recent.length > 0 ? (
@@ -46,15 +40,14 @@ export function StaffHoursSection({ staffMemberId }: { staffMemberId: string }) 
                   <View className="flex-row items-center justify-between">
                     <View>
                       <Text className="text-sm font-sans-semibold text-t1">
-                        {formatDate(a.shift!.date)}
+                        {formatDate(a.date)}
                       </Text>
                       <Text className="text-xs text-t3">
-                        {formatTime(a.shift!.start_time)}–
-                        {formatTime(a.shift!.end_time)}
+                        {formatTime(a.start_time)}–{formatTime(a.end_time)}
                       </Text>
                     </View>
                     <Text className="text-sm font-sans-semibold text-gold">
-                      {formatHours(assignmentHours(a.status, a.worked_hours, a.shift))}
+                      {formatHours(a.hours)}
                     </Text>
                   </View>
                 </Card>

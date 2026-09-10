@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase";
 import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember } from "@/features/staff/api";
-import { assignmentHours, isWorked } from "./hours";
 import { isActiveAssignment } from "./status";
 import type { CoverageEmbeds } from "./coverage";
 
@@ -387,29 +386,59 @@ export async function setAssignmentPresence(
   if (error) throw new Error(error.message);
 }
 
-type ShiftSlot = Pick<
-  Shift,
-  "id" | "title" | "date" | "start_time" | "end_time" | "venue_id"
->;
+/**
+ * Statistiche di un membro dell'organico (sezioni "Ore & presenze" e
+ * "Performance"). Sette numeri, calcolati dal database.
+ *
+ * Prima le due sezioni condividevano una query che scaricava **l'intera storia
+ * di assegnazioni** del membro per sommarla in JS — e ne mostrava sei righe.
+ */
+export type StaffPerformance = {
+  past_total: number;
+  worked_count: number;
+  no_show_count: number;
+  declined_count: number;
+  total_hours: number;
+  month_shifts: number;
+  month_hours: number;
+};
 
-/** Manager side: an assignment joined with a lightweight shift slot. */
-export type StaffAssignment = Assignment & { shift: ShiftSlot | null };
-
-/** All assignments of one roster member (for the hours/history section). */
-export async function getStaffAssignments(
+export async function getStaffPerformance(
   staffMemberId: string
-): Promise<StaffAssignment[]> {
+): Promise<StaffPerformance | null> {
   const { data, error } = await supabase
-    .from("shift_assignments")
-    .select(
-      "*, shift:shifts!inner(id, title, date, start_time, end_time, venue_id)"
-    )
-    .eq("staff_member_id", staffMemberId);
+    .rpc("get_staff_performance", { p_staff_member: staffMemberId })
+    .maybeSingle();
   if (error) throw new Error(error.message);
-  const rows = (data as StaffAssignment[] | null) ?? [];
-  return rows.sort((a, b) =>
-    (b.shift?.date ?? "").localeCompare(a.shift?.date ?? "")
-  );
+  return data ?? null;
+}
+
+/** Ultimi turni svolti da un membro, già ordinati e limitati dal database. */
+export type StaffWorkedShift = {
+  id: string;
+  status: Enums<"assignment_status">;
+  worked_hours: number | null;
+  shift_id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  /** Ore effettive: `worked_hours` se corretta a mano, altrimenti la durata. */
+  hours: number;
+};
+
+export const STAFF_RECENT_SHIFTS = 6;
+
+export async function getStaffWorkedShifts(
+  staffMemberId: string,
+  limit = STAFF_RECENT_SHIFTS
+): Promise<StaffWorkedShift[]> {
+  const { data, error } = await supabase.rpc("get_staff_worked_shifts", {
+    p_staff_member: staffMemberId,
+    p_limit: limit,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }
 
 /** Ore lavorate per membro dell'organico in un mese ("YYYY-MM"). */
@@ -419,13 +448,6 @@ export type StaffHoursRow = {
   role: string | null;
   shifts_count: number;
   hours: number;
-};
-
-type HoursRawRow = {
-  status: Enums<"assignment_status">;
-  worked_hours: number | null;
-  staff_member: { id: string; display_name: string; role: string | null } | null;
-  shift: { date: string; start_time: string; end_time: string } | null;
 };
 
 function monthBounds(month: string): { start: string; end: string } {
@@ -441,49 +463,36 @@ function monthBounds(month: string): { start: string; end: string } {
 /**
  * Riepilogo ore per l'organico di un locale in un mese: aggrega i turni interni
  * già svolti (data passata, non rifiutati/assenti) per membro. Ordine per ore desc.
+ *
+ * L'aggregazione la fa il database (`get_venue_hours_summary`). Prima scaricava
+ * ogni assegnazione del mese con due join e sommava qui — e la pagina Ore offre
+ * dodici mesi a portata di click, cioè dodici dataset completi.
  */
 export async function getVenueHoursSummary(
   venueId: string,
   month: string
 ): Promise<StaffHoursRow[]> {
   const { start, end } = monthBounds(month);
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("shift_assignments")
-    .select(
-      "status, worked_hours, staff_member:staff_members!inner(id, display_name, role), shift:shifts!inner(date, start_time, end_time, venue_id, kind)"
-    )
-    .eq("shift.venue_id", venueId)
-    .eq("shift.kind", "internal")
-    .gte("shift.date", start)
-    .lt("shift.date", end);
+  const { data, error } = await supabase.rpc("get_venue_hours_summary", {
+    p_venue: venueId,
+    p_from: start,
+    p_to: end,
+  });
   if (error) throw new Error(error.message);
-
-  const rows = (data as HoursRawRow[] | null) ?? [];
-  const byMember = new Map<string, StaffHoursRow>();
-  for (const r of rows) {
-    const sm = r.staff_member;
-    const sh = r.shift;
-    if (!sm || !sh) continue;
-    if (sh.date >= today) continue; // solo turni conclusi
-    if (!isWorked(r.status)) continue; // esclude rifiutati/assenti
-    const h = assignmentHours(r.status, r.worked_hours, sh);
-    let entry = byMember.get(sm.id);
-    if (!entry) {
-      entry = {
-        staff_member_id: sm.id,
-        display_name: sm.display_name,
-        role: sm.role,
-        shifts_count: 0,
-        hours: 0,
-      };
-      byMember.set(sm.id, entry);
-    }
-    entry.shifts_count += 1;
-    entry.hours += h;
-  }
-  return [...byMember.values()].sort((a, b) => b.hours - a.hours);
+  return data ?? [];
 }
+
+/**
+ * Le due funzioni qui sotto filtravano per data **dopo** aver scaricato tutto:
+ * ciascuna si portava a casa l'intera storia delle assegnazioni del
+ * professionista e ne buttava via metà. Due query, lo stesso identico dataset
+ * completo, due volte. Ora il filtro è server-side (`shift.date` sull'embed
+ * `!inner`), quindi ognuna scarica solo la propria metà.
+ *
+ * L'ordinamento resta lato client di proposito: PostgREST ordina *dentro*
+ * l'embed, non le righe padre, quindi un `order` su `shift.date` non farebbe
+ * quello che sembra. Su insiemi già filtrati per data è irrilevante.
+ */
 
 /** Waiter side: the waiter's upcoming assigned shifts (their "Prossimi turni"). */
 export async function getMyAssignedUpcoming(
@@ -496,15 +505,21 @@ export async function getMyAssignedUpcoming(
       "*, staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
     )
     .eq("staff_member.waiter_id", waiterId)
-    .neq("status", "declined");
+    .neq("status", "declined")
+    .gte("shift.date", today);
   if (error) throw new Error(error.message);
   const rows = (data as AssignmentWithShift[] | null) ?? [];
   return rows
-    .filter((r) => r.shift != null && r.shift.date >= today)
+    .filter((r) => r.shift != null)
     .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
 }
 
-/** Waiter side: le assegnazioni passate (storico turni interni svolti), recenti prima. */
+/**
+ * Waiter side: le assegnazioni passate (storico turni interni svolti), recenti prima.
+ *
+ * TODO paginare: lo storico cresce senza limite. Serve una keyset per data del
+ * turno, che PostgREST non sa ordinare da un embed — probabilmente una RPC.
+ */
 export async function getMyAssignmentHistory(
   waiterId: string
 ): Promise<AssignmentWithShift[]> {
@@ -515,11 +530,12 @@ export async function getMyAssignmentHistory(
       "*, staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
     )
     .eq("staff_member.waiter_id", waiterId)
-    .neq("status", "declined");
+    .neq("status", "declined")
+    .lt("shift.date", today);
   if (error) throw new Error(error.message);
   const rows = (data as AssignmentWithShift[] | null) ?? [];
   return rows
-    .filter((r) => r.shift != null && r.shift.date < today)
+    .filter((r) => r.shift != null)
     .sort((a, b) => b.shift!.date.localeCompare(a.shift!.date));
 }
 

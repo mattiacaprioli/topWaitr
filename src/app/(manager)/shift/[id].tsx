@@ -312,11 +312,16 @@ export default function ShiftDetailScreen() {
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
-  const appsQuery = useApplications(id);
+  // Un turno è `internal` xor `marketplace`: si aspetta di sapere quale prima
+  // di chiedere i dati dell'uno o dell'altro, invece di chiederli entrambi e
+  // buttarne via metà a ogni apertura.
+  const isInternal = shift?.kind === "internal";
+  const isMarketplace = shift?.kind === "marketplace";
+  const appsQuery = useApplications(id, isMarketplace);
   const applications = appsQuery.data ?? [];
-  const assignmentsQuery = useShiftAssignments(id);
+  const assignmentsQuery = useShiftAssignments(id, isInternal);
   const assignments = assignmentsQuery.data ?? [];
-  const roleReqsQuery = useShiftRoleRequirements(id);
+  const roleReqsQuery = useShiftRoleRequirements(id, isInternal);
   const roleRequirements = roleReqsQuery.data ?? [];
 
   const decision = useApplicationDecision(id);

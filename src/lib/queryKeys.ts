@@ -40,6 +40,8 @@ export const qk = {
     pageMine: (waiterId: string, filter: string) =>
       ["applications", "pageMine", waiterId, filter] as const,
     counts: (waiterId: string) => ["applications", "counts", waiterId] as const,
+    servicesCount: (waiterId: string) =>
+      ["applications", "servicesCount", waiterId] as const,
     upcoming: (waiterId: string) =>
       ["applications", "upcoming", waiterId] as const,
     todayStaff: (venueId: string) =>
@@ -74,6 +76,10 @@ export const qk = {
     byShift: (shiftId: string) => ["assignments", "byShift", shiftId] as const,
     byStaff: (staffMemberId: string) =>
       ["assignments", "byStaff", staffMemberId] as const,
+    staffPerformance: (staffMemberId: string) =>
+      ["assignments", "staffPerformance", staffMemberId] as const,
+    staffWorked: (staffMemberId: string, limit: number) =>
+      ["assignments", "staffWorked", staffMemberId, limit] as const,
     coverage: (venueId: string) => ["assignments", "coverage", venueId] as const,
     roleReqs: (shiftId: string) => ["assignments", "roleReqs", shiftId] as const,
     today: (venueId: string) => ["assignments", "today", venueId] as const,

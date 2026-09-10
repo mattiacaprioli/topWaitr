@@ -35,7 +35,7 @@ export function App() {
     <>
       {/* Stesso listener dell'app: la dashboard si aggiorna sola quando il
           gestore tocca qualcosa dal telefono. */}
-      <RealtimeSync userId={session.user.id} />
+      <RealtimeSync userId={session.user.id} role={profile.role} />
       {/* RealtimeSync non copre la tabella `notifications`: ci pensa questo,
           come NotificationsListener sull'app. */}
       <NotificationsWatcher userId={session.user.id} />

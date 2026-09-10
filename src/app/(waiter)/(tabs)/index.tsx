@@ -11,8 +11,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ReviewCard } from "@/components/ui/ReviewCard";
 import { StatCard } from "@/components/ui/StatCard";
 import {
-  useMyApplications,
-  useMyApplicationsList,
+  useMyServicesCount,
   useMyUpcomingShifts,
 } from "@/features/applications/hooks";
 import { useMyAssignedUpcoming } from "@/features/assignments/hooks";
@@ -50,8 +49,7 @@ export default function WaiterHomeScreen() {
   const upcomingQuery = useMyUpcomingShifts(waiterId);
   const assignedQuery = useMyAssignedUpcoming(waiterId);
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
-  const appsQuery = useMyApplications(waiterId);
-  const appsListQuery = useMyApplicationsList(waiterId);
+  const serviziQuery = useMyServicesCount(waiterId);
   const card = useWaiterPublicCard(waiterId).data;
   const reviews = useWaiterReviewsPreview(waiterId, 1).data ?? [];
   const unread = useUnreadCount(waiterId).data ?? 0;
@@ -59,8 +57,7 @@ export default function WaiterHomeScreen() {
     Promise.all([
       upcomingQuery.refetch(),
       assignedQuery.refetch(),
-      appsQuery.refetch(),
-      appsListQuery.refetch(),
+      serviziQuery.refetch(),
     ])
   );
 
@@ -82,10 +79,7 @@ export default function WaiterHomeScreen() {
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
 
   // Reputazione (dati reali). "Servizi" = candidature accettate ormai passate.
-  const today = new Date().toISOString().slice(0, 10);
-  const serviziCount = (appsListQuery.data ?? []).filter(
-    (a) => a.status === "accepted" && a.shift != null && a.shift.date < today,
-  ).length;
+  const serviziCount = serviziQuery.data ?? 0;
   const reviewsCount = card?.rating_count ?? 0;
   const ratingLabel =
     reviewsCount > 0
