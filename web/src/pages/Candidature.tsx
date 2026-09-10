@@ -51,7 +51,7 @@ export function CandidaturePage() {
       {shifts.length === 0 ? (
         <Placeholder
           title="Nessun turno extra in programma"
-          detail="I turni marketplace si pubblicano dall'app, quando serve una persona in più oltre al tuo staff."
+          detail="Quando ti serve una persona in più oltre al tuo staff, pubblica un turno extra dal Planning: le candidature arrivano qui."
         />
       ) : (
         <div className="grid grid-cols-[18rem_1fr] gap-6">

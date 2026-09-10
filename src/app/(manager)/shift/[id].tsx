@@ -35,6 +35,7 @@ import {
 } from "@/features/assignments/hooks";
 import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
+import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
 import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
@@ -72,13 +73,6 @@ const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
   cancelled: "Ritirata",
 };
 
-const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
-  assigned: "Assegnato",
-  confirmed: "Confermato",
-  declined: "Rifiutato",
-  no_show: "Assente",
-};
-
 /** Riga staff assegnato a un turno interno (vista ristoratore). */
 function AssignedRow({
   assignment,
@@ -105,7 +99,7 @@ function AssignedRow({
           {sm?.role ? <Text className="text-xs text-t3">{sm.role}</Text> : null}
         </View>
         <Pill
-          label={ASSIGN_STATUS_LABEL[assignment.status]}
+          label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
           variant={assignment.status === "declined" ? "cancelled" : "neutral"}
         />
         {onMessage ? (

@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { useShift, useVenueShiftsRange } from "@/features/shifts/hooks";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import type { Shift, ShiftWithCount } from "@/features/shifts/api";
+import { shiftCoverage } from "@/features/assignments/coverage";
+import type { Shift, ShiftWithCoverage } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
 import {
   addDays,
@@ -21,6 +22,7 @@ import {
 } from "../lib/week";
 import { Button, PageHeader, Pill, QueryError, Spinner } from "../ui/primitives";
 import { ShiftPanel } from "../shifts/ShiftPanel";
+import { DuplicateWeekDialog } from "../shifts/DuplicateWeekDialog";
 
 type View = "settimana" | "mese";
 const VIEW_KEY = "topwaitr.planning.view";
@@ -48,6 +50,7 @@ export function PlanningPage() {
   const [panel, setPanel] = useState<{ date: string; shift?: Shift } | null>(
     null
   );
+  const [duplicating, setDuplicating] = useState(false);
 
   const [params, setParams] = useSearchParams();
   const deepLinkId = params.get("shift");
@@ -72,7 +75,7 @@ export function PlanningPage() {
   );
 
   const byDay = useMemo(() => {
-    const map = new Map<string, ShiftWithCount[]>();
+    const map = new Map<string, ShiftWithCoverage[]>();
     for (const day of days) map.set(day, []);
     for (const shift of data ?? []) map.get(shift.date)?.push(shift);
     return map;
@@ -90,6 +93,13 @@ export function PlanningPage() {
         subtitle={view === "settimana" ? weekLabel(monday) : monthTitle(month)}
         actions={
           <>
+            {/* Solo in vista settimana: si duplica una settimana, non un mese —
+                copiare 60 turni in un colpo non è un gesto da un click. */}
+            {view === "settimana" ? (
+              <Button className="mr-2" onClick={() => setDuplicating(true)}>
+                Duplica settimana
+              </Button>
+            ) : null}
             <div className="mr-2 flex overflow-hidden rounded-xl border border-border-2">
               {(["settimana", "mese"] as const).map((v) => (
                 <button
@@ -200,6 +210,14 @@ export function PlanningPage() {
         />
       ) : null}
 
+      {duplicating ? (
+        <DuplicateWeekDialog
+          monday={monday}
+          shifts={data ?? []}
+          onClose={() => setDuplicating(false)}
+        />
+      ) : null}
+
       {panel ? (
         <ShiftPanel
           date={panel.date}
@@ -220,9 +238,9 @@ function MonthGrid({
 }: {
   days: string[];
   month: Date;
-  byDay: Map<string, ShiftWithCount[]>;
+  byDay: Map<string, ShiftWithCoverage[]>;
   onCreate: (day: string) => void;
-  onOpen: (day: string, shift: ShiftWithCount) => void;
+  onOpen: (day: string, shift: ShiftWithCoverage) => void;
 }) {
   // Nel mese lo spazio per cella è poco: si mostrano i primi tre turni e si
   // conta il resto, invece di comprimerli fino a renderli illeggibili.
@@ -282,14 +300,14 @@ function MonthGrid({
 
               <div className="flex flex-1 flex-col gap-1">
                 {visible.map((shift) => {
+                  const counts = cellCounts(shift);
                   const short =
-                    shift.positions_filled < shift.positions_total &&
-                    shift.status !== "cancelled";
+                    counts.short && shift.status !== "cancelled";
                   return (
                     <button
                       key={shift.id}
                       onClick={() => onOpen(day, shift)}
-                      title={`${shift.title} · ${formatTime(shift.start_time)}–${formatTime(shift.end_time)} · ${shift.positions_filled}/${shift.positions_total}`}
+                      title={`${shift.title} · ${formatTime(shift.start_time)}–${formatTime(shift.end_time)} · ${counts.filled}/${counts.total}`}
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
                         shift.status === "cancelled"
@@ -339,17 +357,35 @@ function MonthGrid({
   );
 }
 
+/**
+ * I numeri mostrati sul turno. Per un turno interno con fabbisogno per ruolo
+ * vale la **copertura per ruolo**, la stessa della pagina «Copertura»: il
+ * conteggio grezzo degli assegnati diceva "1/2" anche quando quella persona
+ * copriva un ruolo che non serviva (o aveva rifiutato). Senza fabbisogno, o sul
+ * marketplace, restano i posti (`positions_filled`, tenuto dai trigger DB).
+ */
+function cellCounts(shift: ShiftWithCoverage): {
+  filled: number;
+  total: number;
+  short: boolean;
+} {
+  const coverage = shiftCoverage(shift);
+  const byRole = shift.kind === "internal" && coverage.required > 0;
+  const filled = byRole ? coverage.covered : shift.positions_filled;
+  const total = byRole ? coverage.required : shift.positions_total;
+  return { filled, total, short: filled < total };
+}
+
 function ShiftCell({
   shift,
   onOpen,
 }: {
-  shift: ShiftWithCount;
+  shift: ShiftWithCoverage;
   onOpen: () => void;
 }) {
   const internal = shift.kind === "internal";
   const cancelled = shift.status === "cancelled";
-  // `positions_filled` è tenuto dai trigger DB, mai dal client.
-  const short = shift.positions_filled < shift.positions_total;
+  const { filled, total, short } = cellCounts(shift);
 
   return (
     <button
@@ -380,7 +416,7 @@ function ShiftCell({
           <Pill tone="error">Annullato</Pill>
         ) : (
           <Pill tone={short ? "warning" : "success"}>
-            {shift.positions_filled}/{shift.positions_total}
+            {filled}/{total}
           </Pill>
         )}
       </div>

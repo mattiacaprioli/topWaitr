@@ -1,8 +1,13 @@
 import { supabase } from "@/lib/supabase";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
-import type { Shift, ShiftWithCount, ShiftWithVenue } from "./types";
+import type {
+  Shift,
+  ShiftWithCount,
+  ShiftWithCoverage,
+  ShiftWithVenue,
+} from "./types";
 
-export type { Shift, ShiftWithCount, ShiftWithVenue };
+export type { Shift, ShiftWithCount, ShiftWithCoverage, ShiftWithVenue };
 
 export const SHIFTS_PAGE_SIZE = 20;
 
@@ -30,17 +35,19 @@ export async function getVenueShiftsRange(
   venueId: string,
   from: string,
   to: string
-): Promise<ShiftWithCount[]> {
+): Promise<ShiftWithCoverage[]> {
   const { data, error } = await supabase
     .from("shifts")
-    .select("*, applications(count), shift_assignments(count)")
+    .select(
+      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+    )
     .eq("venue_id", venueId)
     .gte("date", from)
     .lte("date", to)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as ShiftWithCount[] | null) ?? [];
+  return (data as ShiftWithCoverage[] | null) ?? [];
 }
 
 /** Storico paginato: turni passati del locale, più recenti prima. */

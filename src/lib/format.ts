@@ -73,6 +73,15 @@ export function toDateString(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Somma (o sottrae) giorni a una data in formato colonna, "YYYY-MM-DD".
+// Passa da Date per gestire fine mese e ora legale; mezzanotte locale evita lo
+// scivolamento di un giorno che darebbe new Date("2026-03-29").
+export function addDaysToDate(date: string, days: number): string {
+  const d = new Date(`${date}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toDateString(d);
+}
+
 // Date -> "HH:MM"
 export function toTimeString(d: Date): string {
   const h = String(d.getHours()).padStart(2, "0");

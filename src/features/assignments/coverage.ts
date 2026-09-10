@@ -1,8 +1,8 @@
-import type { Enums } from "@/types/database";
+import { isActiveAssignment, type AssignmentStatus } from "./status";
 
 export type RoleRequirement = { role: string; count: number };
 export type CoverageAssignment = {
-  status: Enums<"assignment_status">;
+  status: AssignmentStatus;
   role: string | null;
 };
 
@@ -14,11 +14,6 @@ export type Coverage = {
   missing: number;
 };
 
-/** Un'assegnazione "copre" se è attiva (assegnato/confermato, non rifiutato/assente). */
-function isActive(status: Enums<"assignment_status">): boolean {
-  return status === "assigned" || status === "confirmed";
-}
-
 /**
  * Copertura per ruolo: per ogni fabbisogno conta gli assegnati attivi con quel
  * ruolo. L'eccedenza su un ruolo non copre gli altri (min con il richiesto).
@@ -27,7 +22,7 @@ export function computeCoverage(
   requirements: RoleRequirement[],
   assignments: CoverageAssignment[]
 ): Coverage {
-  const active = assignments.filter((a) => isActive(a.status));
+  const active = assignments.filter((a) => isActiveAssignment(a.status));
   const rows: CoverageRow[] = requirements.map((req) => ({
     role: req.role,
     required: req.count,
@@ -36,4 +31,31 @@ export function computeCoverage(
   const required = rows.reduce((s, r) => s + r.required, 0);
   const covered = rows.reduce((s, r) => s + Math.min(r.covered, r.required), 0);
   return { rows, required, covered, missing: Math.max(0, required - covered) };
+}
+
+/**
+ * Le due relazioni da cui si legge la copertura di un turno, così come le
+ * caricano le query (`shift_role_requirements(...)` + `shift_assignments(...)`).
+ */
+export type CoverageEmbeds = {
+  shift_role_requirements: RoleRequirement[];
+  shift_assignments: {
+    status: AssignmentStatus;
+    staff_member: { role: string | null } | null;
+  }[];
+};
+
+/**
+ * Copertura di un turno già caricato con le sue relazioni: unico punto in cui
+ * si passa dalle righe DB agli argomenti di `computeCoverage`, così nessuna
+ * schermata può sbagliare la conversione (o inventarsi lo stato).
+ */
+export function shiftCoverage(shift: CoverageEmbeds): Coverage {
+  return computeCoverage(
+    shift.shift_role_requirements,
+    shift.shift_assignments.map((a) => ({
+      status: a.status,
+      role: a.staff_member?.role ?? null,
+    }))
+  );
 }

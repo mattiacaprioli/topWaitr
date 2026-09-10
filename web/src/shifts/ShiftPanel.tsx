@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  useCreateInternalShift,
+  useCreateInternalShifts,
   useShiftAssignments,
   useShiftRoleRequirements,
   useUpdateInternalShift,
@@ -12,10 +12,16 @@ import { useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useVenueStaff } from "@/features/staff/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
 import { computeCoverage } from "@/features/assignments/coverage";
+import {
+  ASSIGNMENT_STATUS_LABEL,
+  isActiveAssignment,
+  type AssignmentStatus,
+} from "@/features/assignments/status";
 import { formatTime, toDateString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
+import { dayLabel, startOfWeek, weekDays } from "../lib/week";
 import { Button, Field, Input, Pill, Textarea } from "../ui/primitives";
 import { PresenceSection } from "./PresenceSection";
 import { MarketplaceForm } from "./MarketplaceForm";
@@ -29,10 +35,10 @@ function todayDbDate(): string {
 }
 
 /**
- * Pannello laterale di creazione/modifica turno. Copre i turni interni (quelli
- * che il gestore organizza col proprio staff, il caso d'uso da scrivania). Per i
- * turni marketplace mostra il riepilogo e le azioni di stato: si pubblicano
- * dall'app, e le candidature hanno una pagina dedicata.
+ * Pannello laterale di creazione/modifica turno, per entrambe le modalità:
+ * turni **interni** (il gestore chiama il proprio staff — il caso d'uso da
+ * scrivania) e turni **marketplace**, che da qui si pubblicano e si modificano.
+ * Le candidature restano su una pagina dedicata, che è dove si decide.
  */
 export function ShiftPanel({
   date,
@@ -231,16 +237,19 @@ function InternalForm({
   const staffQuery = useVenueStaff(venue.id);
   const assignmentsQuery = useShiftAssignments(shift?.id ?? "");
   const roleReqsQuery = useShiftRoleRequirements(shift?.id ?? "");
-  const create = useCreateInternalShift(venue.id);
+  const create = useCreateInternalShifts(venue.id);
   const update = useUpdateInternalShift(shift?.id ?? "");
   const status = useUpdateShiftStatus(shift?.id ?? "", venue.id);
 
   const [staffIds, setStaffIds] = useState<string[]>([]);
   const [roleTargets, setRoleTargets] = useState<RoleTarget[]>([]);
+  // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
+  const [extraDates, setExtraDates] = useState<string[]>([]);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<InternalShiftForm>({
     resolver: zodResolver(internalShiftSchema),
@@ -279,14 +288,37 @@ function InternalForm({
     [staff, staffIds]
   );
 
+  // Stato reale dell'assegnazione. Chi ha rifiutato (o è stato segnato assente)
+  // resta in elenco ma NON copre il suo ruolo: darlo per `assigned` faceva
+  // sembrare coperto un turno in cui quella persona non viene.
+  const statusById = useMemo(
+    () =>
+      new Map<string, AssignmentStatus>(
+        (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.status])
+      ),
+    [assignmentsQuery.data]
+  );
+
+  /** Chi viene selezionato ora non ha ancora una riga: sarà `assigned` al salvataggio. */
+  function staffStatus(id: string): AssignmentStatus {
+    return statusById.get(id) ?? "assigned";
+  }
+
   const coverage = useMemo(
     () =>
       computeCoverage(
         roleTargets,
-        selectedStaff.map((m) => ({ status: "assigned" as const, role: m.role }))
+        selectedStaff.map((m) => ({
+          status: statusById.get(m.id) ?? "assigned",
+          role: m.role,
+        }))
       ),
-    [roleTargets, selectedStaff]
+    [roleTargets, selectedStaff, statusById]
   );
+
+  const workingCount = selectedStaff.filter((m) =>
+    isActiveAssignment(staffStatus(m.id))
+  ).length;
 
   function toggleStaff(id: string) {
     setStaffIds((prev) =>
@@ -299,6 +331,30 @@ function InternalForm({
       const rest = prev.filter((t) => t.role !== role);
       return count > 0 ? [...rest, { role, count }] : rest;
     });
+  }
+
+  // I sette giorni della settimana della data scelta: è lì che si ripete un
+  // turno di servizio ("anche giovedì e sabato"), non a distanza di mesi.
+  const formDate = watch("date");
+  const weekOfForm = useMemo(
+    () => (formDate ? weekDays(startOfWeek(new Date(`${formDate}T00:00:00`))) : []),
+    [formDate]
+  );
+
+  // Se si cambia data e si finisce in un'altra settimana, i giorni spuntati
+  // prima non esistono più in griglia: si azzerano invece di restare invisibili
+  // e creare turni a sorpresa.
+  const weekKey = weekOfForm[0] ?? "";
+  useEffect(() => {
+    setExtraDates((prev) => prev.filter((d) => weekOfForm.includes(d)));
+    // Dipende solo dal cambio di settimana: `weekOfForm` è derivato da lì.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekKey]);
+
+  function toggleExtraDate(day: string) {
+    setExtraDates((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
   }
 
   const pending = create.isPending || update.isPending;
@@ -316,9 +372,15 @@ function InternalForm({
     };
     if (shift) {
       update.mutate(payload, { onSuccess: onClose });
-    } else {
-      create.mutate(payload, { onSuccess: onClose });
+      return;
     }
+    // Un turno o dieci passano dalla stessa mutation: la data è l'unica cosa
+    // che cambia tra le copie.
+    const dates = [values.date, ...extraDates.filter((d) => d !== values.date)];
+    create.mutate(
+      dates.sort().map((d) => ({ ...payload, date: d })),
+      { onSuccess: onClose }
+    );
   }
 
   return (
@@ -341,6 +403,47 @@ function InternalForm({
           <Input type="time" {...register("end_time")} />
         </Field>
       </div>
+
+      {/* Solo in creazione: su un turno esistente "ripeti" vorrebbe dire
+          crearne altri, cosa diversa dal modificare questo. */}
+      {!shift ? (
+        <section>
+          <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
+            Ripeti anche il…
+          </span>
+          <div className="grid grid-cols-7 gap-1">
+            {weekOfForm.map((day) => {
+              const isMain = day === formDate;
+              const on = isMain || extraDates.includes(day);
+              const { name, num } = dayLabel(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  disabled={isMain}
+                  onClick={() => toggleExtraDate(day)}
+                  title={isMain ? "È la data del turno" : undefined}
+                  className={cn(
+                    "focus-gold rounded-xl border py-1.5 text-center transition",
+                    on
+                      ? "border-border-gold bg-gold/10 text-gold"
+                      : "border-border-2 bg-bg-1 text-t3 hover:bg-bg-2",
+                    isMain && "cursor-default"
+                  )}
+                >
+                  <span className="block text-[10px] uppercase">{name}</span>
+                  <span className="block font-mono text-xs">{num}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-1.5 text-xs text-t4">
+            {extraDates.length === 0
+              ? "Stessi orari, staff e fabbisogno su più giorni della settimana."
+              : `Verranno creati ${extraDates.length + 1} turni identici, uno per giorno.`}
+          </p>
+        </section>
+      ) : null}
 
       <Field label="Note" hint="Visibili a chi è assegnato al turno.">
         <Textarea {...register("description")} />
@@ -389,7 +492,7 @@ function InternalForm({
 
       <section>
         <span className="mb-2 block text-xs font-semibold uppercase tracking-wider text-t3">
-          Chi lavora ({staffIds.length})
+          Chi lavora ({workingCount})
         </span>
         {staff.length === 0 ? (
           <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
@@ -399,6 +502,8 @@ function InternalForm({
           <div className="flex flex-col gap-1">
             {staff.map((member) => {
               const on = staffIds.includes(member.id);
+              const status = staffStatus(member.id);
+              const works = isActiveAssignment(status);
               return (
                 <button
                   key={member.id}
@@ -406,9 +511,9 @@ function InternalForm({
                   onClick={() => toggleStaff(member.id)}
                   className={cn(
                     "focus-gold flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition",
-                    on
-                      ? "border-border-gold bg-gold/10"
-                      : "border-border-2 bg-bg-1 hover:bg-bg-2"
+                    on && works && "border-border-gold bg-gold/10",
+                    on && !works && "border-error/40 bg-error/5",
+                    !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
                   )}
                 >
                   <span className="min-w-0">
@@ -419,7 +524,11 @@ function InternalForm({
                       {member.role ?? "Ruolo non indicato"}
                     </span>
                   </span>
-                  {on ? <Pill tone="gold">Assegnato</Pill> : null}
+                  {on ? (
+                    <Pill tone={works ? "gold" : "error"}>
+                      {ASSIGNMENT_STATUS_LABEL[status]}
+                    </Pill>
+                  ) : null}
                 </button>
               );
             })}
@@ -444,7 +553,13 @@ function InternalForm({
 
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         <Button type="submit" variant="gold" disabled={pending}>
-          {pending ? "Salvataggio…" : shift ? "Salva modifiche" : "Crea turno"}
+          {pending
+            ? "Salvataggio…"
+            : shift
+              ? "Salva modifiche"
+              : extraDates.length > 0
+                ? `Crea ${extraDates.length + 1} turni`
+                : "Crea turno"}
         </Button>
         {shift && shift.status !== "cancelled" ? (
           <Button

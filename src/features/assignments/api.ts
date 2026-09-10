@@ -3,6 +3,8 @@ import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember } from "@/features/staff/api";
 import { assignmentHours, isWorked } from "./hours";
+import { isActiveAssignment } from "./status";
+import type { CoverageEmbeds } from "./coverage";
 
 export type Assignment = Tables<"shift_assignments">;
 
@@ -90,6 +92,143 @@ export async function createInternalShift(input: {
     if (aErr) throw new Error(aErr.message);
   }
   return shift;
+}
+
+/**
+ * La "ricetta" di un turno interno: campi, fabbisogno per ruolo e chi ci lavora.
+ * È quanto serve per **riprodurlo altrove** senza rimetterlo a mano — duplicare
+ * una settimana, ripetere lo stesso turno su più giorni.
+ */
+export type InternalShiftPlan = {
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  description: string | null;
+  roleTargets: { role: string; count: number }[];
+  staffIds: string[];
+};
+
+/** Legge i turni indicati e ne ricava i piani riproducibili. */
+export async function getInternalShiftPlans(
+  shiftIds: string[]
+): Promise<InternalShiftPlan[]> {
+  if (shiftIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from("shifts")
+    .select(
+      "title, date, start_time, end_time, description, shift_role_requirements(role, count), shift_assignments(staff_member_id, status)"
+    )
+    .in("id", shiftIds)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((s) => ({
+    title: s.title,
+    date: s.date,
+    start_time: s.start_time,
+    end_time: s.end_time,
+    description: s.description,
+    roleTargets: (s.shift_role_requirements ?? []).map((r) => ({
+      role: r.role,
+      count: r.count,
+    })),
+    // Chi ha rifiutato o è risultato assente **non** va ricopiato: il piano
+    // riproduce chi era previsto al lavoro, non la cronaca di quel giorno.
+    staffIds: (s.shift_assignments ?? [])
+      .filter((a) => isActiveAssignment(a.status))
+      .map((a) => a.staff_member_id)
+      .filter((id): id is string => !!id),
+  }));
+}
+
+/**
+ * Crea più turni interni in blocco: **tre statement** (turni, fabbisogni,
+ * assegnazioni) invece di tre per turno. Ogni statement è atomico, quindi un
+ * errore non lascia turni a metà — al più senza fabbisogno per ruolo, cosa
+ * visibile e correggibile dal pannello del turno.
+ *
+ * I trigger DB fanno il resto, come per il turno singolo: ogni assegnato riceve
+ * la sua notifica e `positions_filled` resta sincronizzato.
+ */
+export async function createInternalShifts(input: {
+  venue_id: string;
+  plans: InternalShiftPlan[];
+}): Promise<Shift[]> {
+  const { venue_id, plans } = input;
+  if (plans.length === 0) return [];
+
+  const { data: created, error } = await supabase
+    .from("shifts")
+    .insert(
+      plans.map((p) => {
+        const targetSum = p.roleTargets.reduce(
+          (s, t) => s + Math.max(0, t.count),
+          0
+        );
+        return {
+          venue_id,
+          title: p.title,
+          date: p.date,
+          start_time: p.start_time,
+          end_time: p.end_time,
+          description: p.description,
+          kind: "internal" as const,
+          status: "open" as const,
+          positions_total: Math.max(1, targetSum, p.staffIds.length),
+          positions_filled: p.staffIds.length,
+        };
+      })
+    )
+    .select("*");
+  if (error) throw new Error(error.message);
+
+  // `INSERT ... RETURNING` restituisce le righe nell'ordine in cui sono state
+  // inserite: l'indice riallinea ogni turno creato al piano che lo ha generato.
+  // Non è però una garanzia scritta del protocollo, e sbagliare l'allineamento
+  // vorrebbe dire assegnare le persone al turno sbagliato **in silenzio**: si
+  // verifica su data e ora e si fallisce forte se non torna.
+  const shifts = created ?? [];
+  const aligned =
+    shifts.length === plans.length &&
+    shifts.every(
+      (s, i) =>
+        s.date === plans[i].date &&
+        s.start_time.slice(0, 5) === plans[i].start_time.slice(0, 5)
+    );
+  if (!aligned) {
+    throw new Error(
+      `Turni creati (${shifts.length}), ma non è stato possibile riconoscerne l'ordine: fabbisogni e assegnazioni non sono stati applicati. Aprili dal planning e completali a mano.`
+    );
+  }
+
+  const reqRows = shifts.flatMap((shift, i) =>
+    plans[i].roleTargets
+      .filter((t) => t.count > 0)
+      .map((t) => ({ shift_id: shift.id, role: t.role, count: t.count }))
+  );
+  if (reqRows.length > 0) {
+    const { error: rErr } = await supabase
+      .from("shift_role_requirements")
+      .insert(reqRows);
+    if (rErr) throw new Error(rErr.message);
+  }
+
+  const assignRows = shifts.flatMap((shift, i) =>
+    plans[i].staffIds.map((id) => ({
+      shift_id: shift.id,
+      staff_member_id: id,
+    }))
+  );
+  if (assignRows.length > 0) {
+    const { error: aErr } = await supabase
+      .from("shift_assignments")
+      .insert(assignRows);
+    if (aErr) throw new Error(aErr.message);
+  }
+
+  return shifts;
 }
 
 /**
@@ -182,7 +321,7 @@ export async function getShiftRoleRequirements(
 }
 
 /** Turno interno con fabbisogno + assegnati (con ruolo) per il calcolo copertura. */
-export type CoverageShift = {
+export type CoverageShift = CoverageEmbeds & {
   id: string;
   title: string;
   date: string;
@@ -190,11 +329,6 @@ export type CoverageShift = {
   end_time: string;
   positions_total: number;
   positions_filled: number;
-  shift_role_requirements: { role: string; count: number }[];
-  shift_assignments: {
-    status: Enums<"assignment_status">;
-    staff_member: { role: string | null } | null;
-  }[];
 };
 
 /** Turni interni futuri del locale con dati per calcolare la copertura per ruolo. */

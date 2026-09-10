@@ -20,6 +20,11 @@ import {
   useShiftRoleRequirements,
   useUpdateInternalShift,
 } from "@/features/assignments/hooks";
+import {
+  ASSIGNMENT_STATUS_LABEL,
+  isActiveAssignment,
+  type AssignmentStatus,
+} from "@/features/assignments/status";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { TimeField } from "@/features/shifts/TimeField";
 import type { Shift } from "@/features/shifts/types";
@@ -35,10 +40,11 @@ function timeToDate(time: string): Date {
 type SeededProps = {
   shift: Shift;
   initialTargets: Record<string, number>;
-  initialStaffIds: string[];
+  /** Stato dell'assegnazione già a sistema, per membro dell'organico. */
+  initialStatuses: Record<string, AssignmentStatus>;
 };
 
-function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
+function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(shift.venue_id);
@@ -53,7 +59,7 @@ function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
   const [end, setEnd] = useState(timeToDate(shift.end_time));
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
   const [selected, setSelected] = useState<Set<string>>(
-    new Set(initialStaffIds)
+    new Set(Object.keys(initialStatuses))
   );
   const [note, setNote] = useState(shift.description ?? "");
 
@@ -73,7 +79,17 @@ function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
     }));
   }
 
+  /** Chi selezioni ora non ha ancora una riga: sarà `assigned` al salvataggio. */
+  function memberStatus(id: string): AssignmentStatus {
+    return initialStatuses[id] ?? "assigned";
+  }
+
   const selectedMembers = staff.filter((m) => selected.has(m.id));
+  // Chi ha rifiutato (o è mancato) resta in elenco ma non copre il suo ruolo:
+  // contarlo faceva sembrare completo un fabbisogno ancora scoperto.
+  const workingMembers = selectedMembers.filter((m) =>
+    isActiveAssignment(memberStatus(m.id))
+  );
 
   function onSubmit() {
     if (selected.size === 0) {
@@ -128,7 +144,7 @@ function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
         <RoleRequirementsField
           targets={targets}
           onChange={setTarget}
-          assignedRoles={selectedMembers.map((m) => m.role)}
+          assignedRoles={workingMembers.map((m) => m.role)}
         />
 
         <View className="gap-3">
@@ -144,12 +160,14 @@ function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
             <View className="gap-3">
               {staff.map((m) => {
                 const active = selected.has(m.id);
+                const status = memberStatus(m.id);
+                const works = isActiveAssignment(status);
                 return (
                   <Card
                     key={m.id}
                     className={cn(
                       "rounded-3xl border-border-2 p-4",
-                      active && "border-gold"
+                      active && (works ? "border-gold" : "border-error")
                     )}
                     onPress={() => toggle(m.id)}
                   >
@@ -166,15 +184,27 @@ function EditForm({ shift, initialTargets, initialStaffIds }: SeededProps) {
                         {m.role ? (
                           <Text className="text-xs text-t3">{m.role}</Text>
                         ) : null}
+                        {active && !works ? (
+                          <Text className="text-xs font-sans-semibold text-error">
+                            {ASSIGNMENT_STATUS_LABEL[status]} · non copre il
+                            turno
+                          </Text>
+                        ) : null}
                       </View>
                       <View
                         className={cn(
                           "h-6 w-6 items-center justify-center rounded-full border",
-                          active ? "border-gold bg-gold" : "border-border"
+                          !active && "border-border",
+                          active && works && "border-gold bg-gold",
+                          active && !works && "border-error"
                         )}
                       >
                         {active ? (
-                          <Icon name="check" size={14} color="#1A1206" />
+                          works ? (
+                            <Icon name="check" size={14} color="#1A1206" />
+                          ) : (
+                            <Icon name="close" size={14} color="#e55b45" />
+                          )
                         ) : null}
                       </View>
                     </View>
@@ -223,16 +253,16 @@ export function InternalShiftEditForm({ shift }: { shift: Shift }) {
   const initialTargets = Object.fromEntries(
     (reqsQuery.data ?? []).map((r) => [r.role, r.count])
   );
-  const initialStaffIds = (assignmentsQuery.data ?? [])
-    .map((a) => a.staff_member_id)
-    .filter(Boolean);
+  const initialStatuses = Object.fromEntries(
+    (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.status])
+  ) as Record<string, AssignmentStatus>;
 
   return (
     <EditForm
       key={shift.id}
       shift={shift}
       initialTargets={initialTargets}
-      initialStaffIds={initialStaffIds}
+      initialStatuses={initialStatuses}
     />
   );
 }

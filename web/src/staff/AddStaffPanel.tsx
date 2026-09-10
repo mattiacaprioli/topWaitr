@@ -5,7 +5,7 @@ import {
   useVenueStaff,
   useWorkedWithWaiters,
 } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { canonicalRole, STAFF_ROLES } from "@/features/staff/roles";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
@@ -130,7 +130,10 @@ function WorkedWithList({ onDone }: { onDone: () => void }) {
                 {
                   venue_id: venue.id,
                   display_name: w.full_name ?? "Professionista",
-                  role: w.primary_role,
+                  // Il ruolo arriva dal profilo di un'altra persona: va
+                  // riportato alla forma canonica o non combacerà mai con un
+                  // fabbisogno.
+                  role: canonicalRole(w.primary_role),
                   waiter_id: w.id,
                   employment_type: "a_chiamata",
                 },
