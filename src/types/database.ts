@@ -710,6 +710,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      get_my_work_history: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          date: string
+          end_time: string
+          hours: number
+          key: string
+          kind: string
+          logo_url: string
+          start_time: string
+          title: string
+          venue_name: string
+        }[]
+      }
+      get_my_work_history_totals: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_count: number
+          total_hours: number
+        }[]
+      }
       get_rating_breakdown: {
         Args: { p_waiter: string }
         Returns: {

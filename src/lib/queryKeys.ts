@@ -35,8 +35,6 @@ export const qk = {
     mine: (shiftId: string, waiterId: string) =>
       ["applications", "mine", shiftId, waiterId] as const,
     mineAll: (waiterId: string) => ["applications", "mineAll", waiterId] as const,
-    mineList: (waiterId: string) =>
-      ["applications", "mineList", waiterId] as const,
     pageMine: (waiterId: string, filter: string) =>
       ["applications", "pageMine", waiterId, filter] as const,
     counts: (waiterId: string) => ["applications", "counts", waiterId] as const,
@@ -76,6 +74,10 @@ export const qk = {
     byShift: (shiftId: string) => ["assignments", "byShift", shiftId] as const,
     byStaff: (staffMemberId: string) =>
       ["assignments", "byStaff", staffMemberId] as const,
+    workHistory: (waiterId: string) =>
+      ["assignments", "workHistory", waiterId] as const,
+    workHistoryTotals: (waiterId: string) =>
+      ["assignments", "workHistoryTotals", waiterId] as const,
     staffPerformance: (staffMemberId: string) =>
       ["assignments", "staffPerformance", staffMemberId] as const,
     staffWorked: (staffMemberId: string, limit: number) =>
@@ -85,8 +87,6 @@ export const qk = {
     today: (venueId: string) => ["assignments", "today", venueId] as const,
     mineUpcoming: (waiterId: string) =>
       ["assignments", "mineUpcoming", waiterId] as const,
-    mineHistory: (waiterId: string) =>
-      ["assignments", "mineHistory", waiterId] as const,
     mineForShift: (shiftId: string, waiterId: string) =>
       ["assignments", "mineForShift", shiftId, waiterId] as const,
   },

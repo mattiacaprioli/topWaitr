@@ -83,6 +83,19 @@ export default function WaiterHistoryScreen() {
               />
             </View>
           }
+          // Lo storico arriva a pagine: si carica la successiva avvicinandosi
+          // al fondo, invece di scaricare tutto all'apertura.
+          onEndReachedThreshold={0.5}
+          onEndReached={() => {
+            if (history.hasNextPage && !history.isFetchingNextPage) {
+              history.fetchNextPage();
+            }
+          }}
+          ListFooterComponent={
+            history.isFetchingNextPage ? (
+              <ActivityIndicator color="#EAB54C" style={{ marginTop: 12 }} />
+            ) : null
+          }
         />
       )}
     </View>

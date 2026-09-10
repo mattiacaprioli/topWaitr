@@ -119,28 +119,15 @@ export async function getMyApplications(
   return data ?? [];
 }
 
-/**
- * The waiter's applications with their shift/venue, every status, newest first
- * ("Le mie candidature" screen). created_at is on `applications` (not nested), so
- * PostgREST can order it server-side.
- */
-export async function getMyApplicationsWithShift(
-  waiterId: string
-): Promise<ApplicationWithShift[]> {
-  const { data, error } = await supabase
-    .from("applications")
-    .select("*, shift:shifts(*, venue:venues(*))")
-    .eq("waiter_id", waiterId)
-    .order("created_at", { ascending: false });
-  if (error) throw new Error(error.message);
-  return (data as ApplicationWithShift[] | null) ?? [];
-}
+// Lo storico del professionista non si legge più da qui: `getMyWorkHistoryPage`
+// (RPC `get_my_work_history`) unisce candidature e turni interni, a pagine.
+// Questa versione scaricava ogni candidatura di sempre, con turno e locale.
 
 /**
  * "Servizi" della home professionista: candidature accettate su turni ormai
- * passati. Era calcolato scaricando `getMyApplicationsWithShift` — tutte le
- * candidature con turno e locale annidati, senza limite — per poi contarne
- * alcune in JS. Qui torna solo il numero.
+ * passati. Era calcolato scaricando tutte le candidature di sempre, con turno e
+ * locale annidati e senza limite, per poi contarne alcune in JS. Qui torna solo
+ * il numero.
  */
 export async function getMyServicesCount(waiterId: string): Promise<number> {
   const today = new Date().toISOString().slice(0, 10);

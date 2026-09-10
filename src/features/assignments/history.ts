@@ -1,8 +1,11 @@
 import { useMemo } from "react";
-import { shiftDurationHours } from "@/lib/format";
-import { useMyApplicationsList } from "@/features/applications/hooks";
-import { useMyAssignmentHistory } from "./hooks";
-import { assignmentHours, isWorked } from "./hours";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { qk } from "@/lib/queryKeys";
+import {
+  WORK_HISTORY_PAGE_SIZE,
+  getMyWorkHistoryPage,
+  getMyWorkHistoryTotals,
+} from "./api";
 
 export type WorkHistoryItem = {
   key: string;
@@ -17,60 +20,78 @@ export type WorkHistoryItem = {
 };
 
 /**
- * Storico dei turni svolti dal cameriere: assegnazioni interne passate (non
- * rifiutate/assenti) + candidature marketplace accettate ormai passate. Solo ore
- * lavorate, nessun dato economico.
+ * I due totali dello storico: turni svolti e ore. Nient'altro.
+ *
+ * La schermata Profilo mostra solo questi, e prima per averli scaricava
+ * l'intera storia delle assegnazioni **e** l'intera storia delle candidature,
+ * con turno e locale annidati, per poi contarle in memoria.
+ */
+export function useMyWorkHistoryTotals(waiterId: string) {
+  const query = useQuery({
+    queryKey: qk.assignments.workHistoryTotals(waiterId),
+    queryFn: getMyWorkHistoryTotals,
+    enabled: !!waiterId,
+  });
+  return {
+    count: query.data?.total_count ?? 0,
+    totalHours: query.data?.total_hours ?? 0,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    refetch: query.refetch,
+  };
+}
+
+/**
+ * Storico dei turni svolti dal professionista, a pagine: assegnazioni interne
+ * passate (non rifiutate/assenti) + candidature marketplace accettate ormai
+ * passate. Solo ore lavorate, nessun dato economico.
+ *
+ * L'unione e l'ordinamento li fa il database (`get_my_work_history`): erano
+ * impossibili lato client senza scaricare tutto, perché si ordina per la data
+ * del turno, che sta in una tabella collegata.
  */
 export function useMyWorkHistory(waiterId: string) {
-  const assignmentsQ = useMyAssignmentHistory(waiterId);
-  const appsQ = useMyApplicationsList(waiterId);
-  const today = new Date().toISOString().slice(0, 10);
+  const list = useInfiniteQuery({
+    queryKey: qk.assignments.workHistory(waiterId),
+    queryFn: ({ pageParam }) => getMyWorkHistoryPage(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length < WORK_HISTORY_PAGE_SIZE ? undefined : allPages.length,
+    enabled: !!waiterId,
+  });
 
-  const items = useMemo<WorkHistoryItem[]>(() => {
-    const fromAssign: WorkHistoryItem[] = (assignmentsQ.data ?? [])
-      .filter((a) => a.shift != null && isWorked(a.status))
-      .map((a) => ({
-        key: `asg-${a.id}`,
-        venueName: a.shift!.venue?.name ?? "Locale",
-        logoUrl: a.shift!.venue?.logo_url ?? null,
-        title: a.shift!.title,
-        date: a.shift!.date,
-        start_time: a.shift!.start_time,
-        end_time: a.shift!.end_time,
-        hours: assignmentHours(a.status, a.worked_hours, a.shift!),
-        kind: "staff",
-      }));
-    const fromApps: WorkHistoryItem[] = (appsQ.data ?? [])
-      .filter(
-        (a) => a.status === "accepted" && a.shift != null && a.shift.date < today
-      )
-      .map((a) => ({
-        key: `app-${a.id}`,
-        venueName: a.shift!.venue?.name ?? "Locale",
-        logoUrl: a.shift!.venue?.logo_url ?? null,
-        title: a.shift!.title,
-        date: a.shift!.date,
-        start_time: a.shift!.start_time,
-        end_time: a.shift!.end_time,
-        hours: shiftDurationHours(a.shift!.start_time, a.shift!.end_time),
-        kind: "marketplace",
-      }));
-    return [...fromAssign, ...fromApps].sort((x, y) =>
-      y.date.localeCompare(x.date)
-    );
-  }, [assignmentsQ.data, appsQ.data, today]);
+  const totals = useMyWorkHistoryTotals(waiterId);
 
-  const totalHours = items.reduce((sum, i) => sum + i.hours, 0);
+  const items = useMemo<WorkHistoryItem[]>(
+    () =>
+      (list.data?.pages ?? []).flat().map((r) => ({
+        key: r.key,
+        venueName: r.venue_name ?? "Locale",
+        logoUrl: r.logo_url,
+        title: r.title,
+        date: r.date,
+        start_time: r.start_time,
+        end_time: r.end_time,
+        hours: r.hours,
+        kind: r.kind === "staff" ? "staff" : "marketplace",
+      })),
+    [list.data]
+  );
 
   return {
     items,
-    totalHours,
-    count: items.length,
-    isLoading: assignmentsQ.isLoading || appsQ.isLoading,
-    isError: assignmentsQ.isError || appsQ.isError,
+    // I totali coprono **tutto** lo storico, non solo le pagine caricate:
+    // vengono da una query a parte, non dalla somma di ciò che è a schermo.
+    totalHours: totals.totalHours,
+    count: totals.count,
+    isLoading: list.isLoading || totals.isLoading,
+    isError: list.isError || totals.isError,
+    fetchNextPage: list.fetchNextPage,
+    hasNextPage: list.hasNextPage,
+    isFetchingNextPage: list.isFetchingNextPage,
     refetch: () => {
-      assignmentsQ.refetch();
-      appsQ.refetch();
+      list.refetch();
+      totals.refetch();
     },
   };
 }

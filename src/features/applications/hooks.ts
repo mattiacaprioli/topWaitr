@@ -16,7 +16,6 @@ import {
   getMyApplicationCounts,
   getMyApplications,
   getMyApplicationsPage,
-  getMyApplicationsWithShift,
   getMyServicesCount,
   getMyUpcomingShifts,
   getPendingCount,
@@ -84,15 +83,6 @@ export function useMyUpcomingShifts(waiterId: string | undefined) {
   });
 }
 
-/** The waiter's applications with shift/venue, every status ("Le mie candidature"). */
-export function useMyApplicationsList(waiterId: string | undefined) {
-  return useQuery({
-    queryKey: qk.applications.mineList(waiterId ?? ""),
-    queryFn: () => getMyApplicationsWithShift(waiterId as string),
-    enabled: !!waiterId,
-  });
-}
-
 /** "Le mie candidature" — scroll infinito con filtro server-side. */
 export function useMyApplicationsInfinite(
   waiterId: string | undefined,
@@ -134,7 +124,7 @@ export function useCancelApplication() {
   return useMutation({
     mutationFn: (appId: string) => cancelMyApplication(appId),
     onSuccess: () => {
-      // Prefix invalidation covers mineList/mineAll/mine/upcoming.
+      // Prefix invalidation covers mineAll/mine/upcoming + pagine e conteggi.
       qc.invalidateQueries({ queryKey: qk.applications.all });
       qc.invalidateQueries({ queryKey: qk.shifts.open() });
     },
@@ -148,7 +138,7 @@ export function useApply(shiftId: string, waiterId: string) {
     mutationFn: (message?: string) =>
       createApplication({ shift_id: shiftId, waiter_id: waiterId, message }),
     onSuccess: () => {
-      // Prefix: copre mine/mineAll/mineList + pagine e conteggi delle candidature.
+      // Prefix: copre mine/mineAll + pagine e conteggi delle candidature.
       qc.invalidateQueries({ queryKey: qk.applications.all });
       qc.invalidateQueries({ queryKey: qk.shifts.open() });
     },

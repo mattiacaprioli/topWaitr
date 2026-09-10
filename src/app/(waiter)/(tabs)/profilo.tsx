@@ -22,7 +22,7 @@ import {
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
-import { useMyWorkHistory } from "@/features/assignments/history";
+import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import type { MyEmployer } from "@/features/staff/api";
 import { useToast } from "@/providers/Toast";
 import { useAuth } from "@/lib/auth";
@@ -166,7 +166,8 @@ export default function WaiterProfiloScreen() {
   const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
   const breakdown = useRatingBreakdown(userId).data;
   const employers = useMyEmployers(userId).data ?? [];
-  const history = useMyWorkHistory(userId);
+  // Solo i due totali: il Profilo non mostra la lista dei turni.
+  const history = useMyWorkHistoryTotals(userId);
   const reviewsCount = card?.rating_count ?? 0;
   const ratingLabel =
     reviewsCount > 0

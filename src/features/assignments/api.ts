@@ -441,6 +441,55 @@ export async function getStaffWorkedShifts(
   return data ?? [];
 }
 
+/**
+ * Storico lavoro del professionista ("Le mie ore"): turni interni svolti +
+ * candidature marketplace accettate ormai passate, in un'unica lista.
+ *
+ * L'unione la fa il database (`get_my_work_history`). Il client non poteva
+ * paginare da solo: l'ordinamento è per `shifts.date`, che sta in una tabella
+ * collegata, e PostgREST non sa ordinare le righe padre per una colonna
+ * dell'embed — quindi prima si scaricavano **due storie intere** e si fondevano
+ * in memoria.
+ */
+export const WORK_HISTORY_PAGE_SIZE = 20;
+
+export type WorkHistoryRow = {
+  key: string;
+  venue_name: string | null;
+  logo_url: string | null;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  hours: number;
+  kind: string;
+};
+
+export async function getMyWorkHistoryPage(
+  page: number
+): Promise<WorkHistoryRow[]> {
+  const { data, error } = await supabase.rpc("get_my_work_history", {
+    p_limit: WORK_HISTORY_PAGE_SIZE,
+    p_offset: page * WORK_HISTORY_PAGE_SIZE,
+  });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+/**
+ * Solo i due totali (turni svolti, ore). Esistono a parte perché la schermata
+ * Profilo mostra **solo questi**: prima, per due numeri, scaricava tutto.
+ */
+export type WorkHistoryTotals = { total_count: number; total_hours: number };
+
+export async function getMyWorkHistoryTotals(): Promise<WorkHistoryTotals> {
+  const { data, error } = await supabase
+    .rpc("get_my_work_history_totals")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ?? { total_count: 0, total_hours: 0 };
+}
+
 /** Ore lavorate per membro dell'organico in un mese ("YYYY-MM"). */
 export type StaffHoursRow = {
   staff_member_id: string;
@@ -514,30 +563,9 @@ export async function getMyAssignedUpcoming(
     .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
 }
 
-/**
- * Waiter side: le assegnazioni passate (storico turni interni svolti), recenti prima.
- *
- * TODO paginare: lo storico cresce senza limite. Serve una keyset per data del
- * turno, che PostgREST non sa ordinare da un embed — probabilmente una RPC.
- */
-export async function getMyAssignmentHistory(
-  waiterId: string
-): Promise<AssignmentWithShift[]> {
-  const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("shift_assignments")
-    .select(
-      "*, staff_member:staff_members!inner(waiter_id), shift:shifts!inner(*, venue:venues(*))"
-    )
-    .eq("staff_member.waiter_id", waiterId)
-    .neq("status", "declined")
-    .lt("shift.date", today);
-  if (error) throw new Error(error.message);
-  const rows = (data as AssignmentWithShift[] | null) ?? [];
-  return rows
-    .filter((r) => r.shift != null)
-    .sort((a, b) => b.shift!.date.localeCompare(a.shift!.date));
-}
+// Lo storico passato del professionista non si legge più da qui: è paginato e
+// unito alle candidature marketplace da `getMyWorkHistoryPage` (RPC
+// `get_my_work_history`). Questa versione scaricava tutta la storia in un colpo.
 
 /** Waiter side: the waiter's assignment for a specific shift, if any. */
 export async function getMyAssignmentForShift(
