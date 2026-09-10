@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { useMyShifts } from "@/features/shifts/hooks";
 import {
   useApplicationDecision,
@@ -123,9 +124,20 @@ function ApplicationList({ shiftId }: { shiftId: string }) {
         return (
           <Card key={app.id} className="flex flex-wrap items-center gap-4 p-4">
             <div className="min-w-48 flex-1">
-              <p className="text-sm font-semibold text-t1">
-                {app.waiter?.full_name ?? "Professionista"}
-              </p>
+              {/* Il nome apre il profilo pubblico: la reputazione è il dato su
+                  cui si decide, e qui ne sta solo la sintesi. */}
+              {app.waiter_id ? (
+                <Link
+                  to={`/professionista/${app.waiter_id}`}
+                  className="focus-gold text-sm font-semibold text-t1 underline decoration-border-gold decoration-2 underline-offset-4 hover:text-gold"
+                >
+                  {app.waiter?.full_name ?? "Professionista"}
+                </Link>
+              ) : (
+                <p className="text-sm font-semibold text-t1">
+                  {app.waiter?.full_name ?? "Professionista"}
+                </p>
+              )}
               <p className="mt-0.5 text-xs text-t3">
                 {wp?.primary_role ?? "Ruolo non indicato"}
                 {wp?.years_experience

@@ -12,21 +12,11 @@ import {
   useWaiterReviewsInfinite,
 } from "./hooks";
 import type { ReviewSort } from "./types";
-
-const SORTS: { id: ReviewSort; label: string }[] = [
-  { id: "recent", label: "Recenti" },
-  { id: "top", label: "Voto alto" },
-  { id: "low", label: "Voto basso" },
-];
-const STAR_FILTERS = [null, 5, 4, 3, 2, 1] as const;
-const MERIT_TAGS = [
-  "GENTILE",
-  "VELOCE",
-  "CORTESE",
-  "VINO",
-  "MULTILINGUE",
-  "ATTENZIONE",
-];
+import {
+  REVIEW_MERIT_TAGS,
+  REVIEW_SORTS,
+  REVIEW_STAR_FILTERS,
+} from "./filterOptions";
 
 function FilterChip({
   label,
@@ -93,7 +83,7 @@ export function WaiterReviewsList({
       />
       <View className="gap-2">
         <View className="flex-row flex-wrap gap-2">
-          {SORTS.map((s) => (
+          {REVIEW_SORTS.map((s) => (
             <FilterChip
               key={s.id}
               label={s.label}
@@ -103,7 +93,7 @@ export function WaiterReviewsList({
           ))}
         </View>
         <View className="flex-row flex-wrap gap-2">
-          {STAR_FILTERS.map((s) => (
+          {REVIEW_STAR_FILTERS.map((s) => (
             <FilterChip
               key={String(s)}
               label={s == null ? "Tutte" : `${s}★`}
@@ -118,7 +108,7 @@ export function WaiterReviewsList({
             active={tag === null}
             onPress={() => setTag(null)}
           />
-          {MERIT_TAGS.map((t) => (
+          {REVIEW_MERIT_TAGS.map((t) => (
             <FilterChip
               key={t}
               label={t}

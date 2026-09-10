@@ -82,17 +82,21 @@ export async function getRatingBreakdown(
 }
 
 /**
- * A waiter's public "business card" (safe fields + rating aggregates) from the
- * `waiter_public_cards` view. rating_avg/rating_count are kept in sync by the
- * `reviews_sync_waiter_rating` trigger.
+ * A waiter's public "business card" (safe fields + rating aggregates).
+ * rating_avg/rating_count are kept in sync by the `reviews_sync_waiter_rating`
+ * trigger.
+ *
+ * Goes through the `get_waiter_public_card` RPC, not the `waiter_public_cards`
+ * view: the view's source is a SECURITY DEFINER function, so Postgres cannot
+ * inline it and an outer `.eq("id", …)` is NOT pushed down — every read scanned
+ * the whole `profiles` table to return one row. The RPC takes the id as an
+ * argument, so the filter runs inside: index scan on the primary key.
  */
 export async function getWaiterPublicCard(
   waiterId: string
 ): Promise<WaiterPublicCard | null> {
   const { data, error } = await supabase
-    .from("waiter_public_cards")
-    .select("*")
-    .eq("id", waiterId)
+    .rpc("get_waiter_public_card", { p_waiter: waiterId })
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ?? null;

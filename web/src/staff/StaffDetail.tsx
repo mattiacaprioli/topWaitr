@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useRemoveStaffMember,
   useUpdateStaffMember,
@@ -188,16 +189,26 @@ function Performance({
       </span>
 
       {waiterId ? (
-        <Card className="flex items-center justify-between p-4">
+        <Card className="flex items-center justify-between gap-3 p-4">
           <span className="text-sm text-t2">Valutazione clienti</span>
-          {card && card.rating_count ? (
-            <span className="font-mono text-sm text-gold">
-              ★ {card.rating_avg?.toFixed(1)}{" "}
-              <span className="text-t4">({card.rating_count})</span>
-            </span>
-          ) : (
-            <span className="text-xs text-t4">Nessuna recensione</span>
-          )}
+          <span className="flex items-center gap-3">
+            {card && card.rating_count ? (
+              <span className="font-mono text-sm text-gold">
+                ★ {card.rating_avg?.toFixed(1)}{" "}
+                <span className="text-t4">({card.rating_count})</span>
+              </span>
+            ) : (
+              <span className="text-xs text-t4">Nessuna recensione</span>
+            )}
+            {/* Qui c'è solo la media: le recensioni per esteso stanno sul
+                profilo pubblico. */}
+            <Link
+              to={`/professionista/${waiterId}`}
+              className="focus-gold text-xs text-gold underline underline-offset-2"
+            >
+              Profilo
+            </Link>
+          </span>
         </Card>
       ) : null}
 

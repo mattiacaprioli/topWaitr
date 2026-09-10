@@ -168,6 +168,16 @@ Il punto 3 dell'audit: il turnario finisce in bacheca, e `window.print()` esiste
 - Effetto collaterale gradito: **ogni** pagina della dashboard ora stampa in modo decente con Cmd+P, non solo il Planning.
 - **Verificato**: `tsc` root + `tsc -p web`, `vite build web`, blocco `@media print` e tutte le utility `print:*` presenti nel CSS generato. ⚠️ **Non** verificata l'anteprima di stampa reale del browser: va guardata a occhio prima di fidarsi dell'impaginazione.
 
+### Sessione 2026-09-10 (5) — Profilo pubblico del professionista sul web ✅
+Il punto 5 dell'audit: l'app aveva `(manager)/cameriere/[id]` con le recensioni, il web solo la media ★ nella riga della candidatura. Ma decidere chi accettare è un'attività **da scrivania**, e le recensioni sono il fulcro del prodotto.
+- **Nuova rotta `/professionista/:id`** (`web/src/pages/Professionista.tsx`): scheda a sinistra (**sticky**, resta in vista mentre si scorrono le recensioni — è il punto della pagina, tenere insieme persona e reputazione), recensioni a destra. Nessuna voce di menu: non è una lista da sfogliare, si arriva da una candidatura o dall'organico.
+- **Recensioni** in `web/src/reviews/WaiterReviews.tsx`: riepilogo con distribuzione per stelle, filtri e lista paginata dagli **stessi hook** dell'app (`useWaiterReviewsInfinite`/`useRatingBreakdown`/`useWaiterPublicCard`), quindi la stessa query server-side. Differenza voluta: da scrivania le pagine si chiedono con **«Carica altre»** invece dello scroll infinito — si legge e si decide, non si scorre.
+- ⚠️ **Quarta estrazione contro le due fonti di verità**: `SORTS`/`STAR_FILTERS`/`MERIT_TAGS` erano costanti **locali** di `WaiterReviewsList.tsx` (componente RN), quindi invisibili al web. Ora stanno in `src/features/reviews/filterOptions.ts` e le usano entrambi. Duplicarle voleva dire due elenchi di tag che divergono appena il form recensione ne aggiunge uno — e **un tag scritto in un posto solo filtra zero risultati senza dare errore**.
+- **Punti d'ingresso**: il nome del candidato in Candidature è ora un link (solo se `waiter_id` esiste: una candidatura può riferirsi a un profilo cancellato), e la scheda staff ha «Profilo» accanto alla valutazione clienti — lì c'è solo la media, le recensioni per esteso stanno sul profilo.
+- **Solo dati pubblici**: vista `waiter_public_cards` + recensioni con RLS di lettura pubblica + `waiter_experiences` (public read). Nessun contatto privato, nessuna email. «Invia messaggio» riusa `useStartConversation` e porta in `/chat/:id`.
+- Piccolo debito evitato: la pagina fa da involucro e passa `waiterId: string` a un sottocomponente, invece di trascinare `id!` in tutto il corpo (la rotta garantisce il parametro, ma TS non può saperlo dentro le closure).
+- **Verificato**: `tsc` root + `tsc -p web`, `expo lint`, `vite build web` (270 moduli), dev server.
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati
@@ -193,7 +203,7 @@ Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più 
    - [ ] (piccolo, scoperto lì) `useShiftAssignments` e `useShiftRoleRequirements` **non hanno `enabled`**: aperto il pannello in creazione girano con `shift_id = ""`, cioè due richieste che Postgres rifiuta (uuid non valido) e React Query ritenta. Innocuo ma è rumore, e ha già costretto a una guardia nell'effetto che sincronizza gli assegnati.
 3. ~~**Il planning non si stampa**~~ ✅ **fatto** il 10/09, vedi la sessione sopra.
 4. ~~**Copy ormai falsa** in `Candidature.tsx` («I turni marketplace si pubblicano dall'app»)~~ ✅ **corretta** il 10/09, insieme al docstring di `ShiftPanel` che diceva la stessa cosa.
-5. **Nessun profilo pubblico del professionista sul web.** L'app ha `(manager)/cameriere/[id]` con le recensioni; sul web si vede solo la media ★ nella riga della candidatura. Decidere chi accettare è una decisione **da scrivania**, e le recensioni sono il fulcro del prodotto. Era la quarta opzione scartata il 10/09, ora è l'ultimo pezzo mancante della superficie ristoratore.
+5. ~~**Nessun profilo pubblico del professionista sul web**~~ ✅ **fatto** il 10/09, vedi la sessione sopra.
 6. **Operativo, non codice**: (a) **repository variables** `EXPO_PUBLIC_SUPABASE_URL`/`_ANON_KEY` **non impostate** su GitHub → se il workflow parte ora pubblica una dashboard che non raggiunge Supabase; (b) **test live mai fatto** con un account ristoratore reale (vedi la sessione sopra per la lista delle prove incrociate).
 
 - ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up: ~~entry point da EmployerCard nel profilo waiter~~ ✅ **già fatto** (verificato 09/09: `owner_id` c'è in `getMyEmployers`, `(waiter)/(tabs)/profilo.tsx` apre la chat dalla card del locale). Restano aperti: toast soppresso se sei già nel thread, indicatore "sta scrivendo" (broadcast channel).

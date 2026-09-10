@@ -713,6 +713,18 @@ export type Database = {
           rating: number
         }[]
       }
+      get_waiter_public_card: {
+        Args: { p_waiter: string }
+        Returns: {
+          avatar_url: string
+          city: string
+          full_name: string
+          id: string
+          primary_role: string
+          rating_avg: number
+          rating_count: number
+        }[]
+      }
       is_my_assigned_shift: { Args: { p_shift: string }; Returns: boolean }
       leave_venue: { Args: { p_staff_id: string }; Returns: undefined }
       mark_conversation_read: {
