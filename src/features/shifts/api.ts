@@ -20,6 +20,29 @@ export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
   return (data as ShiftWithCount[] | null) ?? [];
 }
 
+/**
+ * Turni del locale in un intervallo di date arbitrario (estremi inclusi).
+ * Serve alle viste a calendario, che devono poter navigare anche indietro:
+ * `getMyShifts` copre solo futuri/oggi e `getVenuePastShiftsPage` è paginata.
+ * `from`/`to` sono date DB (`YYYY-MM-DD`), vedi `toDateString` in lib/format.
+ */
+export async function getVenueShiftsRange(
+  venueId: string,
+  from: string,
+  to: string
+): Promise<ShiftWithCount[]> {
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("*, applications(count), shift_assignments(count)")
+    .eq("venue_id", venueId)
+    .gte("date", from)
+    .lte("date", to)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as ShiftWithCount[] | null) ?? [];
+}
+
 /** Storico paginato: turni passati del locale, più recenti prima. */
 export async function getVenuePastShiftsPage(
   venueId: string,

@@ -12,28 +12,12 @@ import { useCreateShift } from "@/features/shifts/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { TimeField } from "@/features/shifts/TimeField";
 
-const ROLES = [
-  "Cameriere",
-  "Chef de rang",
-  "Sommelier",
-  "Runner",
-  "Barista",
-  "Hostess",
-  "Lavapiatti",
-];
-
-const BADGES = [
-  "Veloce",
-  "Cortese",
-  "Vino",
-  "Cocktail",
-  "Multi",
-  "Gentile",
-  "Eventi",
-];
-
-const RATE_MIN = 8;
-const RATE_MAX = 30;
+import {
+  EXTRA_SHIFT_BADGES as BADGES,
+  EXTRA_SHIFT_ROLES as ROLES,
+  RATE_MAX,
+  RATE_MIN,
+} from "@/features/shifts/extraShiftOptions";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -53,7 +37,7 @@ export function ExtraShiftForm({ venueId, header }: Props) {
   const toast = useToast();
   const create = useCreateShift(venueId);
 
-  const [role, setRole] = useState(ROLES[0]);
+  const [role, setRole] = useState<string>(ROLES[0]);
   const [date, setDate] = useState(new Date());
   const [start, setStart] = useState(defaultTime(19));
   const [end, setEnd] = useState(defaultTime(23));

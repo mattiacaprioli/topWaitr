@@ -1,0 +1,108 @@
+import { useNavigate } from "react-router-dom";
+import {
+  useVenuePastShifts,
+  useVenuePastShiftsCount,
+} from "@/features/shifts/hooks";
+import { formatDate, formatTime } from "@/lib/format";
+import { useVenue } from "../lib/venue";
+import {
+  Button,
+  Card,
+  PageHeader,
+  Pill,
+  Placeholder,
+  QueryError,
+  Spinner,
+} from "../ui/primitives";
+
+/**
+ * Turni passati, dal più recente. Paginati (20 per volta) con la stessa infinite
+ * query dell'app: lo storico di un locale attivo cresce senza limiti, caricarlo
+ * tutto sarebbe un problema in poche settimane.
+ */
+export function StoricoPage() {
+  const venue = useVenue();
+  const navigate = useNavigate();
+  const count = useVenuePastShiftsCount(venue.id).data ?? 0;
+  const { data, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
+    useVenuePastShifts(venue.id);
+
+  if (isPending) return <Spinner />;
+  if (isError) return <QueryError error={error} />;
+
+  const shifts = data?.pages.flat() ?? [];
+
+  return (
+    <>
+      <PageHeader
+        title="Storico"
+        subtitle={`${count} turni svolti`}
+      />
+
+      {shifts.length === 0 ? (
+        <Placeholder
+          title="Nessun turno passato"
+          detail="Qui finiscono i turni una volta conclusi."
+        />
+      ) : (
+        <>
+          <Card className="p-0">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border-2 text-left text-[11px] uppercase tracking-wider text-t3">
+                  <th className="px-5 py-3 font-semibold">Data</th>
+                  <th className="px-5 py-3 font-semibold">Turno</th>
+                  <th className="px-5 py-3 font-semibold">Orario</th>
+                  <th className="px-5 py-3 font-semibold">Tipo</th>
+                  <th className="px-5 py-3 text-right font-semibold">Coperti</th>
+                  <th className="px-5 py-3 font-semibold">Stato</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shifts.map((s) => (
+                  <tr
+                    key={s.id}
+                    onClick={() => navigate(`/planning?shift=${s.id}`)}
+                    className="cursor-pointer border-b border-border transition last:border-0 hover:bg-bg-1"
+                  >
+                    <td className="px-5 py-2.5 text-t2">{formatDate(s.date)}</td>
+                    <td className="px-5 py-2.5 text-t1">{s.title}</td>
+                    <td className="px-5 py-2.5 font-mono text-xs text-t3">
+                      {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                    </td>
+                    <td className="px-5 py-2.5">
+                      <Pill tone={s.kind === "internal" ? "neutral" : "gold"}>
+                        {s.kind === "internal" ? "Staff" : "Extra"}
+                      </Pill>
+                    </td>
+                    <td className="px-5 py-2.5 text-right font-mono text-t2">
+                      {s.positions_filled}/{s.positions_total}
+                    </td>
+                    <td className="px-5 py-2.5">
+                      {s.status === "cancelled" ? (
+                        <Pill tone="error">Annullato</Pill>
+                      ) : (
+                        <Pill tone="neutral">Concluso</Pill>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          {hasNextPage ? (
+            <div className="mt-4 flex justify-center">
+              <Button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+              >
+                {isFetchingNextPage ? "Caricamento…" : "Carica altri"}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}

@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+/*
+ * Token AURA — stessi valori di src/global.css (app) e web-review/styles.css.
+ * Differenza rispetto al mobile: qui i font sono famiglie web reali con i pesi
+ * numerici, mentre in React Native il peso fa parte del nome della famiglia.
+ */
+@theme {
+  --color-gold: #eab54c;
+  --color-gold-light: #f5c765;
+  --color-gold-dark: #c68a34;
+  --color-gold-ink: #1a1206;
+
+  --color-bg-0: #0c0907;
+  --color-bg-1: #1f1a13;
+  --color-bg-2: #2a241b;
+  --color-bg-3: #362e24;
+  --color-bg-card: #17120b;
+
+  --color-t1: #f8f4ed;
+  --color-t2: #c2bbb0;
+  --color-t3: #8c857a;
+  --color-t4: #6a6358;
+
+  --color-success: #4fc97d;
+  --color-warning: #e2922f;
+  --color-error: #e55b45;
+  --color-info: #208aef;
+
+  --color-border: rgba(255, 240, 220, 0.07);
+  --color-border-2: rgba(255, 240, 220, 0.12);
+  --color-border-gold: rgba(234, 181, 76, 0.4);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-serif: "Fraunces", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--color-bg-0);
+    color: var(--color-t1);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* La dashboard è densa: input leggibili e coerenti ovunque. */
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-gold-ink);
+  }
+}
+
+@layer components {
+  .focus-gold {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-0;
+  }
+}

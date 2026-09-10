@@ -22,6 +22,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
 
+      # La dashboard web ha un tsconfig separato (lib DOM, alias verso il client
+      # Supabase web). La root la esclude, quindi va controllata a parte.
+      - name: Typecheck dashboard web
+        run: npx tsc -p web --noEmit
+
       # Blocking: ESLint is configured (eslint.config.js + eslint-config-expo).
       # Fails on errors; advisory warnings (e.g. RHF watch) don't block.
       - name: Lint

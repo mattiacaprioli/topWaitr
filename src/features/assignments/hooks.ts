@@ -85,6 +85,7 @@ export function useCreateInternalShift(venueId: string | undefined) {
     onSuccess: () => {
       if (venueId) {
         qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+        qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
         qc.invalidateQueries({ queryKey: qk.assignments.coverage(venueId) });
       }
       qc.invalidateQueries({ queryKey: qk.assignments.all });

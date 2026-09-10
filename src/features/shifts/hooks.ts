@@ -15,6 +15,7 @@ import {
   getShiftWithVenue,
   getVenuePastShiftsCount,
   getVenuePastShiftsPage,
+  getVenueShiftsRange,
   updateShift,
   updateShiftStatus,
 } from "./api";
@@ -23,6 +24,19 @@ export function useMyShifts(venueId: string | undefined) {
   return useQuery({
     queryKey: qk.shifts.byVenue(venueId ?? ""),
     queryFn: () => getMyShifts(venueId as string),
+    enabled: !!venueId,
+  });
+}
+
+/** Turni del locale in un intervallo di date — vista calendario/planning. */
+export function useVenueShiftsRange(
+  venueId: string | undefined,
+  from: string,
+  to: string
+) {
+  return useQuery({
+    queryKey: qk.shifts.range(venueId ?? "", from, to),
+    queryFn: () => getVenueShiftsRange(venueId as string, from, to),
     enabled: !!venueId,
   });
 }
@@ -76,7 +90,10 @@ export function useCreateShift(venueId: string | undefined) {
   return useMutation({
     mutationFn: (input: TablesInsert<"shifts">) => createShift(input),
     onSuccess: () => {
-      if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+      if (venueId) {
+        qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+        qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
+      }
     },
   });
 }
@@ -88,7 +105,10 @@ export function useUpdateShiftStatus(shiftId: string, venueId?: string) {
       updateShiftStatus(shiftId, status),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
-      if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+      if (venueId) {
+        qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+        qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
+      }
     },
   });
 }
@@ -99,7 +119,10 @@ export function useUpdateShift(shiftId: string, venueId?: string) {
     mutationFn: (fields: TablesUpdate<"shifts">) => updateShift(shiftId, fields),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
-      if (venueId) qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+      if (venueId) {
+        qc.invalidateQueries({ queryKey: qk.shifts.byVenue(venueId) });
+        qc.invalidateQueries({ queryKey: qk.shifts.rangeAll(venueId) });
+      }
     },
   });
 }

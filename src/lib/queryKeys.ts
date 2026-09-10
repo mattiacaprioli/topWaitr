@@ -20,6 +20,11 @@ export const qk = {
     all: ["shifts"] as const,
     open: () => ["shifts", "open"] as const,
     byVenue: (venueId: string) => ["shifts", "byVenue", venueId] as const,
+    range: (venueId: string, from: string, to: string) =>
+      ["shifts", "range", venueId, from, to] as const,
+    // Prefisso: invalida ogni intervallo già in cache per quel locale (la vista
+    // calendario ne tiene più di uno mentre si naviga tra le settimane).
+    rangeAll: (venueId: string) => ["shifts", "range", venueId] as const,
     past: (venueId: string) => ["shifts", "past", venueId] as const,
     pastCount: (venueId: string) => ["shifts", "pastCount", venueId] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,

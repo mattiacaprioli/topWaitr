@@ -1,14 +1,22 @@
-name: Deploy web-review to Pages
+name: Deploy sito + dashboard to Pages
 
-# Pubblica la cartella statica web-review/ su GitHub Pages.
-# Il sito di recensione (Componente B) è indipendente dall'app Expo: HTML/CSS/JS
-# puri, nessuno step di build. Serve solo caricare la cartella come artifact Pages.
+# Pubblica su GitHub Pages i due pezzi web del progetto, in un solo artifact
+# (Pages consente un solo sito per repo):
+#   /            → web-review/ : recensioni dei clienti + pagine legali.
+#                  HTML/CSS/JS puri, nessuno step di build. L'URL NON deve
+#                  cambiare: è quello nei QR e in EXPO_PUBLIC_REVIEW_SITE_URL.
+#   /app/        → web/dist    : dashboard dei locali (Vite, build richiesta).
 
 on:
   push:
     branches: [main]
     paths:
       - "web-review/**"
+      - "web/**"
+      # La dashboard importa il data layer dell'app: una modifica lì cambia
+      # il bundle pubblicato.
+      - "src/**"
+      - "package.json"
       - ".github/workflows/deploy-web-review.yml"
   workflow_dispatch:
 
@@ -28,11 +36,35 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    env:
+      # Chiavi pubbliche per definizione: la sicurezza è nella RLS, non nella
+      # loro segretezza (stessa scelta già fatta in web-review/config.js).
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build dashboard
+        run: npx vite build web
+
+      - name: Assemble Pages artifact
+        run: |
+          rm -rf _site
+          cp -r web-review _site
+          mkdir -p _site/app
+          cp -r web/dist/. _site/app/
+
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: web-review
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4

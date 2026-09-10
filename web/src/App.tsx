@@ -1,0 +1,61 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
+import { RealtimeSync } from "@/features/realtime/RealtimeSync";
+import { Spinner } from "./ui/primitives";
+import { AppLayout } from "./AppLayout";
+import { NotificationsWatcher } from "./NotificationsWatcher";
+import { LoginPage } from "./pages/Login";
+import { NotForWaitersPage } from "./pages/NotForWaiters";
+import { HomePage } from "./pages/Home";
+import { StoricoPage } from "./pages/Storico";
+import { NotifichePage } from "./pages/Notifiche";
+import { ChatPage } from "./pages/Chat";
+import { PlanningPage } from "./pages/Planning";
+import { CoperturaPage } from "./pages/Copertura";
+import { OrePage } from "./pages/Ore";
+import { StaffPage } from "./pages/Staff";
+import { CandidaturePage } from "./pages/Candidature";
+import { LocalePage } from "./pages/Locale";
+import { ImpostazioniPage } from "./pages/Impostazioni";
+
+export function App() {
+  const { session, profile, loading } = useAuth();
+
+  if (loading) return <Spinner label="Verifica sessione…" />;
+  if (!session) return <LoginPage />;
+
+  // La dashboard è uno strumento da scrivania per chi gestisce un locale. Il
+  // professionista non ha nulla da farci: schermata esplicita, non un redirect
+  // silenzioso che lo lascerebbe a chiedersi cosa è andato storto.
+  if (profile && profile.role !== "manager") return <NotForWaitersPage />;
+  if (!profile) return <Spinner label="Caricamento profilo…" />;
+
+  return (
+    <>
+      {/* Stesso listener dell'app: la dashboard si aggiorna sola quando il
+          gestore tocca qualcosa dal telefono. */}
+      <RealtimeSync userId={session.user.id} />
+      {/* RealtimeSync non copre la tabella `notifications`: ci pensa questo,
+          come NotificationsListener sull'app. */}
+      <NotificationsWatcher userId={session.user.id} />
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/planning" element={<PlanningPage />} />
+          <Route path="/storico" element={<StoricoPage />} />
+          <Route path="/copertura" element={<CoperturaPage />} />
+          <Route path="/ore" element={<OrePage />} />
+          <Route path="/staff" element={<StaffPage />} />
+          <Route path="/candidature" element={<CandidaturePage />} />
+          <Route path="/notifiche" element={<NotifichePage />} />
+          {/* Stessa pagina con e senza thread aperto: la lista resta a sinistra. */}
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:id" element={<ChatPage />} />
+          <Route path="/locale" element={<LocalePage />} />
+          <Route path="/impostazioni" element={<ImpostazioniPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </>
+  );
+}
