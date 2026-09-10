@@ -111,14 +111,18 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-4 print:mb-3">
       <div>
         <h1 className="font-serif text-2xl text-t1">{title}</h1>
         {subtitle ? (
           <p className="mt-1 text-sm text-t3">{subtitle}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {/* Titolo e sottotitolo (settimana, mese) servono anche sul foglio; i
+          comandi no: su carta non si clicca niente. */}
+      {actions ? (
+        <div className="flex gap-2 print:hidden">{actions}</div>
+      ) : null}
     </header>
   );
 }
@@ -132,7 +136,9 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold",
+        // In stampa il browser non riempie gli sfondi: senza un bordo la pill
+        // perderebbe la sua forma e resterebbe testo in mezzo ad altro testo.
+        "inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold print:border print:border-border-2",
         tone === "neutral" && "bg-bg-3 text-t2",
         tone === "gold" && "bg-gold/15 text-gold",
         tone === "success" && "bg-success/15 text-success",

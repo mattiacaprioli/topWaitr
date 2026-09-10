@@ -2,12 +2,19 @@ import { supabase } from "@/lib/supabase";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import type {
   Shift,
+  ShiftWithAssignees,
   ShiftWithCount,
   ShiftWithCoverage,
   ShiftWithVenue,
 } from "./types";
 
-export type { Shift, ShiftWithCount, ShiftWithCoverage, ShiftWithVenue };
+export type {
+  Shift,
+  ShiftWithAssignees,
+  ShiftWithCount,
+  ShiftWithCoverage,
+  ShiftWithVenue,
+};
 
 export const SHIFTS_PAGE_SIZE = 20;
 
@@ -35,11 +42,13 @@ export async function getVenueShiftsRange(
   venueId: string,
   from: string,
   to: string
-): Promise<ShiftWithCoverage[]> {
+): Promise<ShiftWithAssignees[]> {
   const { data, error } = await supabase
     .from("shifts")
     .select(
-      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+      // Identità dell'assegnato oltre al ruolo: la stessa query alimenta la
+      // copertura (per ruolo) e la vista per persona (chi lavora quanto).
+      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(id, display_name, role))"
     )
     .eq("venue_id", venueId)
     .gte("date", from)
@@ -47,7 +56,7 @@ export async function getVenueShiftsRange(
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as ShiftWithCoverage[] | null) ?? [];
+  return (data as ShiftWithAssignees[] | null) ?? [];
 }
 
 /** Storico paginato: turni passati del locale, più recenti prima. */

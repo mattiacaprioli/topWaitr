@@ -37,7 +37,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
   return (
     <ToastContext.Provider value={api}>
       {children}
-      <div className="pointer-events-none fixed bottom-6 right-6 z-[100] flex flex-col gap-2">
+      <div className="pointer-events-none fixed bottom-6 right-6 z-[100] flex flex-col gap-2 print:hidden">
         {toasts.map((t) => (
           <div
             key={t.id}

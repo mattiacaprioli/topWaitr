@@ -4,7 +4,7 @@ import { useShift, useVenueShiftsRange } from "@/features/shifts/hooks";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { shiftCoverage } from "@/features/assignments/coverage";
-import type { Shift, ShiftWithCoverage } from "@/features/shifts/api";
+import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
 import {
   addDays,
@@ -22,14 +22,17 @@ import {
 } from "../lib/week";
 import { Button, PageHeader, Pill, QueryError, Spinner } from "../ui/primitives";
 import { ShiftPanel } from "../shifts/ShiftPanel";
+import { PeopleWeek } from "../shifts/PeopleWeek";
 import { DuplicateWeekDialog } from "../shifts/DuplicateWeekDialog";
 
-type View = "settimana" | "mese";
+const VIEWS = ["settimana", "mese", "persone"] as const;
+type View = (typeof VIEWS)[number];
 const VIEW_KEY = "topwaitr.planning.view";
 
 function storedView(): View {
   try {
-    return localStorage.getItem(VIEW_KEY) === "mese" ? "mese" : "settimana";
+    const saved = localStorage.getItem(VIEW_KEY);
+    return VIEWS.find((v) => v === saved) ?? "settimana";
   } catch {
     // Private browsing / cookie bloccati: si riparte dal default.
     return "settimana";
@@ -37,19 +40,25 @@ function storedView(): View {
 }
 
 /**
- * Planning. Due viste sullo stesso dato: la **settimana** per lavorare (celle
- * alte, si legge tutto), il **mese** per vedere la forma del periodo e trovare
- * i giorni scoperti. Entrambe usano `useVenueShiftsRange`, cambia solo
- * l'intervallo richiesto.
+ * Planning. Tre viste sullo stesso dato, tutte da `useVenueShiftsRange`:
+ * - **settimana** per lavorare (celle alte, si legge tutto);
+ * - **mese** per vedere la forma del periodo e trovare i giorni scoperti;
+ * - **persone** per la domanda che le altre due non pongono, «chi lavora
+ *   quanto»: righe = organico, colonne = giorni, ore programmate a destra.
+ *
+ * Settimana e persone guardano lo stesso intervallo: cambia solo il pivot.
  */
 export function PlanningPage() {
   const venue = useVenue();
   const [view, setView] = useState<View>(storedView);
   const [monday, setMonday] = useState(() => startOfWeek(new Date()));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const [panel, setPanel] = useState<{ date: string; shift?: Shift } | null>(
-    null
-  );
+  const [panel, setPanel] = useState<{
+    date: string;
+    shift?: Shift;
+    /** Preselezione in creazione, usata dalla vista per persona. */
+    staffIds?: string[];
+  } | null>(null);
   const [duplicating, setDuplicating] = useState(false);
 
   const [params, setParams] = useSearchParams();
@@ -63,9 +72,10 @@ export function PlanningPage() {
     }
   }, [view]);
 
+  const isWeekly = view !== "mese";
   const days = useMemo(
-    () => (view === "settimana" ? weekDays(monday) : monthGridDays(month)),
-    [view, monday, month]
+    () => (isWeekly ? weekDays(monday) : monthGridDays(month)),
+    [isWeekly, monday, month]
   );
 
   const { data, isPending, isError, error } = useVenueShiftsRange(
@@ -75,7 +85,7 @@ export function PlanningPage() {
   );
 
   const byDay = useMemo(() => {
-    const map = new Map<string, ShiftWithCoverage[]>();
+    const map = new Map<string, ShiftWithAssignees[]>();
     for (const day of days) map.set(day, []);
     for (const shift of data ?? []) map.get(shift.date)?.push(shift);
     return map;
@@ -90,18 +100,23 @@ export function PlanningPage() {
     <>
       <PageHeader
         title="Planning"
-        subtitle={view === "settimana" ? weekLabel(monday) : monthTitle(month)}
+        subtitle={isWeekly ? weekLabel(monday) : monthTitle(month)}
         actions={
           <>
-            {/* Solo in vista settimana: si duplica una settimana, non un mese —
-                copiare 60 turni in un colpo non è un gesto da un click. */}
-            {view === "settimana" ? (
-              <Button className="mr-2" onClick={() => setDuplicating(true)}>
+            {/* Solo sulle viste settimanali: si duplica una settimana, non un
+                mese — copiare 60 turni in un colpo non è un gesto da un click. */}
+            {isWeekly ? (
+              <Button onClick={() => setDuplicating(true)}>
                 Duplica settimana
               </Button>
             ) : null}
+            {/* Il turnario finisce in bacheca: la stampa la fa il browser sulla
+                vista che hai davanti, con i token ribaltati su bianco. */}
+            <Button className="mr-2" onClick={() => window.print()}>
+              Stampa
+            </Button>
             <div className="mr-2 flex overflow-hidden rounded-xl border border-border-2">
-              {(["settimana", "mese"] as const).map((v) => (
+              {VIEWS.map((v) => (
                 <button
                   key={v}
                   onClick={() => setView(v)}
@@ -118,7 +133,7 @@ export function PlanningPage() {
             </div>
             <Button
               onClick={() =>
-                view === "settimana"
+                isWeekly
                   ? setMonday((m) => addDays(m, -7))
                   : setMonth((m) => addMonths(m, -1))
               }
@@ -128,7 +143,7 @@ export function PlanningPage() {
             <Button onClick={goToday}>Oggi</Button>
             <Button
               onClick={() =>
-                view === "settimana"
+                isWeekly
                   ? setMonday((m) => addDays(m, 7))
                   : setMonth((m) => addMonths(m, 1))
               }
@@ -151,7 +166,7 @@ export function PlanningPage() {
               <section
                 key={day}
                 className={cn(
-                  "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2",
+                  "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
                   isToday(day) ? "border-border-gold" : "border-border-2"
                 )}
               >
@@ -179,7 +194,7 @@ export function PlanningPage() {
 
                 <button
                   onClick={() => setPanel({ date: day })}
-                  className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold"
+                  className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
                 >
                   + Turno
                 </button>
@@ -187,6 +202,15 @@ export function PlanningPage() {
             );
           })}
         </div>
+      ) : view === "persone" ? (
+        <PeopleWeek
+          days={days}
+          shifts={data ?? []}
+          onOpen={(shift) => setPanel({ date: shift.date, shift })}
+          onCreate={(day, staffMemberId) =>
+            setPanel({ date: day, staffIds: [staffMemberId] })
+          }
+        />
       ) : (
         <MonthGrid
           days={days}
@@ -222,6 +246,7 @@ export function PlanningPage() {
         <ShiftPanel
           date={panel.date}
           shift={panel.shift}
+          initialStaffIds={panel.staffIds}
           onClose={() => setPanel(null)}
         />
       ) : null}
@@ -238,9 +263,9 @@ function MonthGrid({
 }: {
   days: string[];
   month: Date;
-  byDay: Map<string, ShiftWithCoverage[]>;
+  byDay: Map<string, ShiftWithAssignees[]>;
   onCreate: (day: string) => void;
-  onOpen: (day: string, shift: ShiftWithCoverage) => void;
+  onOpen: (day: string, shift: ShiftWithAssignees) => void;
 }) {
   // Nel mese lo spazio per cella è poco: si mostrano i primi tre turni e si
   // conta il resto, invece di comprimerli fino a renderli illeggibili.
@@ -271,7 +296,7 @@ function MonthGrid({
             <section
               key={day}
               className={cn(
-                "group flex min-h-28 flex-col rounded-xl border p-1.5",
+                "group flex min-h-28 flex-col rounded-xl border p-1.5 print:break-inside-avoid",
                 today
                   ? "border-border-gold bg-bg-card"
                   : "border-border-2 bg-bg-card",
@@ -292,7 +317,7 @@ function MonthGrid({
                 <button
                   onClick={() => onCreate(day)}
                   aria-label={`Aggiungi turno il ${day}`}
-                  className="focus-gold rounded px-1 text-xs text-t4 opacity-0 transition hover:text-gold group-hover:opacity-100"
+                  className="focus-gold rounded px-1 text-xs text-t4 opacity-0 transition hover:text-gold group-hover:opacity-100 print:hidden"
                 >
                   +
                 </button>
@@ -364,7 +389,7 @@ function MonthGrid({
  * copriva un ruolo che non serviva (o aveva rifiutato). Senza fabbisogno, o sul
  * marketplace, restano i posti (`positions_filled`, tenuto dai trigger DB).
  */
-function cellCounts(shift: ShiftWithCoverage): {
+function cellCounts(shift: ShiftWithAssignees): {
   filled: number;
   total: number;
   short: boolean;
@@ -380,7 +405,7 @@ function ShiftCell({
   shift,
   onOpen,
 }: {
-  shift: ShiftWithCoverage;
+  shift: ShiftWithAssignees;
   onOpen: () => void;
 }) {
   const internal = shift.kind === "internal";

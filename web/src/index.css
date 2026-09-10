@@ -69,3 +69,58 @@
     @apply outline-none focus-visible:ring-2 focus-visible:ring-gold/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg-0;
   }
 }
+
+/*
+ * STAMPA — il planning finisce in bacheca, non solo sullo schermo.
+ *
+ * Invece di regole per componente si ridefiniscono i **token**: ogni utility
+ * (`bg-bg-card`, `text-t1`, `border-border-2`, …) compila in `var(--color-*)`,
+ * quindi ribaltare le variabili qui converte tutta la dashboard in
+ * inchiostro-su-bianco in un colpo — e nessun componente nuovo dovrà
+ * ricordarsi della stampa.
+ *
+ * Il fondo scuro su carta è illeggibile e divora toner; l'oro chiaro su bianco
+ * sparisce, quindi diventa un ambra scuro che resta distinguibile anche in
+ * bianco e nero. Cosa nascondere si dichiara nel markup con la variante
+ * `print:` di Tailwind, che è dove si vede se un elemento serve o è arredo.
+ */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 12mm;
+  }
+
+  :root {
+    --color-bg-0: #ffffff;
+    --color-bg-1: #f6f5f2;
+    --color-bg-2: #ffffff;
+    --color-bg-3: #ffffff;
+    --color-bg-card: #ffffff;
+
+    --color-t1: #14110c;
+    --color-t2: #37322a;
+    --color-t3: #5a544a;
+    --color-t4: #7b7469;
+
+    --color-gold: #7a5a12;
+    --color-gold-ink: #ffffff;
+
+    --color-success: #1c6b39;
+    --color-warning: #8a5200;
+    --color-error: #9c2b17;
+
+    --color-border: #d5d2cc;
+    --color-border-2: #b9b5ae;
+    --color-border-gold: #8a8478;
+
+    color-scheme: light;
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    background: #ffffff;
+  }
+}

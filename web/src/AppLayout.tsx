@@ -41,7 +41,8 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh">
-      <aside className="flex w-56 shrink-0 flex-col border-r border-border-2 bg-bg-card p-4">
+      {/* Navigazione: sul foglio non serve, e ruberebbe un quarto di pagina. */}
+      <aside className="flex w-56 shrink-0 flex-col border-r border-border-2 bg-bg-card p-4 print:hidden">
         <div className="mb-6 px-2">
           <div className="mb-3 h-1 w-8 rounded-full bg-gold" />
           <p className="font-serif text-lg leading-tight text-t1">
@@ -93,7 +94,7 @@ export function AppLayout() {
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 p-8">
+      <main className="min-w-0 flex-1 p-8 print:p-0">
         {venueQuery.isPending ? (
           <Spinner />
         ) : venueQuery.isError ? (
@@ -112,6 +113,16 @@ export function AppLayout() {
           />
         ) : (
           <VenueContext.Provider value={venueQuery.data ?? null}>
+            {/* Solo in stampa: senza la sidebar il foglio sarebbe anonimo, e un
+                turnario appeso in bacheca deve dire di chi è e di quando. */}
+            <div className="mb-4 hidden items-baseline justify-between gap-4 border-b border-border-2 pb-2 print:flex">
+              <span className="font-serif text-base text-t1">
+                {venueQuery.data?.name}
+              </span>
+              <span className="font-mono text-xs text-t3">
+                stampato il {new Date().toLocaleDateString("it-IT")}
+              </span>
+            </div>
             <Outlet />
           </VenueContext.Provider>
         )}

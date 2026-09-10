@@ -43,10 +43,16 @@ function todayDbDate(): string {
 export function ShiftPanel({
   date,
   shift,
+  initialStaffIds,
   onClose,
 }: {
   date: string;
   shift?: Shift;
+  /**
+   * Persone già selezionate in creazione. Serve alla vista per persona: si
+   * clicca la casella vuota di chi è libero e il turno nasce già suo.
+   */
+  initialStaffIds?: string[];
   onClose: () => void;
 }) {
   // In creazione il tipo si sceglie; in modifica lo detta il turno (`kind` non
@@ -101,7 +107,12 @@ export function ShiftPanel({
         {effectiveKind === "marketplace" ? (
           <MarketplaceSection date={date} shift={shift} onClose={onClose} />
         ) : (
-          <InternalForm date={date} shift={shift} onClose={onClose} />
+          <InternalForm
+            date={date}
+            shift={shift}
+            initialStaffIds={initialStaffIds}
+            onClose={onClose}
+          />
         )}
       </div>
     </div>
@@ -227,10 +238,12 @@ function MarketplaceSection({
 function InternalForm({
   date,
   shift,
+  initialStaffIds,
   onClose,
 }: {
   date: string;
   shift?: Shift;
+  initialStaffIds?: string[];
   onClose: () => void;
 }) {
   const venue = useVenue();
@@ -241,7 +254,7 @@ function InternalForm({
   const update = useUpdateInternalShift(shift?.id ?? "");
   const status = useUpdateShiftStatus(shift?.id ?? "", venue.id);
 
-  const [staffIds, setStaffIds] = useState<string[]>([]);
+  const [staffIds, setStaffIds] = useState<string[]>(initialStaffIds ?? []);
   const [roleTargets, setRoleTargets] = useState<RoleTarget[]>([]);
   // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
   const [extraDates, setExtraDates] = useState<string[]>([]);
@@ -264,15 +277,17 @@ function InternalForm({
 
   // Su un turno esistente, assegnati e fabbisogni arrivano da due query: si
   // sincronizzano nello stato locale appena disponibili.
+  // ⚠️ Solo su un turno esistente: in creazione la query gira con id vuoto e
+  // sovrascriverebbe `initialStaffIds` con una lista vuota.
   useEffect(() => {
-    if (assignmentsQuery.data) {
+    if (shift && assignmentsQuery.data) {
       setStaffIds(
         assignmentsQuery.data
           .map((a) => a.staff_member_id)
           .filter((id): id is string => !!id)
       );
     }
-  }, [assignmentsQuery.data]);
+  }, [shift, assignmentsQuery.data]);
 
   useEffect(() => {
     if (roleReqsQuery.data) {
