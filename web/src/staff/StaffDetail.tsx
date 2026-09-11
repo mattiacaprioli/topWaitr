@@ -10,7 +10,7 @@ import {
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
-import { formatDate, formatHours, formatTime, toDateString } from "@/lib/format";
+import { formatDate, formatHours, formatTime } from "@/lib/format";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
@@ -316,7 +316,7 @@ function RemoveSection({
         </div>
       ) : (
         <Button variant="danger" onClick={() => setConfirming(true)}>
-          Rimuovi dall'organico
+          Rimuovi dall&apos;organico
         </Button>
       )}
     </section>

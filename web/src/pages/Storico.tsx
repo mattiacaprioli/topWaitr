@@ -1,11 +1,13 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   useVenuePastShifts,
   useVenuePastShiftsCount,
 } from "@/features/shifts/hooks";
 import { formatDate, formatTime } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
+import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
+import { ShiftPanel } from "../shifts/ShiftPanel";
 import {
   Button,
   Card,
@@ -23,7 +25,9 @@ import {
  */
 export function StoricoPage() {
   const venue = useVenue();
-  const navigate = useNavigate();
+  // Il dettaglio si apre qui sopra, senza cambiare rotta: mandare l'utente sul
+  // Planning gli faceva perdere lo storico e riportava il calendario indietro.
+  const [panel, setPanel] = useState<Shift | null>(null);
   const count = useVenuePastShiftsCount(venue.id).data ?? 0;
   const { data, isPending, isError, error, hasNextPage, isFetchingNextPage, fetchNextPage } =
     useVenuePastShifts(venue.id);
@@ -65,7 +69,7 @@ export function StoricoPage() {
                   return (
                   <tr
                     key={s.id}
-                    onClick={() => navigate(`/planning?shift=${s.id}`)}
+                    onClick={() => setPanel(s)}
                     className="cursor-pointer border-b border-border transition last:border-0 hover:bg-bg-1"
                   >
                     <td className="px-5 py-2.5 text-t2">{formatDate(s.date)}</td>
@@ -107,6 +111,14 @@ export function StoricoPage() {
           ) : null}
         </>
       )}
+
+      {panel ? (
+        <ShiftPanel
+          date={panel.date}
+          shift={panel}
+          onClose={() => setPanel(null)}
+        />
+      ) : null}
     </>
   );
 }

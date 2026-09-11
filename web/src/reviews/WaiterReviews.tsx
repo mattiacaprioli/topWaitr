@@ -125,7 +125,8 @@ export function RatingSummary({
   if (total === 0) {
     return (
       <Card className="p-4 text-sm text-t3">
-        Nessuna recensione: la reputazione si costruisce col QR in sala, non c'è
+        Nessuna recensione: la reputazione si costruisce col QR in sala, non
+        c&apos;è
         ancora niente da leggere.
       </Card>
     );

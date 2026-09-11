@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
 import {
@@ -9,7 +9,9 @@ import { useTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { formatDate, formatTime, toDateString } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
+import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
 
 type Worker = {
@@ -30,6 +32,9 @@ type Worker = {
 export function HomePage() {
   const venue = useVenue();
   const navigate = useNavigate();
+  // Il turno si apre nel pannello qui sopra: restare sulla home è meno
+  // spaesante che finire sul Planning, che si riposiziona da solo.
+  const [panel, setPanel] = useState<Shift | null>(null);
 
   const shifts = useMyShifts(venue.id).data ?? [];
   const pastCount = useVenuePastShiftsCount(venue.id).data ?? 0;
@@ -153,7 +158,7 @@ export function HomePage() {
                 return (
                   <button
                     key={s.id}
-                    onClick={() => navigate(`/planning?shift=${s.id}`)}
+                    onClick={() => setPanel(s)}
                     className="focus-gold rounded-2xl border border-border-2 bg-bg-card p-3 text-left transition hover:border-border-gold hover:bg-bg-1"
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -180,6 +185,14 @@ export function HomePage() {
           )}
         </section>
       </div>
+
+      {panel ? (
+        <ShiftPanel
+          date={panel.date}
+          shift={panel}
+          onClose={() => setPanel(null)}
+        />
+      ) : null}
     </>
   );
 }

@@ -15,6 +15,8 @@ proprietà del locale (`venues.owner_id = auth.uid()`).
 yarn web:dev         # dev server Vite
 yarn web:build       # build di produzione → web/dist
 yarn web:typecheck   # tsc con il tsconfig del web
+yarn lint            # eslint su src/ E web/src/ (i path sono nominati nello
+                     #   script: `expo lint` da solo guarda solo src/app/components)
 ```
 
 ⚠️ Da non confondere con `yarn web`, che è `expo start --web` (l'app mobile
@@ -83,6 +85,21 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
   Site URL. Il client web ha `detectSessionInUrl: false` (i token nel fragment
   litigherebbero con l'`HashRouter`), quindi dopo la conferma si passa dal
   login: il catch-all fuori sessione ci porta da sé.
+- **Il recupero password si chiude qui, nel browser.** `Login` chiede l'email
+  con `resetPassword(email, redirectTo)`; il link torna sulla dashboard con i
+  token nel fragment, `web/src/lib/recovery.ts` li consuma **prima del mount**
+  (dopo, il primo `<Navigate>` dell'`HashRouter` li cancellerebbe) e porta a
+  `/nuova-password`, che sta davanti a ogni gate di `<App />`.
+  ⚠️ Anche qui l'URL della dashboard va nei **Redirect URLs** di Supabase,
+  altrimenti il link ripiega sul Site URL — che porta all'app, cioè fuori dal
+  desktop da cui si è partiti. Link scaduto → `#/login?link=scaduto`, e
+  l'accesso lo dice invece di restare muto.
+- **Un errore di render non è una pagina bianca**: `AppErrorBoundary`
+  (`web/src/ui/ErrorBoundary.tsx`) è l'equivalente dell'`ErrorBoundary` in
+  `src/providers/AppProviders.tsx` e si azzera al cambio di rotta. La
+  segnalazione passa da `web/src/lib/reportError.ts`, che oggi scrive solo in
+  console: `@sentry/react-native` non sta in un bundle Vite, quando la dashboard
+  avrà un DSN proprio lì dentro va `@sentry/react`.
 - **La presenza si modifica dal pannello del turno**, non dalla pagina Ore: è lì
   che i dati vivono già (`useShiftAssignments`). La pagina Ore aggrega per
   persona sul mese e non conosce le singole assegnazioni.

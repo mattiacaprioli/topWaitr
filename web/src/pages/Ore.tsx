@@ -27,7 +27,7 @@ function recentMonths(): string[] {
 
 export function OrePage() {
   const venue = useVenue();
-  const months = useMemo(recentMonths, []);
+  const months = useMemo(() => recentMonths(), []);
   const [month, setMonth] = useState(months[0]);
   const { data, isPending, isError, error } = useVenueHoursSummary(
     venue.id,

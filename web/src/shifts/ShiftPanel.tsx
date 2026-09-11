@@ -17,7 +17,7 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
-import { formatTime, isShiftOver } from "@/lib/format";
+import { isShiftOver } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";

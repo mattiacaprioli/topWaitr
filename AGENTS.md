@@ -28,7 +28,8 @@ yarn start                # Expo dev server
 yarn ios                  # iOS simulator
 yarn android              # Android emulator
 yarn web                  # web
-yarn lint                 # expo lint (eslint) — bloccante in CI
+yarn lint                 # expo lint src web/src (eslint) — bloccante in CI
+                          #   i path vanno nominati: senza, expo lint salta web/
 yarn add <pkg>            # dipendenze (oppure `npx expo install <pkg>`)
 npx tsc --noEmit          # type-check
 npx expo export --platform ios   # verifica bundle

@@ -37,7 +37,7 @@ export function ImpostazioniPage() {
             <Button onClick={() => void signOut()}>Esci</Button>
           </Card>
           <p className="mt-2 px-1 text-xs text-t4">
-            Nome e foto del profilo si modificano dall'app. Il locale si modifica
+            Nome e foto del profilo si modificano dall&apos;app. Il locale si modifica
             dalla scheda Locale.
           </p>
         </section>
@@ -148,7 +148,7 @@ function NotificationPrefsSection() {
       <p className="mt-2 px-1 text-xs leading-5 text-t4">
         Questi interruttori controllano solo gli avvisi push <b>sul telefono</b>:
         la dashboard non ne riceve. Le notifiche restano comunque visibili sia
-        qui sia nell'app.
+        qui sia nell&apos;app.
       </p>
     </section>
   );
@@ -184,11 +184,11 @@ function DeleteAccountSection() {
         Zona pericolosa
       </h2>
       <Card className="border-error/30">
-        <p className="text-sm font-semibold text-t1">Elimina l'account</p>
+        <p className="text-sm font-semibold text-t1">Elimina l&apos;account</p>
         <p className="mt-1 text-xs leading-5 text-t3">
           I tuoi dati personali vengono rimossi e non potrai più accedere.
           Turni e ore già registrati restano al locale in forma anonima, perché
-          servono a chi ci ha lavorato. <b>L'operazione non è reversibile.</b>
+          servono a chi ci ha lavorato. <b>L&apos;operazione non è reversibile.</b>
         </p>
 
         {!open ? (
@@ -197,7 +197,7 @@ function DeleteAccountSection() {
             className="mt-4"
             onClick={() => setOpen(true)}
           >
-            Elimina l'account
+            Elimina l&apos;account
           </Button>
         ) : (
           <div className="mt-4 flex flex-col gap-3">

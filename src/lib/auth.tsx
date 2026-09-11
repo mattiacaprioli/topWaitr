@@ -38,7 +38,17 @@ type AuthState = {
     needsConfirmation: boolean;
     alreadyRegistered: boolean;
   }>;
-  resetPassword: (email: string) => Promise<{ error: string | null }>;
+  /**
+   * `redirectTo`: dove deve atterrare il link di recupero. Vale la stessa
+   * regola di `emailRedirectTo` (allowlist, altrimenti Site URL). Omesso
+   * sull'app, che non ha una pagina propria dove impostare la password.
+   */
+  resetPassword: (
+    email: string,
+    redirectTo?: string
+  ) => Promise<{ error: string | null }>;
+  /** Cambia la password dell'utente in sessione (anche di sola recovery). */
+  updatePassword: (password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   /** Re-fetch the profile row after an edit, without blanking the UI. */
   refreshProfile: () => Promise<void>;
@@ -180,8 +190,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }
 
-  async function resetPassword(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email);
+  async function resetPassword(email: string, redirectTo?: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo ? { redirectTo } : undefined
+    );
+    return { error: error?.message ?? null };
+  }
+
+  async function updatePassword(password: string) {
+    const { error } = await supabase.auth.updateUser({ password });
     return { error: error?.message ?? null };
   }
 
@@ -212,6 +230,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signIn,
         signUp,
         resetPassword,
+        updatePassword,
         signOut,
         refreshProfile,
       }}
@@ -237,6 +256,14 @@ export function authErrorMessage(message: string): string {
   }
   if (m.includes("email not confirmed")) {
     return "Conferma la tua email prima di accedere.";
+  }
+  if (m.includes("different from the old password")) {
+    return "La nuova password deve essere diversa dalla precedente.";
+  }
+  // GoTrue limita le email di recupero: "For security purposes, you can only
+  // request this after N seconds" / "email rate limit exceeded".
+  if (m.includes("rate limit") || m.includes("you can only request this")) {
+    return "Troppi tentativi. Aspetta qualche minuto e riprova.";
   }
   return "Si è verificato un errore. Riprova.";
 }

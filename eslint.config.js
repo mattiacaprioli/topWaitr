@@ -15,6 +15,8 @@ module.exports = defineConfig([
   {
     ignores: [
       "dist/*",
+      // Bundle della dashboard: è output di Vite, non codice sorgente.
+      "web/dist/*",
       ".expo/*",
       "node_modules/*",
       "android/*",

@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { RealtimeSync } from "@/features/realtime/RealtimeSync";
 import { Spinner } from "./ui/primitives";
@@ -7,6 +7,7 @@ import { NotificationsWatcher } from "./NotificationsWatcher";
 import { LoginPage } from "./pages/Login";
 import { RegistrazionePage } from "./pages/Registrazione";
 import { NotForWaitersPage } from "./pages/NotForWaiters";
+import { NuovaPasswordPage } from "./pages/NuovaPassword";
 import { HomePage } from "./pages/Home";
 import { StoricoPage } from "./pages/Storico";
 import { NotifichePage } from "./pages/Notifiche";
@@ -22,8 +23,14 @@ import { ImpostazioniPage } from "./pages/Impostazioni";
 
 export function App() {
   const { session, profile, loading } = useAuth();
+  const { pathname } = useLocation();
 
   if (loading) return <Spinner label="Verifica sessione…" />;
+
+  // Davanti a ogni gate: chi arriva dal link di recupero ha una sessione (di
+  // recupero) ma deve poter fare una cosa sola, e se il link è scaduto la
+  // pagina lo spiega da sé. Un redirect qui lo lascerebbe fuori per sempre.
+  if (pathname === "/nuova-password") return <NuovaPasswordPage />;
 
   // Fuori sessione esistono due sole pagine. Il catch-all riporta al login
   // anche il fragment che Supabase lascia nell'URL dopo la conferma email

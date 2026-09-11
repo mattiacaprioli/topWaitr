@@ -29,5 +29,7 @@ jobs:
 
       # Blocking: ESLint is configured (eslint.config.js + eslint-config-expo).
       # Fails on errors; advisory warnings (e.g. RHF watch) don't block.
+      # `expo lint` senza argomenti guarda solo src/app/components: la dashboard
+      # web va nominata, altrimenti questo job dà falsa sicurezza su web/src.
       - name: Lint
-        run: npx expo lint
+        run: npx expo lint src web/src
