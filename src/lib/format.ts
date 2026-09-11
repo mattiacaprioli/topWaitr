@@ -29,6 +29,24 @@ export function shiftDurationHours(start: string, end: string): number {
   return mins / 60;
 }
 
+// Istante in cui il turno finisce davvero: se l'orario di fine non è successivo
+// a quello di inizio il turno scavalca la mezzanotte e finisce il giorno dopo
+// (stessa convenzione di shiftDurationHours).
+export function shiftEndsAt(date: string, start: string, end: string): Date {
+  const d = new Date(`${date}T${end.slice(0, 5)}:00`);
+  if (end.slice(0, 5) <= start.slice(0, 5)) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+// Il turno è concluso? È questo il momento in cui si consuntivano presenze e
+// ore, non la mezzanotte: un pranzo si chiude alle 15, una serata alle 2.
+export function isShiftOver(
+  shift: { date: string; start_time: string; end_time: string },
+  now: Date = new Date()
+): boolean {
+  return shiftEndsAt(shift.date, shift.start_time, shift.end_time) <= now;
+}
+
 // Stima del compenso lordo del turno = paga oraria × durata.
 export function shiftTotal(
   rate: number | null,

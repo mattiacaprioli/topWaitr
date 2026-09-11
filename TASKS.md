@@ -178,6 +178,22 @@ Il punto 5 dell'audit: l'app aveva `(manager)/cameriere/[id]` con le recensioni,
 - Piccolo debito evitato: la pagina fa da involucro e passa `waiterId: string` a un sottocomponente, invece di trascinare `id!` in tutto il corpo (la rotta garantisce il parametro, ma TS non può saperlo dentro le closure).
 - **Verificato**: `tsc` root + `tsc -p web`, `expo lint`, `vite build web` (270 moduli), dev server.
 
+### Sessione 2026-09-10 (6) — Deploy configurato e verificato sul vivo ✅
+Il punto 6 dell'audit, metà (a). **Fatto**: `gh variable set` per `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` (`gh variable list` era vuoto). Prima di pubblicarla ho **decodificato il JWT** per accertarmi che fosse `role: anon` e non `service_role`: quest'ultima finirebbe nel bundle e scavalcherebbe tutta la RLS. Ref corretto, scadenza 2036.
+- ✅ **Verificato sul sito live**, non solo configurato: `https://mattiacaprioli.github.io/topWaitr/app/` risponde 200, il bundle pubblicato contiene URL e anon key e ha **zero occorrenze di `process.env`** — cioè lo shim `define` funziona anche nella build di CI, non solo in locale.
+- **Le query nuove risolvono contro il database vero** (interrogato via PostgREST con la anon key: la RLS filtra le righe ma un embed sbagliato darebbe comunque 400 «could not find a relationship»). Verificate: l'embed allargato di `getVenueShiftsRange`, `getInternalShiftPlans`, `waiter_public_cards`, `waiter_experiences`, le recensioni con ordinamento/filtro tag e la RPC `get_rating_breakdown`. Tutte 200.
+- **Censimento dei tag recensione sul DB**: `GENTILE, VELOCE, VINO, CORTESE, MULTILINGUE, ATTENZIONE` — esattamente i sei di `REVIEW_MERIT_TAGS`, nessun settimo che il filtro mancherebbe.
+
+> ⚠️ **TRAPPOLA — non lanciare `yarn db:types` alla cieca.** Verificato il 10/09 sbattendoci contro: `supabase gen types` (CLI 2.108.0) **non emette** `get_staff_performance`, `get_staff_worked_shifts`, `get_my_work_history`, `get_my_work_history_totals`, che però **esistono sul remoto** — provato con PostgREST, rispondono `42501 permission denied` e non `42883`, e su una funzione inesistente il permesso non te lo negano. Rigenerare il file quindi **cancella quelle quattro dichiarazioni e rompe `tsc` con 8 errori**. Ipotesi (non verificata) sul perché: sono eseguibili solo da `authenticated`, mentre le funzioni che il generatore emette sono anche anon-eseguibili. **Se serve rigenerare: generare in un file a parte e fare `diff`, mai sovrascrivere direttamente.**
+
+⚠️ **Resta aperta la metà (b): il test live con un account ristoratore reale.** Non è automatizzabile da qui (serve una sessione autenticata in un browser). Checklist minima, mirata su ciò che i controlli statici non possono cogliere:
+1. **Duplica settimana _con_ staff** → i turni creati sono quelli attesi, `positions_filled` è giusto (lo fanno i trigger) e **ogni assegnato riceve la notifica**. È l'operazione che genera più notifiche in assoluto: guardare che non ne arrivino di doppie.
+2. **Duplica settimana _senza_ staff** → i turni nascono da assegnare e **nessuno riceve niente**.
+3. **Ripeti su più giorni** in creazione → N turni identici, uno per giorno spuntato.
+4. **Vista Persone** → le ore di una persona coincidono con la somma dei suoi turni, e chi ha rifiutato **non** somma ore.
+5. **Anteprima di stampa** (Cmd+P) sulle tre viste: impaginazione e nessuno sbordo, in particolare il mese su sei righe.
+6. **Profilo professionista** da una candidatura: recensioni, filtri, «Carica altre» e «Invia messaggio».
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati
@@ -204,7 +220,7 @@ Le pagine ci sono tutte; quello che manca è ciò che rende la scrivania **più 
 3. ~~**Il planning non si stampa**~~ ✅ **fatto** il 10/09, vedi la sessione sopra.
 4. ~~**Copy ormai falsa** in `Candidature.tsx` («I turni marketplace si pubblicano dall'app»)~~ ✅ **corretta** il 10/09, insieme al docstring di `ShiftPanel` che diceva la stessa cosa.
 5. ~~**Nessun profilo pubblico del professionista sul web**~~ ✅ **fatto** il 10/09, vedi la sessione sopra.
-6. **Operativo, non codice**: (a) **repository variables** `EXPO_PUBLIC_SUPABASE_URL`/`_ANON_KEY` **non impostate** su GitHub → se il workflow parte ora pubblica una dashboard che non raggiunge Supabase; (b) **test live mai fatto** con un account ristoratore reale (vedi la sessione sopra per la lista delle prove incrociate).
+6. **Operativo, non codice**: (a) ~~repository variables non impostate~~ ✅ **fatte e verificate sul bundle live** il 10/09; (b) ⚠️ **test live ancora da fare** con un account ristoratore reale — checklist puntuale nella sessione «Deploy configurato e verificato sul vivo».
 
 - ~~**M6 — Chat realtime**~~ ✅ fatta (15/07, vedi sopra). Follow-up: ~~entry point da EmployerCard nel profilo waiter~~ ✅ **già fatto** (verificato 09/09: `owner_id` c'è in `getMyEmployers`, `(waiter)/(tabs)/profilo.tsx` apre la chat dalla card del locale). Restano aperti: toast soppresso se sei già nel thread, indicatore "sta scrivendo" (broadcast channel).
 - ~~**M7 — Push notifications**~~ ✅ **COMPLETO e verificato end-to-end su device Android (19/07)**: `push_tokens` + trigger `pg_net` → Edge Function `push` (`expo-server-sdk`) + `expo-notifications`; EAS/build/FCM/deploy operativi. Follow-up (non bloccanti): receipt-check a 15 min (cleanup completo token), badge iOS, **push iOS mai testate** (serve account Apple Developer).

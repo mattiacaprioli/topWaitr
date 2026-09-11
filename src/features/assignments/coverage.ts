@@ -1,3 +1,4 @@
+import type { Enums } from "@/types/database";
 import { isActiveAssignment, type AssignmentStatus } from "./status";
 
 export type RoleRequirement = { role: string; count: number };
@@ -58,4 +59,34 @@ export function shiftCoverage(shift: CoverageEmbeds): Coverage {
       role: a.staff_member?.role ?? null,
     }))
   );
+}
+
+/** Turno visto dai conteggi: i posti pubblicati più le relazioni della copertura. */
+export type CountableShift = CoverageEmbeds & {
+  kind: Enums<"shift_kind">;
+  positions_filled: number;
+  positions_total: number;
+};
+
+/**
+ * I due numeri "coperti/da coprire" di un turno, per **tutte** le viste che li
+ * mostrano (home, planning, storico, elenchi): su un turno interno con
+ * fabbisogno per ruolo vale la copertura per ruolo, altrove valgono i posti
+ * (`positions_*`, tenuti dai trigger DB).
+ *
+ * ⚠️ Chi mostra "x/y" DEVE passare da qui. Leggere `positions_filled` da una
+ * parte e la copertura dall'altra fa dire due cose diverse allo stesso turno
+ * sulla stessa schermata: i posti contano teste, la copertura conta i ruoli
+ * che servono davvero.
+ */
+export function shiftCounts(shift: CountableShift): {
+  filled: number;
+  total: number;
+  short: boolean;
+} {
+  const coverage = shiftCoverage(shift);
+  const byRole = shift.kind === "internal" && coverage.required > 0;
+  const filled = byRole ? coverage.covered : shift.positions_filled;
+  const total = byRole ? coverage.required : shift.positions_total;
+  return { filled, total, short: filled < total };
 }

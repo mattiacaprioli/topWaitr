@@ -23,7 +23,12 @@ export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
   const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("shifts")
-    .select("*, applications(count), shift_assignments(count)")
+    .select(
+      // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
+      // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
+      // ragiona per ruolo e ignora chi ha rifiutato.
+      "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+    )
     .eq("venue_id", venueId)
     .gte("date", today)
     .order("date", { ascending: true })
@@ -68,7 +73,12 @@ export async function getVenuePastShiftsPage(
   const from = page * SHIFTS_PAGE_SIZE;
   const { data, error } = await supabase
     .from("shifts")
-    .select("*, applications(count), shift_assignments(count)")
+    .select(
+      // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
+      // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
+      // ragiona per ruolo e ignora chi ha rifiutato.
+      "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+    )
     .eq("venue_id", venueId)
     .lt("date", today)
     .order("date", { ascending: false })

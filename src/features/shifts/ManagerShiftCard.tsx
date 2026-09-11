@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
+import { shiftCounts } from "@/features/assignments/coverage";
 import type { Enums } from "@/types/database";
 import type { ShiftWithCount } from "./types";
 
@@ -22,8 +23,7 @@ export function ManagerShiftCard({
 }) {
   const internal = shift.kind === "internal";
   const applicants = shift.applications[0]?.count ?? 0;
-  const covered = shift.positions_filled;
-  const total = shift.positions_total;
+  const { filled: covered, total } = shiftCounts(shift);
   return (
     <Card className="rounded-3xl border-border-2 p-5" onPress={onPress}>
       <View className="flex-row items-start justify-between gap-3">

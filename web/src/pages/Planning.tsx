@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useShift, useVenueShiftsRange } from "@/features/shifts/hooks";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { shiftCoverage } from "@/features/assignments/coverage";
+import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
 import {
@@ -325,7 +325,7 @@ function MonthGrid({
 
               <div className="flex flex-1 flex-col gap-1">
                 {visible.map((shift) => {
-                  const counts = cellCounts(shift);
+                  const counts = shiftCounts(shift);
                   const short =
                     counts.short && shift.status !== "cancelled";
                   return (
@@ -382,25 +382,6 @@ function MonthGrid({
   );
 }
 
-/**
- * I numeri mostrati sul turno. Per un turno interno con fabbisogno per ruolo
- * vale la **copertura per ruolo**, la stessa della pagina «Copertura»: il
- * conteggio grezzo degli assegnati diceva "1/2" anche quando quella persona
- * copriva un ruolo che non serviva (o aveva rifiutato). Senza fabbisogno, o sul
- * marketplace, restano i posti (`positions_filled`, tenuto dai trigger DB).
- */
-function cellCounts(shift: ShiftWithAssignees): {
-  filled: number;
-  total: number;
-  short: boolean;
-} {
-  const coverage = shiftCoverage(shift);
-  const byRole = shift.kind === "internal" && coverage.required > 0;
-  const filled = byRole ? coverage.covered : shift.positions_filled;
-  const total = byRole ? coverage.required : shift.positions_total;
-  return { filled, total, short: filled < total };
-}
-
 function ShiftCell({
   shift,
   onOpen,
@@ -410,7 +391,7 @@ function ShiftCell({
 }) {
   const internal = shift.kind === "internal";
   const cancelled = shift.status === "cancelled";
-  const { filled, total, short } = cellCounts(shift);
+  const { filled, total, short } = shiftCounts(shift);
 
   return (
     <button

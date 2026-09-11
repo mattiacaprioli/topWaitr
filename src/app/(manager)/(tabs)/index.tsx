@@ -22,6 +22,7 @@ import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
 import { usePendingCount, useTodayStaff } from "@/features/applications/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
+import { shiftCounts } from "@/features/assignments/coverage";
 import { useUnreadCount } from "@/features/notifications/hooks";
 
 const PREVIEW_COUNT = 3;
@@ -64,8 +65,9 @@ export default function ManagerHome() {
   ).length;
   // Gli annullati non hanno posti da coprire: esclusi dal KPI.
   const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
-  const filled = activeUpcoming.reduce((n, s) => n + s.positions_filled, 0);
-  const totalPos = activeUpcoming.reduce((n, s) => n + s.positions_total, 0);
+  const counts = activeUpcoming.map((s) => shiftCounts(s));
+  const filled = counts.reduce((n, c) => n + c.filled, 0);
+  const totalPos = counts.reduce((n, c) => n + c.total, 0);
 
   // "Chi lavora oggi": staff assegnato ai turni interni + camerieri accettati
   // sui turni marketplace di oggi, in un'unica lista.

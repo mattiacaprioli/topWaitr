@@ -28,8 +28,13 @@ export function PresenceSection({
   const presence = useSetAssignmentPresence(shiftId);
   const planned = shiftDurationHours(startTime, endTime);
 
+  // Chi ha rifiutato il turno non è una presenza da consuntivare: resta in
+  // "Chi lavora" con la sua etichetta, ma qui darebbe un "Presente" verde (e un
+  // tocco sul toggle ne sovrascriverebbe lo stato con `no_show`).
+  const rows = (data ?? []).filter((a) => a.status !== "declined");
+
   if (isPending) return <Spinner label="Caricamento presenze…" />;
-  if (!data || data.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <section>
@@ -37,7 +42,7 @@ export function PresenceSection({
         Presenze e ore
       </span>
       <div className="flex flex-col gap-1">
-        {data.map((a) => {
+        {rows.map((a) => {
           const absent = a.status === "no_show";
           const hours = assignmentHours(a.status, a.worked_hours, {
             start_time: startTime,

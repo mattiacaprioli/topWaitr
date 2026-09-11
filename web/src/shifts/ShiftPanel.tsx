@@ -17,7 +17,7 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
-import { formatTime, toDateString } from "@/lib/format";
+import { formatTime, isShiftOver } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
@@ -28,11 +28,6 @@ import { MarketplaceForm } from "./MarketplaceForm";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 
 type RoleTarget = { role: string; count: number };
-
-/** Data di oggi nel formato delle colonne `date` (confronto lessicografico ok). */
-function todayDbDate(): string {
-  return toDateString(new Date());
-}
 
 /**
  * Pannello laterale di creazione/modifica turno, per entrambe le modalità:
@@ -554,7 +549,7 @@ function InternalForm({
       </section>
 
       {/* Solo a turno concluso: prima non c'è nulla da consuntivare. */}
-      {shift && shift.date <= todayDbDate() && shift.status !== "cancelled" ? (
+      {shift && isShiftOver(shift) && shift.status !== "cancelled" ? (
         <PresenceSection
           shiftId={shift.id}
           startTime={shift.start_time}

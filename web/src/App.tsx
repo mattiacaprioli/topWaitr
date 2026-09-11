@@ -5,6 +5,7 @@ import { Spinner } from "./ui/primitives";
 import { AppLayout } from "./AppLayout";
 import { NotificationsWatcher } from "./NotificationsWatcher";
 import { LoginPage } from "./pages/Login";
+import { RegistrazionePage } from "./pages/Registrazione";
 import { NotForWaitersPage } from "./pages/NotForWaiters";
 import { HomePage } from "./pages/Home";
 import { StoricoPage } from "./pages/Storico";
@@ -23,7 +24,20 @@ export function App() {
   const { session, profile, loading } = useAuth();
 
   if (loading) return <Spinner label="Verifica sessione…" />;
-  if (!session) return <LoginPage />;
+
+  // Fuori sessione esistono due sole pagine. Il catch-all riporta al login
+  // anche il fragment che Supabase lascia nell'URL dopo la conferma email
+  // (il client web ha `detectSessionInUrl: false`: quei token non servono, e
+  // senza `replace` resterebbero scritti nella barra degli indirizzi).
+  if (!session) {
+    return (
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/registrati" element={<RegistrazionePage />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
 
   // La dashboard è uno strumento da scrivania per chi gestisce un locale. Il
   // professionista non ha nulla da farci: schermata esplicita, non un redirect

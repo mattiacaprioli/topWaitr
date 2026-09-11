@@ -40,6 +40,18 @@ export type TodayAssignmentRow = Assignment & {
 };
 
 /**
+ * Quanti posti ha un turno interno. Se c'è un fabbisogno per ruolo è lui a
+ * dettare il totale: chiamare qualcuno in più — o lasciare in elenco chi ha
+ * rifiutato — non aggiunge posti da coprire. Contarli faceva dire "3/4" alla
+ * home su un turno che il pannello dava (giustamente) per completo, perché
+ * `positions_filled` lo tiene il trigger DB sui soli assegnati attivi.
+ * Senza fabbisogno il totale sono le persone chiamate.
+ */
+function internalPositionsTotal(targetSum: number, activeStaff: number): number {
+  return Math.max(1, targetSum > 0 ? targetSum : activeStaff);
+}
+
+/**
  * Create an "internal" shift (mode "Chiamo il mio staff") and assign it to the
  * given roster members in one go. Internal shifts don't enter the marketplace
  * feed; positions are pre-filled by the assignees.
@@ -64,7 +76,7 @@ export async function createInternalShift(input: {
       ...fields,
       kind: "internal",
       status: "open",
-      positions_total: Math.max(1, targetSum, staffIds.length),
+      positions_total: internalPositionsTotal(targetSum, staffIds.length),
       positions_filled: staffIds.length,
     })
     .select("*")
@@ -175,7 +187,7 @@ export async function createInternalShifts(input: {
           description: p.description,
           kind: "internal" as const,
           status: "open" as const,
-          positions_total: Math.max(1, targetSum, p.staffIds.length),
+          positions_total: internalPositionsTotal(targetSum, p.staffIds.length),
           positions_filled: p.staffIds.length,
         };
       })
@@ -251,13 +263,27 @@ export async function updateInternalShift(
   const targets = roleTargets.filter((t) => t.count > 0);
   const targetSum = targets.reduce((s, t) => s + t.count, 0);
 
+  // 0) Stato attuale delle assegnazioni: serve prima di toccare il turno,
+  //    perché i posti non contano chi ha rifiutato (e serve poi per il diff).
+  const { data: existing, error: eErr } = await supabase
+    .from("shift_assignments")
+    .select("id, staff_member_id, status")
+    .eq("shift_id", shiftId);
+  if (eErr) throw new Error(eErr.message);
+  const current = new Map((existing ?? []).map((a) => [a.staff_member_id, a]));
+  // Chi viene aggiunto adesso nasce `assigned`, quindi conta come posto.
+  const activeStaff = staffIds.filter((id) => {
+    const row = current.get(id);
+    return !row || isActiveAssignment(row.status);
+  }).length;
+
   // 1) Campi base (il trigger notify_on_shift_updated avvisa gli assegnati
   //    se giorno/orario cambiano).
   const { error: sErr } = await supabase
     .from("shifts")
     .update({
       ...fields,
-      positions_total: Math.max(1, targetSum, staffIds.length),
+      positions_total: internalPositionsTotal(targetSum, activeStaff),
     })
     .eq("id", shiftId);
   if (sErr) throw new Error(sErr.message);
@@ -275,14 +301,7 @@ export async function updateInternalShift(
     if (rErr) throw new Error(rErr.message);
   }
 
-  // 3) Diff assegnazioni.
-  const { data: existing, error: eErr } = await supabase
-    .from("shift_assignments")
-    .select("id, staff_member_id")
-    .eq("shift_id", shiftId);
-  if (eErr) throw new Error(eErr.message);
-  const current = new Map((existing ?? []).map((a) => [a.staff_member_id, a.id]));
-
+  // 3) Diff assegnazioni (sullo stato letto al punto 0).
   const toAdd = staffIds.filter((id) => !current.has(id));
   if (toAdd.length > 0) {
     const { error } = await supabase

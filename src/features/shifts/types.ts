@@ -7,10 +7,15 @@ import type { AssignmentStatus } from "@/features/assignments/status";
 
 export type Shift = Tables<"shifts">;
 
-export type ShiftWithCount = Shift & {
-  applications: { count: number }[];
-  shift_assignments: { count: number }[];
-};
+/**
+ * Turno + candidature contate + le relazioni della copertura: è quanto serve
+ * agli elenchi del locale per mostrare "x/y coperti" con `shiftCounts()` senza
+ * una seconda query per turno.
+ */
+export type ShiftWithCount = Shift &
+  CoverageEmbeds & {
+    applications: { count: number }[];
+  };
 
 /**
  * Turno + le relazioni della copertura per ruolo. Serve alle viste a calendario:

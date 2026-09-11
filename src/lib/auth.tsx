@@ -19,6 +19,13 @@ type SignUpParams = {
   password: string;
   fullName: string;
   role: Role;
+  /**
+   * Dove riportare l'utente dopo il click sul link di conferma email. Serve
+   * solo alla dashboard web, che vive su un URL: sul mobile si omette e vale
+   * il Site URL del progetto. Supabase lo onora solo se l'URL è in allowlist
+   * (Authentication → URL Configuration), altrimenti ripiega sul Site URL.
+   */
+  emailRedirectTo?: string;
 };
 
 type AuthState = {
@@ -142,11 +149,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return { error: error?.message ?? null };
   }
 
-  async function signUp({ email, password, fullName, role }: SignUpParams) {
+  async function signUp({
+    email,
+    password,
+    fullName,
+    role,
+    emailRedirectTo,
+  }: SignUpParams) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName, role } },
+      options: { data: { full_name: fullName, role }, emailRedirectTo },
     });
     if (error) {
       return {

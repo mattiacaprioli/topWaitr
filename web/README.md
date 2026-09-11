@@ -72,6 +72,17 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
 
 ## Scelte da conoscere prima di metterci mano
 
+- **La registrazione dal web crea solo account `manager`**: il ruolo non si
+  sceglie (a differenza dell'app), perché questa dashboard è per i locali e un
+  professionista finirebbe comunque su `NotForWaitersPage`. L'account si crea
+  con `signUp` condiviso di `src/lib/auth.tsx` e il locale arriva dopo, dal gate
+  di `AppLayout` → `/locale`: senza sessione (conferma email attiva) la RLS non
+  permetterebbe l'insert in `venues`.
+  ⚠️ Il link di conferma punta all'URL della dashboard (`emailRedirectTo`): va
+  aggiunto ai **Redirect URLs** del progetto Supabase, altrimenti si ripiega sul
+  Site URL. Il client web ha `detectSessionInUrl: false` (i token nel fragment
+  litigherebbero con l'`HashRouter`), quindi dopo la conferma si passa dal
+  login: il catch-all fuori sessione ci porta da sé.
 - **La presenza si modifica dal pannello del turno**, non dalla pagina Ore: è lì
   che i dati vivono già (`useShiftAssignments`). La pagina Ore aggrega per
   persona sul mese e non conosce le singole assegnazioni.

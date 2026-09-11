@@ -4,6 +4,7 @@ import {
   useVenuePastShiftsCount,
 } from "@/features/shifts/hooks";
 import { formatDate, formatTime } from "@/lib/format";
+import { shiftCounts } from "@/features/assignments/coverage";
 import { useVenue } from "../lib/venue";
 import {
   Button,
@@ -59,7 +60,9 @@ export function StoricoPage() {
                 </tr>
               </thead>
               <tbody>
-                {shifts.map((s) => (
+                {shifts.map((s) => {
+                  const counts = shiftCounts(s);
+                  return (
                   <tr
                     key={s.id}
                     onClick={() => navigate(`/planning?shift=${s.id}`)}
@@ -76,7 +79,7 @@ export function StoricoPage() {
                       </Pill>
                     </td>
                     <td className="px-5 py-2.5 text-right font-mono text-t2">
-                      {s.positions_filled}/{s.positions_total}
+                      {counts.filled}/{counts.total}
                     </td>
                     <td className="px-5 py-2.5">
                       {s.status === "cancelled" ? (
@@ -86,7 +89,8 @@ export function StoricoPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </Card>

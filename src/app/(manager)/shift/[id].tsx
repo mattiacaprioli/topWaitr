@@ -22,6 +22,7 @@ import {
   formatHours,
   formatRate,
   formatTime,
+  isShiftOver,
   shiftDurationHours,
 } from "@/lib/format";
 import { useAuth } from "@/lib/auth";
@@ -403,8 +404,14 @@ export default function ShiftDetailScreen() {
 
   const internal = shift.kind === "internal";
   const requirements = shift.requirements ?? [];
-  const isPast = shift.date < new Date().toISOString().slice(0, 10);
+  // A turno finito (non a mezzanotte) si passa dalla vista "staff assegnato"
+  // a quella delle presenze.
+  const isPast = isShiftOver(shift);
   const plannedHours = shiftDurationHours(shift.start_time, shift.end_time);
+  // A consuntivo si segna solo chi il turno l'ha accettato: un rifiuto non è
+  // un'assenza, e nella riga presenza si leggerebbe come tale.
+  const presenceRows = assignments.filter((a) => a.status !== "declined");
+  const staffRows = isPast ? presenceRows : assignments;
   const roleCoverage = computeCoverage(
     roleRequirements.map((r) => ({ role: r.role, count: r.count })),
     assignments.map((a) => ({
@@ -579,13 +586,17 @@ export default function ShiftDetailScreen() {
               onRetry={() => assignmentsQuery.refetch()}
               subtitle="Non siamo riusciti a caricare lo staff. Riprova."
             />
-          ) : assignments.length === 0 ? (
+          ) : staffRows.length === 0 ? (
             <EmptyState
-              title="Nessuno assegnato"
-              subtitle="Questo turno non ha ancora nessuno dello staff."
+              title={isPast ? "Nessuna presenza" : "Nessuno assegnato"}
+              subtitle={
+                isPast
+                  ? "Chi era assegnato ha rifiutato il turno."
+                  : "Questo turno non ha ancora nessuno dello staff."
+              }
             />
           ) : isPast ? (
-            assignments.map((a) => (
+            presenceRows.map((a) => (
               <PresenceRow
                 key={a.id}
                 assignment={a}

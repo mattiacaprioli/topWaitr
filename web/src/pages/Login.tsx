@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
 import { Button, Field, Input } from "../ui/primitives";
+import { AuthPanel, AuthShell } from "../ui/AuthShell";
 
 export function LoginPage() {
   const { signIn } = useAuth();
@@ -20,20 +22,12 @@ export function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-gold" />
-          <h1 className="font-serif text-3xl text-t1">topWaitr</h1>
-          <p className="mt-2 text-sm text-t3">
-            Gestione del locale — turni, copertura e ore.
-          </p>
-        </div>
-
-        <form
-          onSubmit={onSubmit}
-          className="flex flex-col gap-4 rounded-2xl border border-border-2 bg-bg-card p-6"
-        >
+    <AuthShell
+      title="topWaitr"
+      subtitle="Gestione del locale — turni, copertura e ore."
+    >
+      <AuthPanel>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Field label="Email">
             <Input
               type="email"
@@ -65,11 +59,21 @@ export function LoginPage() {
           </Button>
 
           <p className="text-center text-xs leading-5 text-t4">
-            Usi le stesse credenziali dell'app. La registrazione di un nuovo
-            locale si fa dall'app mobile.
+            Sono le stesse credenziali dell&apos;app: un account solo, da
+            qualunque schermo.
           </p>
         </form>
-      </div>
-    </main>
+      </AuthPanel>
+
+      <p className="mt-5 text-center text-xs text-t3">
+        Non hai ancora un account?{" "}
+        <Link
+          to="/registrati"
+          className="focus-gold font-semibold text-gold hover:underline"
+        >
+          Registra il tuo locale
+        </Link>
+      </p>
+    </AuthShell>
   );
 }
