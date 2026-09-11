@@ -10,7 +10,7 @@ import {
   isActiveAssignment,
 } from "@/features/assignments/status";
 import { useVenueStaff } from "@/features/staff/hooks";
-import { formatHours, formatTime } from "@/lib/format";
+import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
 import type { StaffMember } from "@/features/staff/api";
@@ -269,7 +269,7 @@ function PersonShiftChip({
         },
         `${personShift.title} · ${fromStaffName}`
       )}
-      title={`${personShift.title} · ${formatTime(personShift.start_time)}–${formatTime(personShift.end_time)}${
+      title={`${personShift.title} · ${formatShiftRange(personShift.start_time, personShift.end_time)}${
         active ? "" : ` · ${ASSIGNMENT_STATUS_LABEL[personShift.status]}`
       }`}
       className={cn(
@@ -288,7 +288,7 @@ function PersonShiftChip({
           active ? "text-gold" : "text-t4 line-through"
         )}
       >
-        {formatTime(personShift.start_time)}–{formatTime(personShift.end_time)}
+        {formatShiftRange(personShift.start_time, personShift.end_time)}
       </span>
       <span className="block truncate text-[11px] text-t2">
         {active

@@ -17,7 +17,7 @@ import { cn } from "@/lib/cn";
 import {
   formatDate,
   formatEuro,
-  formatTime,
+  formatShiftRange,
   shiftTotal,
   timeAgo,
 } from "@/lib/format";
@@ -102,9 +102,10 @@ function CandidaturaCard({
 
   const venueName = shift.venue?.name ?? "Locale";
   const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
-  const subtitle = `${shift.title} · ${formatDate(shift.date)} · ${formatTime(
+  const subtitle = `${shift.title} · ${formatDate(shift.date)} · ${formatShiftRange(
     shift.start_time,
-  )}–${formatTime(shift.end_time)}`;
+    shift.end_time,
+  )}`;
 
   return (
     <Card className="rounded-3xl border-border-2 p-5" onPress={onOpen}>

@@ -30,7 +30,7 @@ export default function ManagerShiftsScreen() {
   const upcomingQuery = useMyShifts(venue?.id);
   const upcoming = upcomingQuery.data ?? [];
   const pastQuery = useVenuePastShifts(venue?.id);
-  const pastShifts = pastQuery.data?.pages.flat() ?? [];
+  const pastShifts = pastQuery.data?.pages.flatMap((p) => p.rows) ?? [];
   const pull = usePullToRefresh(() =>
     Promise.all([upcomingQuery.refetch(), pastQuery.refetch()])
   );

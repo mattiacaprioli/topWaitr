@@ -1,4 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import {
+  addDaysToDate,
+  isShiftOver,
+  shiftSortKey,
+  todayString,
+} from "@/lib/format";
 import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember } from "@/features/staff/api";
@@ -351,7 +357,6 @@ export type CoverageShift = CoverageEmbeds & {
 
 /** Turni interni futuri del locale con dati per calcolare la copertura per ruolo. */
 export async function getVenueCoverage(venueId: string): Promise<CoverageShift[]> {
-  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("shifts")
     .select(
@@ -361,11 +366,14 @@ export async function getVenueCoverage(venueId: string): Promise<CoverageShift[]
     .eq("kind", "internal")
     // Gli annullati non hanno fabbisogno da coprire.
     .neq("status", "cancelled")
-    .gte("date", today)
+    // Da ieri: un turno notturno in corso è ancora scoperto se manca qualcuno.
+    .gte("date", addDaysToDate(todayString(), -1))
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as CoverageShift[] | null) ?? [];
+  return ((data as CoverageShift[] | null) ?? []).filter(
+    (s) => !isShiftOver(s)
+  );
 }
 
 export async function getShiftAssignments(
@@ -590,7 +598,6 @@ export async function getVenueHoursSummary(
 export async function getMyAssignedUpcoming(
   waiterId: string
 ): Promise<AssignmentWithShift[]> {
-  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
@@ -598,12 +605,14 @@ export async function getMyAssignedUpcoming(
     )
     .eq("staff_member.waiter_id", waiterId)
     .neq("status", "declined")
-    .gte("shift.date", today);
+    // Da ieri: il turno che il professionista sta lavorando adesso non deve
+    // sparire dai suoi "prossimi" appena scocca mezzanotte.
+    .gte("shift.date", addDaysToDate(todayString(), -1));
   if (error) throw new Error(error.message);
   const rows = (data as AssignmentWithShift[] | null) ?? [];
   return rows
-    .filter((r) => r.shift != null)
-    .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
+    .filter((r) => r.shift != null && !isShiftOver(r.shift))
+    .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }
 
 // Lo storico passato del professionista non si legge più da qui: è paginato e
@@ -625,24 +634,32 @@ export async function getMyAssignmentForShift(
   return (data as Assignment | null) ?? null;
 }
 
-/** Assignees working today on the venue's internal shifts (home dashboard). */
+/**
+ * Chi lavora in questo momento o più tardi oggi, sui turni interni del locale.
+ *
+ * La finestra comprende **ieri** perché chi è in sala all'una di notte sta
+ * lavorando un turno datato ieri: è il caso in cui il ristoratore ha più bisogno
+ * di sapere chi ha in servizio, ed era esattamente quello che spariva.
+ */
 export async function getTodayAssignments(
   venueId: string
 ): Promise<TodayAssignmentRow[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayString();
   const { data, error } = await supabase
     .from("shift_assignments")
     .select(
-      "*, staff_member:staff_members!inner(*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))), shift:shifts!inner(id, title, date, start_time, end_time, venue_id)"
+      "*, staff_member:staff_members!inner(*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url, waiter_profile:waiter_profiles(rating_avg, rating_count))), shift:shifts!inner(id, title, date, start_time, end_time, venue_id, status)"
     )
     .eq("shift.venue_id", venueId)
-    .eq("shift.date", today)
+    .gte("shift.date", addDaysToDate(today, -1))
+    .lte("shift.date", today)
     // I turni annullati non contano tra chi lavora oggi.
     .neq("shift.status", "cancelled")
     .neq("status", "declined");
   if (error) throw new Error(error.message);
   const rows = (data as TodayAssignmentRow[] | null) ?? [];
-  return rows.sort((a, b) =>
-    (a.shift?.start_time ?? "").localeCompare(b.shift?.start_time ?? "")
-  );
+  return rows
+    // Di ieri resta solo ciò che non è ancora finito; di oggi resta tutto.
+    .filter((r) => r.shift != null && !isShiftOver(r.shift))
+    .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }

@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  SHIFT_RANGE_ERROR,
+  isValidShiftRange,
+  toTimeString,
+} from "@/lib/format";
 
 export const shiftSchema = z
   .object({
@@ -18,8 +23,12 @@ export const shiftSchema = z
     requirements: z.string().trim(),
     description: z.string().trim(),
   })
-  .refine((v) => v.end.getTime() > v.start.getTime(), {
-    message: "L'orario di fine deve essere dopo l'inizio.",
+  // I picker datano inizio e fine allo stesso giorno, quindi confrontare gli
+  // istanti direbbe che mezzanotte viene prima delle 16:00: si confrontano gli
+  // orari, con la stessa regola del resto del progetto (un turno può scavalcare
+  // la mezzanotte, non può iniziare e finire allo stesso minuto).
+  .refine((v) => isValidShiftRange(toTimeString(v.start), toTimeString(v.end)), {
+    message: SHIFT_RANGE_ERROR,
     path: ["end"],
   });
 

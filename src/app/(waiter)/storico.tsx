@@ -8,7 +8,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useAuth } from "@/lib/auth";
-import { formatDate, formatHours, formatTime } from "@/lib/format";
+import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
 import { useMyWorkHistory } from "@/features/assignments/history";
 
 export default function WaiterHistoryScreen() {
@@ -59,8 +59,8 @@ export default function WaiterHistoryScreen() {
                     {i.venueName}
                   </Text>
                   <Text className="text-xs text-t3">
-                    {formatDate(i.date)} · {formatTime(i.start_time)}–
-                    {formatTime(i.end_time)}
+                    {formatDate(i.date)} ·{" "}
+                    {formatShiftRange(i.start_time, i.end_time)}
                   </Text>
                 </View>
                 <View className="items-end">

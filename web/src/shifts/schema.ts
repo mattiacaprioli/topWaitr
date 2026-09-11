@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SHIFT_RANGE_ERROR, isValidShiftRange } from "@/lib/format";
 
 /**
  * Schema del turno interno lato web.
@@ -7,8 +8,9 @@ import { z } from "zod";
  * picker di React Native e porta `date`/`start`/`end` come oggetti `Date`, mentre
  * `<input type="date">` e `<input type="time">` restituiscono già stringhe nel
  * formato delle colonne DB. Convertirle avanti e indietro aggiungerebbe solo
- * superficie d'errore. L'invariante che conta — fine dopo inizio — è la stessa,
- * con lo stesso messaggio.
+ * superficie d'errore. L'invariante che conta è la stessa, con lo stesso
+ * messaggio, e sta in `isValidShiftRange`: la fine **non** deve essere dopo
+ * l'inizio, perché un turno notturno finisce il giorno dopo.
  *
  * Convenzione di ARCHITECTURE.md rispettata: niente `.default()` qui, i valori
  * iniziali stanno nei defaultValues del form.
@@ -21,8 +23,8 @@ export const internalShiftSchema = z
     end_time: z.string().min(1, "Scegli l'orario di fine."),
     description: z.string().trim(),
   })
-  .refine((v) => v.end_time > v.start_time, {
-    message: "L'orario di fine deve essere dopo l'inizio.",
+  .refine((v) => isValidShiftRange(v.start_time, v.end_time), {
+    message: SHIFT_RANGE_ERROR,
     path: ["end_time"],
   });
 

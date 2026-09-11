@@ -12,7 +12,7 @@ import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
-import { formatHours } from "@/lib/format";
+import { formatHours, todayString } from "@/lib/format";
 import { exportHoursCsv, exportHoursPdf } from "@/lib/export";
 import { useToast } from "@/providers/Toast";
 import { useMyVenue } from "@/features/venues/hooks";
@@ -24,7 +24,10 @@ const monthFmt = new Intl.DateTimeFormat("it-IT", {
 });
 
 function currentMonth(): string {
-  return new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  // Ora locale, non UTC: col vecchio `toISOString()` il primo del mese, fino
+  // alle 01:00 (o alle 02:00 con l'ora legale), la pagina si apriva ancora sul
+  // mese precedente.
+  return todayString().slice(0, 7); // "YYYY-MM"
 }
 
 function shiftMonth(month: string, delta: number): string {

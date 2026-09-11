@@ -6,7 +6,13 @@ import {
   RATE_MIN,
 } from "@/features/shifts/extraShiftOptions";
 import { useCreateShift, useUpdateShift } from "@/features/shifts/hooks";
-import { formatEuro, shiftDurationHours } from "@/lib/format";
+import {
+  SHIFT_RANGE_ERROR,
+  formatEuro,
+  formatShiftSummary,
+  isValidShiftRange,
+  shiftDurationHours,
+} from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
@@ -42,7 +48,9 @@ export function MarketplaceForm({
   const [note, setNote] = useState(shift?.description ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  const hours = end > start ? shiftDurationHours(start, end) : 0;
+  // `shiftDurationHours` gestisce già lo scavalcamento della mezzanotte: un
+  // turno 22:00–04:00 vale 6 ore, non zero.
+  const hours = shiftDurationHours(start, end);
   const total = Math.round(rate * hours);
 
   function toggleBadge(b: string) {
@@ -55,8 +63,8 @@ export function MarketplaceForm({
   }
 
   function onSubmit() {
-    if (end <= start) {
-      setError("L'orario di fine deve essere dopo l'inizio.");
+    if (!isValidShiftRange(start, end)) {
+      setError(SHIFT_RANGE_ERROR);
       return;
     }
     setError(null);
@@ -132,6 +140,10 @@ export function MarketplaceForm({
         </Field>
       </div>
 
+      <p className="-mt-2 text-xs text-t4">
+        {formatShiftSummary(day, start, end)}
+      </p>
+
       <div>
         <div className="mb-2 flex items-baseline justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-t3">
@@ -150,7 +162,9 @@ export function MarketplaceForm({
           onChange={(e) => setRate(Number(e.target.value))}
           className="w-full accent-[var(--color-gold)]"
         />
-        {hours > 0 ? (
+        {/* Con inizio uguale a fine la durata varrebbe 24 ore tonde: è un
+            orario ancora da correggere, non un preventivo da mostrare. */}
+        {isValidShiftRange(start, end) ? (
           <p className="mt-1.5 text-xs text-t4">
             {hours.toString().replace(".", ",")} h ·{" "}
             <span className="font-mono text-t2">{formatEuro(total)}</span> a

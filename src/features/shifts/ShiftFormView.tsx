@@ -1,10 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyboardAvoidingView } from "react-native";
-import { ScrollView } from "@/tw";
+import { ScrollView, Text } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { ControlledPicker } from "@/components/form/ControlledPicker";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { formatShiftSummary, toDateString, toTimeString } from "@/lib/format";
 import { shiftSchema, type ShiftForm } from "./schema";
 
 type Props = {
@@ -23,10 +24,16 @@ export function ShiftFormView({
   pending,
   onSubmit,
 }: Props) {
-  const { control, handleSubmit } = useForm<ShiftForm>({
+  const { control, handleSubmit, watch } = useForm<ShiftForm>({
     resolver: zodResolver(shiftSchema),
     defaultValues,
   });
+
+  // Riepilogo dal vivo: su un turno notturno è l'unica cosa che dice che la
+  // fine cade il giorno dopo.
+  const date = watch("date");
+  const start = watch("start");
+  const end = watch("end");
 
   return (
     <KeyboardAvoidingView
@@ -48,6 +55,16 @@ export function ShiftFormView({
         <ControlledPicker control={control} name="date" label="Data" mode="date" />
         <ControlledPicker control={control} name="start" label="Inizio" mode="time" />
         <ControlledPicker control={control} name="end" label="Fine" mode="time" />
+
+        {date && start && end ? (
+          <Text className="-mt-1 text-xs text-t3">
+            {formatShiftSummary(
+              toDateString(date),
+              toTimeString(start),
+              toTimeString(end)
+            )}
+          </Text>
+        ) : null}
 
         <ControlledInput
           control={control}

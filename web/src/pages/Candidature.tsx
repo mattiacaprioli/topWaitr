@@ -5,7 +5,7 @@ import {
   useApplicationDecision,
   useApplications,
 } from "@/features/applications/hooks";
-import { formatDate, formatRate, formatTime } from "@/lib/format";
+import { formatDate, formatRate, formatShiftRange } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { useVenue } from "../lib/venue";
 import {
@@ -80,8 +80,7 @@ export function CandidaturePage() {
                   <p className="mt-1 text-xs text-t3">
                     {formatDate(shift.date)} ·{" "}
                     <span className="font-mono">
-                      {formatTime(shift.start_time)}–
-                      {formatTime(shift.end_time)}
+                      {formatShiftRange(shift.start_time, shift.end_time)}
                     </span>
                   </p>
                   <p className="mt-0.5 text-xs text-t4">

@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { cn } from "@/lib/cn";
-import { formatDate, formatRate, formatTime } from "@/lib/format";
+import { formatDate, formatRate, formatShiftRange } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Enums } from "@/types/database";
 import type { ShiftWithCount } from "./types";
@@ -44,8 +44,8 @@ export function ManagerShiftCard({
         )}
       </View>
       <Text className="mt-1 text-sm text-t2">
-        {formatDate(shift.date)} · {formatTime(shift.start_time)}–
-        {formatTime(shift.end_time)}
+        {formatDate(shift.date)} ·{" "}
+        {formatShiftRange(shift.start_time, shift.end_time)}
       </Text>
       <View className="mt-3 flex-row items-center justify-between">
         <Text className="text-sm text-t3">

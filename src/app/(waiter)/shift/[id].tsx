@@ -20,7 +20,7 @@ import { QueryError } from "@/components/ui/QueryError";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
+import { formatDate, formatEuro, formatRate, formatShiftRange, shiftTotal } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import {
@@ -251,9 +251,10 @@ export default function WaiterShiftDetailScreen() {
           <InfoRow
             first
             label="Quando"
-            value={`${formatDate(shift.date)} · ${formatTime(
-              shift.start_time
-            )}–${formatTime(shift.end_time)}`}
+            value={`${formatDate(shift.date)} · ${formatShiftRange(
+              shift.start_time,
+              shift.end_time
+            )}`}
           />
           {internal ? null : (
             <>

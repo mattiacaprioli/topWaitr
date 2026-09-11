@@ -10,7 +10,7 @@ import {
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
-import { formatDate, formatHours, formatTime } from "@/lib/format";
+import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
@@ -264,7 +264,7 @@ function Performance({
                 <span className="text-t2">
                   {formatDate(a.date)}
                   <span className="ml-2 font-mono text-xs text-t4">
-                    {formatTime(a.start_time)}–{formatTime(a.end_time)}
+                    {formatShiftRange(a.start_time, a.end_time)}
                   </span>
                 </span>
                 <span className="font-mono text-xs text-t1">

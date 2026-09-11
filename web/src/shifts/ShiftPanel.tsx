@@ -17,7 +17,7 @@ import {
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
-import { isShiftOver } from "@/lib/format";
+import { formatShiftSummary, isShiftOver } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
@@ -480,6 +480,8 @@ function InternalForm({
   // I sette giorni della settimana della data scelta: è lì che si ripete un
   // turno di servizio ("anche giovedì e sabato"), non a distanza di mesi.
   const formDate = watch("date");
+  const formStart = watch("start_time");
+  const formEnd = watch("end_time");
   const weekOfForm = useMemo(
     () => (formDate ? weekDays(startOfWeek(new Date(`${formDate}T00:00:00`))) : []),
     [formDate]
@@ -551,6 +553,12 @@ function InternalForm({
           <Input type="time" {...register("end_time")} />
         </Field>
       </div>
+
+      {formDate && formStart && formEnd ? (
+        <p className="-mt-2 text-xs text-t4">
+          {formatShiftSummary(formDate, formStart, formEnd)}
+        </p>
+      ) : null}
 
       {/* Solo in creazione: su un turno esistente "ripeti" vorrebbe dire
           crearne altri, cosa diversa dal modificare questo. */}

@@ -27,7 +27,7 @@ import {
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { formatDate, formatEuro, formatTime, shiftTotal } from "@/lib/format";
+import { formatDate, formatEuro, formatShiftRange, shiftTotal } from "@/lib/format";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, Linking, RefreshControl } from "react-native";
@@ -218,8 +218,8 @@ export default function WaiterHomeScreen() {
                   <View className="mt-3 flex-row items-center gap-2">
                     <Icon name="calendar" size={15} color="#8c857a" />
                     <Text className="text-sm text-t2">
-                      {formatDate(s.date)} · {formatTime(s.start_time)}–
-                      {formatTime(s.end_time)}
+                      {formatDate(s.date)} ·{" "}
+                      {formatShiftRange(s.start_time, s.end_time)}
                     </Text>
                   </View>
                 </Card>

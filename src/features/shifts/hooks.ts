@@ -9,7 +9,6 @@ import { qk } from "@/lib/queryKeys";
 import { BADGE_STALE_TIME } from "@/lib/queryClient";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
-  SHIFTS_PAGE_SIZE,
   createShift,
   getMyShifts,
   getOpenShifts,
@@ -51,8 +50,11 @@ export function useVenuePastShifts(venueId: string | undefined) {
     queryFn: ({ pageParam }) =>
       getVenuePastShiftsPage(venueId as string, pageParam),
     initialPageParam: 0,
+    // `hasMore` e non `rows.length`: la pagina può essere più corta di
+    // SHIFTS_PAGE_SIZE perché il turno notturno ancora in corso è stato tolto
+    // dallo storico, e fermarsi lì troncherebbe la lista.
     getNextPageParam: (lastPage, allPages) =>
-      lastPage.length < SHIFTS_PAGE_SIZE ? undefined : allPages.length,
+      lastPage.hasMore ? allPages.length : undefined,
     enabled: !!venueId,
   });
 }

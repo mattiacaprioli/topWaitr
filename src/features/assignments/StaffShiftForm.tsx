@@ -10,14 +10,20 @@ import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { cn } from "@/lib/cn";
-import { formatDate, toDateString, toTimeString } from "@/lib/format";
+import {
+  SHIFT_RANGE_ERROR,
+  formatDate,
+  isValidShiftRange,
+  toDateString,
+  toTimeString,
+} from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useVenueStaff } from "@/features/staff/hooks";
 import { STAFF_ROLES } from "@/features/staff/roles";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
 import { useCreateInternalShift } from "@/features/assignments/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
-import { TimeField } from "@/features/shifts/TimeField";
+import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
 
 function defaultTime(hour: number) {
   const d = new Date();
@@ -76,6 +82,10 @@ export function StaffShiftForm({ venueId, header }: Props) {
       toast.show("Seleziona almeno una persona.", "error");
       return;
     }
+    if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
+      toast.show(SHIFT_RANGE_ERROR, "error");
+      return;
+    }
     const dateStr = toDateString(date);
     const roleTargets = STAFF_ROLES.map((role) => ({
       role: role as string,
@@ -119,10 +129,13 @@ export function StaffShiftForm({ venueId, header }: Props) {
           <DayPicker value={date} onChange={setDate} />
         </View>
 
-        <View className="flex-row gap-4">
-          <TimeField className="flex-1" label="Dalle" value={start} onChange={setStart} />
-          <TimeField className="flex-1" label="Alle" value={end} onChange={setEnd} />
-        </View>
+        <ShiftTimeFields
+          date={date}
+          start={start}
+          end={end}
+          onStartChange={setStart}
+          onEndChange={setEnd}
+        />
 
         <RoleRequirementsField
           targets={targets}

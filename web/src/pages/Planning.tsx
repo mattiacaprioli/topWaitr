@@ -12,7 +12,12 @@ import {
   type ReassignNotifyPlan,
   type ShiftNotifyRecipients,
 } from "@/features/shifts/notify";
-import { formatDate, formatTime } from "@/lib/format";
+import {
+  formatDate,
+  formatShiftRange,
+  formatTime,
+  isOvernightShift,
+} from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
@@ -618,7 +623,7 @@ function MonthGrid({
                       title={
                         cancelled
                           ? `${shift.title} · annullato: riattivalo dal pannello per spostarlo`
-                          : `${shift.title} · ${formatTime(shift.start_time)}–${formatTime(shift.end_time)} · ${counts.filled}/${counts.total}`
+                          : `${shift.title} · ${formatShiftRange(shift.start_time, shift.end_time)} · ${counts.filled}/${counts.total}`
                       }
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
@@ -632,6 +637,12 @@ function MonthGrid({
                     >
                       <span className="shrink-0 font-mono text-[10px] text-t4">
                         {formatTime(shift.start_time)}
+                        {/* Qui c'è posto solo per l'ora d'inizio: senza questo,
+                            un 22:00 che finisce alle 04:00 è identico a uno che
+                            finisce alle 23:00, nella vista più fitta del prodotto. */}
+                        {isOvernightShift(shift.start_time, shift.end_time) ? (
+                          <span className="ml-0.5 text-gold">+1</span>
+                        ) : null}
                       </span>
                       <span
                         className={cn(
@@ -724,7 +735,7 @@ function ShiftCell({
         {shift.title}
       </p>
       <p className="mt-0.5 font-mono text-[11px] text-t3">
-        {formatTime(shift.start_time)}–{formatTime(shift.end_time)}
+        {formatShiftRange(shift.start_time, shift.end_time)}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
         <Pill tone={internal ? "neutral" : "gold"}>

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useVenueCoverage } from "@/features/assignments/hooks";
 import { computeCoverage } from "@/features/assignments/coverage";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatShiftRange } from "@/lib/format";
 import type { CoverageShift } from "@/features/assignments/api";
 import { useVenue } from "../lib/venue";
 import {
@@ -99,7 +99,7 @@ function CoverageRow({ shift }: { shift: CoverageShift }) {
       <div className="min-w-48">
         <p className="text-sm font-semibold text-t1">{shift.title}</p>
         <p className="mt-0.5 font-mono text-xs text-t3">
-          {formatTime(shift.start_time)}–{formatTime(shift.end_time)}
+          {formatShiftRange(shift.start_time, shift.end_time)}
         </p>
       </div>
 

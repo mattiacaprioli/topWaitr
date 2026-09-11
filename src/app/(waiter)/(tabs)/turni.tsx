@@ -15,7 +15,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
-import { formatDate, formatEuro, formatRate, formatTime, shiftTotal } from "@/lib/format";
+import { formatDate, formatEuro, formatRate, formatShiftRange, shiftTotal } from "@/lib/format";
 import { useOpenShifts } from "@/features/shifts/hooks";
 import { useApply, useMyApplications } from "@/features/applications/hooks";
 import { useToast } from "@/providers/Toast";
@@ -124,8 +124,8 @@ function ShiftCard({
         <View className="mt-3 flex-row items-center gap-2">
           <Icon name="calendar" size={15} color="#8c857a" />
           <Text className="text-sm text-t2">
-            {formatDate(shift.date)} · {formatTime(shift.start_time)}–
-            {formatTime(shift.end_time)}
+            {formatDate(shift.date)} ·{" "}
+            {formatShiftRange(shift.start_time, shift.end_time)}
           </Text>
         </View>
 

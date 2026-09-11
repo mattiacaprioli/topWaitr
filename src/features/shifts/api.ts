@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { addDaysToDate, isShiftOver, todayString } from "@/lib/format";
 import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import type {
   Shift,
@@ -18,9 +19,16 @@ export type {
 
 export const SHIFTS_PAGE_SIZE = 20;
 
-/** Turni futuri/di oggi del locale ("In programma" + KPI home). Bounded. */
+/**
+ * Turni non ancora conclusi del locale ("In programma" + KPI home). Bounded.
+ *
+ * La finestra parte da **ieri**, non da oggi: un turno notturno iniziato ieri
+ * sera è ancora in corso all'una di notte, e filtrando sulla sola data sparirebbe
+ * dalle liste del ristoratore proprio mentre la sua gente è in sala. Un giorno
+ * indietro è il massimo scavalcamento possibile; a scartare quelli davvero finiti
+ * ci pensa `isShiftOver`, che conosce l'istante di fine vero.
+ */
 export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
-  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("shifts")
     .select(
@@ -30,11 +38,13 @@ export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
       "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
     )
     .eq("venue_id", venueId)
-    .gte("date", today)
+    .gte("date", addDaysToDate(todayString(), -1))
     .order("date", { ascending: true })
     .order("start_time", { ascending: true });
   if (error) throw new Error(error.message);
-  return (data as ShiftWithCount[] | null) ?? [];
+  return ((data as ShiftWithCount[] | null) ?? []).filter(
+    (s) => !isShiftOver(s)
+  );
 }
 
 /**
@@ -72,12 +82,27 @@ export async function getVenueShiftsRange(
   return (data as ShiftWithAssignees[] | null) ?? [];
 }
 
-/** Storico paginato: turni passati del locale, più recenti prima. */
+/** Una pagina di storico, con l'indicazione che ce ne sono altre. */
+export type PastShiftsPage = {
+  rows: ShiftWithCount[];
+  /** Il server aveva altre righe oltre questa pagina. */
+  hasMore: boolean;
+};
+
+/**
+ * Storico paginato: turni passati del locale, più recenti prima.
+ *
+ * ⚠️ `hasMore` guarda le righe **ricevute dal server**, non quelle che
+ * sopravvivono al filtro: un turno notturno di ieri ancora in corso va tolto
+ * dallo storico, ma se ciò rendesse la pagina più corta di `SHIFTS_PAGE_SIZE`
+ * lo scroll infinito la scambierebbe per l'ultima e troncherebbe la lista.
+ * Essendo l'ordine per data decrescente, quei turni stanno sempre in testa alla
+ * prima pagina: il filtro costa nulla.
+ */
 export async function getVenuePastShiftsPage(
   venueId: string,
   page: number
-): Promise<ShiftWithCount[]> {
-  const today = new Date().toISOString().slice(0, 10);
+): Promise<PastShiftsPage> {
   const from = page * SHIFTS_PAGE_SIZE;
   const { data, error } = await supabase
     .from("shifts")
@@ -88,22 +113,31 @@ export async function getVenuePastShiftsPage(
       "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
     )
     .eq("venue_id", venueId)
-    .lt("date", today)
+    .lt("date", todayString())
     .order("date", { ascending: false })
     .order("start_time", { ascending: false })
     .range(from, from + SHIFTS_PAGE_SIZE - 1);
   if (error) throw new Error(error.message);
-  return (data as ShiftWithCount[] | null) ?? [];
+  const received = (data as ShiftWithCount[] | null) ?? [];
+  return {
+    rows: received.filter((s) => isShiftOver(s)),
+    hasMore: received.length === SHIFTS_PAGE_SIZE,
+  };
 }
 
-/** Conteggio dei turni passati del locale (KPI "turni svolti"). */
+/**
+ * Conteggio dei turni passati del locale (KPI "turni svolti").
+ *
+ * Resta sulla data: un `count` esatto non si può correggere lato client. Il
+ * prezzo è che, finché il turno notturno di ieri non finisce, il KPI lo conta
+ * già fra gli svolti — uno scarto di un'unità per qualche ora di notte.
+ */
 export async function getVenuePastShiftsCount(venueId: string): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
   const { count, error } = await supabase
     .from("shifts")
     .select("*", { count: "exact", head: true })
     .eq("venue_id", venueId)
-    .lt("date", today);
+    .lt("date", todayString());
   if (error) throw new Error(error.message);
   return count ?? 0;
 }
@@ -122,18 +156,20 @@ export const OPEN_SHIFTS_LIMIT = 100;
 
 /** Open, non-past shifts across all venues — the waiter's marketplace feed. */
 export async function getOpenShifts(): Promise<ShiftWithVenue[]> {
-  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("shifts")
     .select("*, venue:venues(*)")
     .eq("status", "open")
     .eq("kind", "marketplace")
-    .gte("date", today)
+    // Da ieri: un turno notturno ancora in corso è ancora un turno da coprire.
+    .gte("date", addDaysToDate(todayString(), -1))
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(OPEN_SHIFTS_LIMIT);
   if (error) throw new Error(error.message);
-  return (data as ShiftWithVenue[] | null) ?? [];
+  return ((data as ShiftWithVenue[] | null) ?? []).filter(
+    (s) => !isShiftOver(s)
+  );
 }
 
 export async function getShiftWithVenue(

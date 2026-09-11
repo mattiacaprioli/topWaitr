@@ -1,4 +1,10 @@
 import { supabase } from "@/lib/supabase";
+import {
+  addDaysToDate,
+  isShiftOver,
+  shiftSortKey,
+  todayString,
+} from "@/lib/format";
 import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 
@@ -48,9 +54,13 @@ export async function updateApplicationStatus(
   if (error) throw new Error(error.message);
 }
 
-/** Manager dashboard: accepted waiters on the venue's shifts happening today. */
+/**
+ * Manager dashboard: gli extra accettati che lavorano adesso o più tardi oggi.
+ * Gemello marketplace di `getTodayAssignments`: la finestra parte da ieri per
+ * non perdere chi è in sala su un turno notturno.
+ */
 export async function getTodayStaff(venueId: string): Promise<TodayStaffRow[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayString();
   const { data, error } = await supabase
     .from("applications")
     .select(
@@ -58,14 +68,15 @@ export async function getTodayStaff(venueId: string): Promise<TodayStaffRow[]> {
     )
     .eq("status", "accepted")
     .eq("shift.venue_id", venueId)
-    .eq("shift.date", today)
+    .gte("shift.date", addDaysToDate(today, -1))
+    .lte("shift.date", today)
     // I turni annullati non contano tra chi lavora oggi.
     .neq("shift.status", "cancelled");
   if (error) throw new Error(error.message);
   const rows = (data as TodayStaffRow[] | null) ?? [];
-  return rows.sort((a, b) =>
-    (a.shift?.start_time ?? "").localeCompare(b.shift?.start_time ?? "")
-  );
+  return rows
+    .filter((r) => r.shift != null && !isShiftOver(r.shift))
+    .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }
 
 /** Manager dashboard: count of pending applications across the venue's shifts. */
@@ -83,7 +94,6 @@ export async function getPendingCount(venueId: string): Promise<number> {
 export async function getMyUpcomingShifts(
   waiterId: string
 ): Promise<ApplicationWithShift[]> {
-  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("applications")
     .select("*, shift:shifts(*, venue:venues(*))")
@@ -92,9 +102,11 @@ export async function getMyUpcomingShifts(
   if (error) throw new Error(error.message);
   const rows = (data as ApplicationWithShift[] | null) ?? [];
   // PostgREST can't order by a nested column, so filter/sort the join client-side.
+  // "Prossimo" = non ancora finito, non "da domani": chi sta lavorando un turno
+  // notturno deve continuare a vederselo qui fino a fine servizio.
   return rows
-    .filter((r) => r.shift != null && r.shift.date >= today)
-    .sort((a, b) => a.shift!.date.localeCompare(b.shift!.date));
+    .filter((r) => r.shift != null && !isShiftOver(r.shift))
+    .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }
 
 /** Stato della candidatura per turno: quanto basta al CTA della lista turni. */
@@ -130,13 +142,15 @@ export async function getMyApplications(
  * il numero.
  */
 export async function getMyServicesCount(waiterId: string): Promise<number> {
-  const today = new Date().toISOString().slice(0, 10);
   const { count, error } = await supabase
     .from("applications")
     .select("id, shift:shifts!inner(date)", { count: "exact", head: true })
     .eq("waiter_id", waiterId)
     .eq("status", "accepted")
-    .lt("shift.date", today);
+    // Resta sulla data, come il KPI dei turni svolti del locale: un `count`
+    // esatto non è correggibile lato client. Scarto: il turno notturno di ieri
+    // è contato come servizio già da mezzanotte invece che da fine turno.
+    .lt("shift.date", todayString());
   if (error) throw new Error(error.message);
   return count ?? 0;
 }

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useCopyInternalShifts } from "@/features/assignments/hooks";
 import { useVenueShiftsRange } from "@/features/shifts/hooks";
-import { addDaysToDate, formatDate, formatTime } from "@/lib/format";
+import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
 import { addDays, weekDays, weekLabel } from "../lib/week";
@@ -190,7 +190,7 @@ export function DuplicateWeekDialog({
                       {s.title}
                     </span>
                     <span className="shrink-0 font-mono text-xs text-t3">
-                      {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                      {formatShiftRange(s.start_time, s.end_time)}
                     </span>
                     <span className="w-28 shrink-0 text-right text-xs text-t2">
                       {formatDate(addDaysToDate(s.date, dayShift))}

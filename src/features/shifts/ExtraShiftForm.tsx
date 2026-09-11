@@ -6,11 +6,17 @@ import { Pressable, ScrollView, Text, TextInput, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Mono } from "@/components/ui/Mono";
 import { SelectChip } from "@/components/ui/SelectChip";
-import { shiftDurationHours, toDateString, toTimeString } from "@/lib/format";
+import {
+  SHIFT_RANGE_ERROR,
+  isValidShiftRange,
+  shiftDurationHours,
+  toDateString,
+  toTimeString,
+} from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useCreateShift } from "@/features/shifts/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
-import { TimeField } from "@/features/shifts/TimeField";
+import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
 
 import {
   EXTRA_SHIFT_BADGES as BADGES,
@@ -61,6 +67,10 @@ export function ExtraShiftForm({ venueId, header }: Props) {
   function onSubmit() {
     if (!venueId) {
       toast.show("Configura prima il tuo locale.", "error");
+      return;
+    }
+    if (!isValidShiftRange(toTimeString(start), toTimeString(end))) {
+      toast.show(SHIFT_RANGE_ERROR, "error");
       return;
     }
     create.mutate(
@@ -127,20 +137,13 @@ export function ExtraShiftForm({ venueId, header }: Props) {
         </View>
 
         {/* Dalle / Alle */}
-        <View className="flex-row gap-4">
-          <TimeField
-            className="flex-1"
-            label="Dalle"
-            value={start}
-            onChange={setStart}
-          />
-          <TimeField
-            className="flex-1"
-            label="Alle"
-            value={end}
-            onChange={setEnd}
-          />
-        </View>
+        <ShiftTimeFields
+          date={date}
+          start={start}
+          end={end}
+          onStartChange={setStart}
+          onEndChange={setEnd}
+        />
 
         {/* Compenso */}
         <View className="gap-3">

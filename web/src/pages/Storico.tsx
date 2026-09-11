@@ -3,7 +3,7 @@ import {
   useVenuePastShifts,
   useVenuePastShiftsCount,
 } from "@/features/shifts/hooks";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatShiftRange } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
@@ -35,7 +35,7 @@ export function StoricoPage() {
   if (isPending) return <Spinner />;
   if (isError) return <QueryError error={error} />;
 
-  const shifts = data?.pages.flat() ?? [];
+  const shifts = data?.pages.flatMap((p) => p.rows) ?? [];
 
   return (
     <>
@@ -75,7 +75,7 @@ export function StoricoPage() {
                     <td className="px-5 py-2.5 text-t2">{formatDate(s.date)}</td>
                     <td className="px-5 py-2.5 text-t1">{s.title}</td>
                     <td className="px-5 py-2.5 font-mono text-xs text-t3">
-                      {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                      {formatShiftRange(s.start_time, s.end_time)}
                     </td>
                     <td className="px-5 py-2.5">
                       <Pill tone={s.kind === "internal" ? "neutral" : "gold"}>

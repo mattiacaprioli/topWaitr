@@ -3,7 +3,7 @@ import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { Mono } from "@/components/ui/Mono";
 import { StatCard } from "@/components/ui/StatCard";
-import { formatDate, formatHours, formatTime } from "@/lib/format";
+import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
 import {
   useStaffPerformance,
   useStaffWorkedShifts,
@@ -43,7 +43,7 @@ export function StaffHoursSection({ staffMemberId }: { staffMemberId: string }) 
                         {formatDate(a.date)}
                       </Text>
                       <Text className="text-xs text-t3">
-                        {formatTime(a.start_time)}–{formatTime(a.end_time)}
+                        {formatShiftRange(a.start_time, a.end_time)}
                       </Text>
                     </View>
                     <Text className="text-sm font-sans-semibold text-gold">

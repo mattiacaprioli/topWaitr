@@ -7,7 +7,12 @@ import {
 } from "@/features/applications/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
-import { formatDate, formatTime, toDateString } from "@/lib/format";
+import {
+  formatDate,
+  formatShiftRange,
+  formatTime,
+  toDateString,
+} from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
 import { useVenue } from "../lib/venue";
@@ -20,6 +25,8 @@ type Worker = {
   role: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
+  /** Giorno del turno: serve a ordinare, e a segnalare chi è qui da ieri sera. */
+  date: string;
   start: string;
   end: string;
 };
@@ -42,8 +49,9 @@ export function HomePage() {
   const todayStaff = useTodayStaff(venue.id).data ?? [];
   const todayAssignments = useTodayAssignments(venue.id).data ?? [];
 
-  const today = toDateString(new Date());
-  const upcoming = shifts.filter((s) => s.date >= today);
+  // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
+  // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
+  const upcoming = shifts;
   const openCount = upcoming.filter(
     (s) => s.kind === "marketplace" && s.status === "open"
   ).length;
@@ -54,29 +62,36 @@ export function HomePage() {
   const totalPos = counts.reduce((n, c) => n + c.total, 0);
 
   // "Chi lavora oggi": staff assegnato ai turni interni + professionisti
-  // accettati sui turni marketplace di oggi, in un'unica lista.
+  // accettati sui turni marketplace, in un'unica lista. Comprende chi è in sala
+  // adesso su un turno cominciato ieri sera, quindi si ordina per giorno **e**
+  // ora: il solo orario metterebbe un turno delle 22:00 di ieri dopo il pranzo.
   const workers = useMemo<Worker[]>(
-    () => [
-      ...todayAssignments.map((a) => ({
-        key: `asg-${a.id}`,
-        name: a.staff_member?.display_name ?? "Staff",
-        role: a.staff_member?.role ?? null,
-        ratingAvg: a.staff_member?.waiter?.waiter_profile?.rating_avg ?? null,
-        ratingCount:
-          a.staff_member?.waiter?.waiter_profile?.rating_count ?? null,
-        start: a.shift?.start_time ?? "",
-        end: a.shift?.end_time ?? "",
-      })),
-      ...todayStaff.map((row) => ({
-        key: `app-${row.id}`,
-        name: row.waiter?.full_name ?? "Professionista",
-        role: row.waiter?.waiter_profile?.primary_role ?? null,
-        ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
-        ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
-        start: row.shift?.start_time ?? "",
-        end: row.shift?.end_time ?? "",
-      })),
-    ],
+    () =>
+      [
+        ...todayAssignments.map((a) => ({
+          key: `asg-${a.id}`,
+          name: a.staff_member?.display_name ?? "Staff",
+          role: a.staff_member?.role ?? null,
+          ratingAvg: a.staff_member?.waiter?.waiter_profile?.rating_avg ?? null,
+          ratingCount:
+            a.staff_member?.waiter?.waiter_profile?.rating_count ?? null,
+          date: a.shift?.date ?? "",
+          start: a.shift?.start_time ?? "",
+          end: a.shift?.end_time ?? "",
+        })),
+        ...todayStaff.map((row) => ({
+          key: `app-${row.id}`,
+          name: row.waiter?.full_name ?? "Professionista",
+          role: row.waiter?.waiter_profile?.primary_role ?? null,
+          ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
+          ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
+          date: row.shift?.date ?? "",
+          start: row.shift?.start_time ?? "",
+          end: row.shift?.end_time ?? "",
+        })),
+      ].sort((a, b) =>
+        `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
+      ),
     [todayAssignments, todayStaff]
   );
 
@@ -130,11 +145,19 @@ export function HomePage() {
                           ★ {w.ratingAvg?.toFixed(1)}
                         </span>
                       ) : null}
+                      {/* Turno di ieri sera ancora in corso: senza questo
+                          sembrerebbe uno che attacca oggi a quell'ora. */}
+                      {w.date && w.date !== toDateString(new Date()) ? (
+                        <span className="ml-2 text-warning">da ieri</span>
+                      ) : null}
                     </p>
                   </div>
                   <span className="shrink-0 font-mono text-xs text-t2">
-                    {w.start ? formatTime(w.start) : "—"}
-                    {w.end ? `–${formatTime(w.end)}` : ""}
+                    {w.start && w.end
+                      ? formatShiftRange(w.start, w.end)
+                      : w.start
+                        ? formatTime(w.start)
+                        : "—"}
                   </span>
                 </Card>
               ))}
@@ -172,7 +195,7 @@ export function HomePage() {
                     <p className="mt-1 text-xs text-t3">
                       {formatDate(s.date)} ·{" "}
                       <span className="font-mono">
-                        {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                        {formatShiftRange(s.start_time, s.end_time)}
                       </span>
                       <span className="ml-2 text-t4">
                         {s.kind === "internal" ? "Staff" : "Extra"}

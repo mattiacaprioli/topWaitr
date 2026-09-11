@@ -10,7 +10,7 @@ import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useAuth } from "@/lib/auth";
-import { formatDate, formatTime } from "@/lib/format";
+import { formatDate, formatShiftRange } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useVenueCoverage } from "@/features/assignments/hooks";
 import { computeCoverage } from "@/features/assignments/coverage";
@@ -85,7 +85,7 @@ export default function CoverageScreen() {
                         {s.title}
                       </Text>
                       <Text className="text-xs text-t3">
-                        {formatTime(s.start_time)}–{formatTime(s.end_time)}
+                        {formatShiftRange(s.start_time, s.end_time)}
                       </Text>
                     </View>
                     {cov.missing > 0 ? (

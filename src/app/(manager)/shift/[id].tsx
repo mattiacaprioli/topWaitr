@@ -21,7 +21,7 @@ import {
   formatDate,
   formatHours,
   formatRate,
-  formatTime,
+  formatShiftRange,
   isShiftOver,
   shiftDurationHours,
 } from "@/lib/format";
@@ -463,9 +463,10 @@ export default function ShiftDetailScreen() {
         <InfoRow
           first
           label="Quando"
-          value={`${formatDate(shift.date)} · ${formatTime(
-            shift.start_time
-          )}–${formatTime(shift.end_time)}`}
+          value={`${formatDate(shift.date)} · ${formatShiftRange(
+            shift.start_time,
+            shift.end_time
+          )}`}
         />
         {internal ? null : (
           <InfoRow label="Compenso" value={formatRate(shift.hourly_rate)} gold />

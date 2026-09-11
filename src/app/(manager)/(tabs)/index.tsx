@@ -10,6 +10,7 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { StatCard } from "@/components/ui/StatCard";
@@ -17,7 +18,7 @@ import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { ProUpsellCard } from "@/features/plan/ProLock";
 import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
-import { formatTime } from "@/lib/format";
+import { formatShiftRange, todayString } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
 import { usePendingCount, useTodayStaff } from "@/features/applications/hooks";
@@ -34,6 +35,8 @@ type TodayWorker = {
   role: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
+  /** Giorno del turno: serve a ordinare, e a segnalare chi è qui da ieri sera. */
+  date: string;
   start: string;
   end: string;
   onPress?: () => void;
@@ -58,8 +61,9 @@ export default function ManagerHome() {
   const pending = usePendingCount(venue?.id).data ?? 0;
   const unread = useUnreadCount(userId).data ?? 0;
 
-  const today = new Date().toISOString().slice(0, 10);
-  const upcoming = shifts.filter((s) => s.date >= today);
+  // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
+  // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
+  const upcoming = shifts;
   const openCount = upcoming.filter(
     (s) => s.kind === "marketplace" && s.status === "open"
   ).length;
@@ -70,7 +74,9 @@ export default function ManagerHome() {
   const totalPos = counts.reduce((n, c) => n + c.total, 0);
 
   // "Chi lavora oggi": staff assegnato ai turni interni + camerieri accettati
-  // sui turni marketplace di oggi, in un'unica lista.
+  // sui turni marketplace, in un'unica lista. Include chi è in sala adesso su un
+  // turno cominciato ieri sera, quindi si ordina per giorno **e** ora: il solo
+  // orario metterebbe un turno iniziato alle 22:00 di ieri dopo il pranzo di oggi.
   const workers: TodayWorker[] = [
     ...todayAssignments.map((a) => {
       const sm = a.staff_member;
@@ -82,6 +88,7 @@ export default function ManagerHome() {
         role: sm?.role ?? null,
         ratingAvg: sm?.waiter?.waiter_profile?.rating_avg ?? null,
         ratingCount: sm?.waiter?.waiter_profile?.rating_count ?? null,
+        date: a.shift?.date ?? "",
         start: a.shift?.start_time ?? "",
         end: a.shift?.end_time ?? "",
         onPress: waiterId
@@ -96,11 +103,14 @@ export default function ManagerHome() {
       role: row.waiter?.waiter_profile?.primary_role ?? null,
       ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
       ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
+      date: row.shift?.date ?? "",
       start: row.shift?.start_time ?? "",
       end: row.shift?.end_time ?? "",
       onPress: () => router.push(`/(manager)/cameriere/${row.waiter_id}`),
     })),
-  ].sort((a, b) => a.start.localeCompare(b.start));
+  ].sort((a, b) =>
+    `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
+  );
 
   const { refreshing, onRefresh } = usePullToRefresh(() =>
     Promise.all([
@@ -211,11 +221,18 @@ export default function ManagerHome() {
                         />
                       </View>
                       {w.start && w.end ? (
-                        <View className="flex-row items-center gap-1.5">
-                          <Icon name="clock" size={14} color="#8c857a" />
-                          <Text className="text-sm text-t2">
-                            {formatTime(w.start)}–{formatTime(w.end)}
-                          </Text>
+                        <View className="items-end gap-1">
+                          <View className="flex-row items-center gap-1.5">
+                            <Icon name="clock" size={14} color="#8c857a" />
+                            <Text className="text-sm text-t2">
+                              {formatShiftRange(w.start, w.end)}
+                            </Text>
+                          </View>
+                          {/* Turno di ieri sera ancora in corso: senza questo
+                              sembrerebbe uno che attacca oggi a quell'ora. */}
+                          {w.date && w.date !== todayString() ? (
+                            <Pill label="Da ieri" variant="pending" />
+                          ) : null}
                         </View>
                       ) : null}
                     </View>
