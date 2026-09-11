@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { addDaysToDate } from "@/lib/format";
+import type { ShiftWithAssignees } from "@/features/shifts/types";
 import type { InternalShiftPlan } from "./api";
 import {
   createInternalShift,
@@ -17,6 +18,7 @@ import {
   getTodayAssignments,
   getVenueCoverage,
   getVenueHoursSummary,
+  reassignShiftAssignment,
   setAssignmentPresence,
   updateAssignmentStatus,
   updateInternalShift,
@@ -151,6 +153,73 @@ export function useUpdateInternalShift(shiftId: string) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.shifts.all });
       qc.invalidateQueries({ queryKey: qk.assignments.all });
+    },
+  });
+}
+
+/**
+ * Riassegna un turno a un'altra persona (trascinamento nella vista per persona
+ * del planning). La patch ottimistica scrive `status: "assigned"` perché è così
+ * che nascerà la riga vera: chi entra non ha confermato niente.
+ *
+ * Nota: scambiare un Cameriere con un Barista può far passare la copertura da
+ * verde ad arancione. È corretto — `shiftCoverage()` guarda i ruoli — e si vede
+ * subito, che è il punto.
+ */
+export function useReassignShiftAssignment(venueId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: {
+      assignmentId: string;
+      shiftId: string;
+      toStaffMember: { id: string; display_name: string; role: string | null };
+    }) => reassignShiftAssignment(vars.assignmentId, vars.toStaffMember.id),
+
+    onMutate: async ({ assignmentId, shiftId, toStaffMember }) => {
+      if (!venueId) return;
+      const queryKey = qk.shifts.rangeAll(venueId);
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueriesData<ShiftWithAssignees[]>({ queryKey });
+      qc.setQueriesData<ShiftWithAssignees[]>({ queryKey }, (rows) =>
+        rows?.map((s) =>
+          s.id !== shiftId
+            ? s
+            : {
+                ...s,
+                shift_assignments: s.shift_assignments.map((a) =>
+                  a.id !== assignmentId
+                    ? a
+                    : {
+                        ...a,
+                        status: "assigned" as const,
+                        staff_member: {
+                          id: toStaffMember.id,
+                          display_name: toStaffMember.display_name,
+                          role: toStaffMember.role,
+                          // Lo rimette a posto il refetch: qui serve solo al
+                          // conteggio dei destinatari, che non è ancora in gioco.
+                          waiter_id: null,
+                        },
+                      }
+                ),
+              }
+        )
+      );
+      return { previous };
+    },
+
+    onError: (_error, _vars, context) => {
+      for (const [key, data] of context?.previous ?? []) {
+        qc.setQueryData(key, data);
+      }
+    },
+
+    onSettled: (_data, _error, { shiftId }) => {
+      qc.invalidateQueries({ queryKey: qk.assignments.byShift(shiftId) });
+      qc.invalidateQueries({ queryKey: qk.shifts.detail(shiftId) });
+      invalidateAfterShiftWrite(qc, venueId);
+      // Le statistiche per persona cambiano da entrambi i lati.
+      qc.invalidateQueries({ queryKey: qk.staff.all });
     },
   });
 }

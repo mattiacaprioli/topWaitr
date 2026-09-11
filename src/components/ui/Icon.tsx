@@ -27,7 +27,9 @@ export type IconName =
   | "send"
   | "download"
   | "upload"
-  | "lock";
+  | "lock"
+  | "eye"
+  | "eyeOff";
 
 type Props = {
   name: IconName;
@@ -200,6 +202,22 @@ export function Icon({
           {...p}
           d="M12 21V10M8 14l4-4 4 4M5 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"
         />
+      )}
+      {name === "eye" && (
+        <>
+          <Path {...p} d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z" />
+          <Circle {...p} cx={12} cy={12} r={3} />
+        </>
+      )}
+      {name === "eyeOff" && (
+        <>
+          <Path
+            {...p}
+            d="M10.7 6.1A9.9 9.9 0 0 1 12 5.5c6.2 0 10 6.5 10 6.5a18 18 0 0 1-2.9 3.6M6.5 7.6A17.6 17.6 0 0 0 2 12s3.8 6.5 10 6.5a9.6 9.6 0 0 0 3.9-.8"
+          />
+          <Path {...p} d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+          <Path {...p} d="M3 3l18 18" />
+        </>
       )}
     </Svg>
   );

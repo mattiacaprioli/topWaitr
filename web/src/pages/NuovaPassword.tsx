@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { authErrorMessage, useAuth } from "@/lib/auth";
 import { isPasswordValid, passwordRules } from "@/features/auth/schema";
 import { cn } from "@/lib/cn";
-import { Button, Field, Input } from "../ui/primitives";
+import { Button, Field, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { useToast } from "../ui/Toast";
 
@@ -77,8 +77,7 @@ export function NuovaPasswordPage() {
       <AuthPanel>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <Field label="Nuova password">
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               required
               value={password}
@@ -86,8 +85,7 @@ export function NuovaPasswordPage() {
             />
           </Field>
           <Field label="Ripeti la password">
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="new-password"
               required
               value={confirm}

@@ -9,7 +9,7 @@ import {
   type SignupForm,
 } from "@/features/auth/schema";
 import { cn } from "@/lib/cn";
-import { Button, Field, Input } from "../ui/primitives";
+import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 
 /**
@@ -115,9 +115,8 @@ export function RegistrazionePage() {
             />
           </Field>
           <Field label="Password" error={errors.password?.message}>
-            <Input
+            <PasswordInput
               {...register("password")}
-              type="password"
               autoComplete="new-password"
             />
           </Field>

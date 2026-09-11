@@ -805,6 +805,10 @@ export type Database = {
         Args: { t: Database["public"]["Enums"]["notification_type"] }
         Returns: string
       }
+      reassign_shift_assignment: {
+        Args: { p_assignment: string; p_staff_member: string }
+        Returns: string
+      }
       register_push_token: {
         Args: { p_platform: string; p_token: string }
         Returns: undefined

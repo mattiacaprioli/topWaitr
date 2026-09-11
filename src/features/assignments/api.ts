@@ -393,6 +393,30 @@ export async function updateAssignmentStatus(
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Passa un'assegnazione a un'altra persona dello stesso locale.
+ *
+ * Delete + insert dentro una transazione (RPC `reassign_shift_assignment`,
+ * migration 20260911120000), non un update di `staff_member_id`: solo così
+ * scattano entrambe le notifiche — «Turno revocato» a chi esce, «Nuovo turno
+ * assegnato» a chi entra — e chi entra non eredita lo stato (magari
+ * "confermato") né le ore di chi esce. Il perché per esteso sta nella migration.
+ *
+ * Ritorna l'id della nuova riga. Gli errori arrivano già in italiano dalla RPC
+ * (persona di un altro locale, persona già sul turno).
+ */
+export async function reassignShiftAssignment(
+  assignmentId: string,
+  toStaffMemberId: string
+): Promise<string> {
+  const { data, error } = await supabase.rpc("reassign_shift_assignment", {
+    p_assignment: assignmentId,
+    p_staff_member: toStaffMemberId,
+  });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
 /** Presenza a turno concluso: stato (presente/assente) e/o ore effettive. */
 export async function setAssignmentPresence(
   id: string,

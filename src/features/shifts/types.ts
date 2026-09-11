@@ -1,4 +1,4 @@
-import type { Tables } from "@/types/database";
+import type { Enums, Tables } from "@/types/database";
 import type {
   CoverageEmbeds,
   RoleRequirement,
@@ -35,13 +35,19 @@ export type ShiftWithCoverage = Shift & CoverageEmbeds;
 export type ShiftWithAssignees = Shift & {
   shift_role_requirements: RoleRequirement[];
   shift_assignments: {
+    /** Identità della riga: è l'assegnazione a spostarsi, non la persona. */
+    id: string;
     status: AssignmentStatus;
     staff_member: {
       id: string;
       display_name: string;
       role: string | null;
+      /** Senza account collegato non c'è nessuno da notificare. */
+      waiter_id: string | null;
     } | null;
   }[];
+  /** Solo lo stato: serve a contare gli accettati di un turno marketplace. */
+  applications: { status: Enums<"application_status"> }[];
 };
 
 export type ShiftWithVenue = Shift & {

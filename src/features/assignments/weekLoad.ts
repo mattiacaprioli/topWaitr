@@ -17,6 +17,7 @@ export const ORDINARY_WEEK_HOURS = 40;
 export const MAX_WEEK_HOURS = 48;
 
 type LoadAssignment = {
+  id: string;
   status: AssignmentStatus;
   staff_member: { id: string; display_name: string; role: string | null } | null;
 };
@@ -35,6 +36,8 @@ export type LoadShift = {
 /** Un turno visto dal lato della persona. */
 export type PersonShift = {
   shiftId: string;
+  /** La riga di assegnazione: è quella che si sposta se il turno cambia mano. */
+  assignmentId: string;
   title: string;
   date: string;
   start_time: string;
@@ -108,6 +111,7 @@ export function computeWeekLoad(
       const list = person.byDay.get(shift.date) ?? [];
       list.push({
         shiftId: shift.id,
+        assignmentId: assignment.id,
         title: shift.title,
         date: shift.date,
         start_time: shift.start_time,

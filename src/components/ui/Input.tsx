@@ -1,5 +1,7 @@
-import { TextInput, View } from "@/tw";
+import { useState } from "react";
+import { Pressable, TextInput, View } from "@/tw";
 import { cn } from "@/lib/cn";
+import { Icon } from "./Icon";
 import { Mono } from "./Mono";
 
 type Props = React.ComponentProps<typeof TextInput> & {
@@ -7,18 +9,50 @@ type Props = React.ComponentProps<typeof TextInput> & {
   className?: string;
 };
 
-export function Input({ label, className, ...props }: Props) {
+export function Input({
+  label,
+  className,
+  secureTextEntry,
+  ...props
+}: Props) {
+  // `secureTextEntry` diventa l'interruttore dell'occhio: ogni campo password
+  // dell'app lo eredita senza che chi lo usa debba saperlo.
+  const [revealed, setRevealed] = useState(false);
+  const isPassword = !!secureTextEntry;
+
   return (
     <View className="gap-2">
       {label ? <Mono>{label}</Mono> : null}
-      <TextInput
-        placeholderTextColor="#6A6358"
-        className={cn(
-          "rounded-[14px] border border-border bg-bg-1 px-4 py-3.5 font-sans text-[16px] text-t1",
-          className
-        )}
-        {...props}
-      />
+      <View className="justify-center">
+        <TextInput
+          placeholderTextColor="#6A6358"
+          secureTextEntry={isPassword && !revealed}
+          className={cn(
+            "rounded-[14px] border border-border bg-bg-1 px-4 py-3.5 font-sans text-[16px] text-t1",
+            // Spazio per l'occhio: senza, il testo lungo ci finisce sotto.
+            isPassword && "pr-14",
+            className
+          )}
+          {...props}
+        />
+        {isPassword ? (
+          <Pressable
+            className="absolute right-1 h-12 w-12 items-center justify-center"
+            hitSlop={6}
+            onPress={() => setRevealed((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              revealed ? "Nascondi la password" : "Mostra la password"
+            }
+          >
+            <Icon
+              name={revealed ? "eyeOff" : "eye"}
+              size={20}
+              color={revealed ? "#EAB54C" : "#8C857A"}
+            />
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }

@@ -53,7 +53,15 @@ export async function getVenueShiftsRange(
     .select(
       // Identità dell'assegnato oltre al ruolo: la stessa query alimenta la
       // copertura (per ruolo) e la vista per persona (chi lavora quanto).
-      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(id, display_name, role))"
+      //
+      // Gli altri tre campi servono al drag & drop del planning, e servono qui
+      // per non fare una query in più a ogni trascinamento:
+      //   · `id` dell'assegnazione → è ciò che si riassegna;
+      //   · `waiter_id` → chi non ha un account collegato non riceve notifiche,
+      //     quindi non va contato quando si chiede conferma;
+      //   · `applications(status)` → sui turni marketplace i destinatari della
+      //     notifica sono i candidati accettati.
+      "*, shift_role_requirements(role, count), shift_assignments(id, status, staff_member:staff_members(id, display_name, role, waiter_id)), applications(status)"
     )
     .eq("venue_id", venueId)
     .gte("date", from)

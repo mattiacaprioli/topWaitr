@@ -13,9 +13,15 @@ import { useVenueStaff } from "@/features/staff/hooks";
 import { formatHours, formatTime } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
+import type { StaffMember } from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
 import { dayLabel, isToday } from "../lib/week";
 import { Pill, Placeholder, Spinner } from "../ui/primitives";
+import {
+  dropClass,
+  useShiftDrag,
+  type ReassignDragPayload,
+} from "./dragContext";
 
 /**
  * La settimana pivotata **per persona**: righe = organico, colonne = giorni.
@@ -29,19 +35,28 @@ export function PeopleWeek({
   shifts,
   onOpen,
   onCreate,
+  onReassign,
 }: {
   days: string[];
   shifts: ShiftWithAssignees[];
   onOpen: (shift: ShiftWithAssignees) => void;
   /** Casella vuota: un turno nuovo quel giorno, già assegnato a quella persona. */
   onCreate: (date: string, staffMemberId: string) => void;
+  /** Turno trascinato sulla riga di un'altra persona dello stesso giorno. */
+  onReassign: (payload: ReassignDragPayload, to: StaffMember) => void;
 }) {
   const venue = useVenue();
   const staffQuery = useVenueStaff(venue.id);
+  const dnd = useShiftDrag();
 
   const byId = useMemo(
     () => new Map(shifts.map((s) => [s.id, s])),
     [shifts]
+  );
+
+  const staffById = useMemo(
+    () => new Map((staffQuery.data ?? []).map((m) => [m.id, m])),
+    [staffQuery.data]
   );
 
   const rows = useMemo(
@@ -118,15 +133,37 @@ export function PeopleWeek({
 
                 {days.map((day) => {
                   const dayShifts = person.byDay.get(day) ?? [];
+                  // Si accetta solo dalla stessa colonna: trascinare su un
+                  // altro giorno *di un'altra persona* sarebbe spostamento e
+                  // riassegnazione insieme, e nessuno saprebbe cosa aspettarsi.
+                  const { state, ...dropHandlers } = dnd.dropProps({
+                    key: `person:${person.staffMemberId}:${day}`,
+                    accepts: (d) =>
+                      d.mode === "reassign" &&
+                      d.date === day &&
+                      d.fromStaffMemberId !== person.staffMemberId,
+                    onDrop: (d) => {
+                      const to = staffById.get(person.staffMemberId);
+                      if (d.mode === "reassign" && to) onReassign(d, to);
+                    },
+                  });
+
                   // Casella vuota: è il punto in cui si vede che la persona è
                   // libera, quindi è anche il punto naturale per darle un turno.
                   if (dayShifts.length === 0) {
                     return (
                       <button
                         key={day}
-                        onClick={() => onCreate(day, person.staffMemberId)}
+                        onClick={() => {
+                          if (dnd.swallowClick()) return;
+                          onCreate(day, person.staffMemberId);
+                        }}
                         aria-label={`Nuovo turno per ${person.name} il ${day}`}
-                        className="focus-gold flex min-h-14 items-center justify-center rounded-xl border border-dashed border-border text-sm text-transparent transition hover:border-border-gold hover:text-gold"
+                        {...dropHandlers}
+                        className={cn(
+                          "focus-gold flex min-h-14 items-center justify-center rounded-xl border border-dashed border-border text-sm text-transparent transition hover:border-border-gold hover:text-gold",
+                          dropClass(state)
+                        )}
                       >
                         +
                       </button>
@@ -135,12 +172,25 @@ export function PeopleWeek({
                   return (
                     <div
                       key={day}
-                      className="flex min-h-14 flex-col gap-1 rounded-xl border border-border-2 bg-bg-card p-1"
+                      {...dropHandlers}
+                      className={cn(
+                        "flex min-h-14 flex-col gap-1 rounded-xl border border-border-2 bg-bg-card p-1",
+                        dropClass(state)
+                      )}
                     >
                       {dayShifts.map((ps) => (
                         <PersonShiftChip
                           key={ps.shiftId}
                           personShift={ps}
+                          fromStaffMemberId={person.staffMemberId}
+                          fromStaffName={person.name}
+                          busyStaffIds={
+                            byId
+                              .get(ps.shiftId)
+                              ?.shift_assignments.map(
+                                (a) => a.staff_member?.id ?? ""
+                              ) ?? []
+                          }
                           onOpen={() => {
                             const shift = byId.get(ps.shiftId);
                             if (shift) onOpen(shift);
@@ -185,25 +235,51 @@ export function PeopleWeek({
 
 function PersonShiftChip({
   personShift,
+  fromStaffMemberId,
+  fromStaffName,
+  busyStaffIds,
   onOpen,
 }: {
   personShift: PersonShift;
+  fromStaffMemberId: string;
+  fromStaffName: string;
+  busyStaffIds: string[];
   onOpen: () => void;
 }) {
+  const dnd = useShiftDrag();
   const active = isActiveAssignment(personShift.status);
+  const dragging = dnd.isSource(personShift.shiftId, personShift.assignmentId);
+
   return (
     <button
-      onClick={onOpen}
+      onClick={() => {
+        if (dnd.swallowClick()) return;
+        onOpen();
+      }}
+      {...dnd.dragProps(
+        {
+          mode: "reassign",
+          shiftId: personShift.shiftId,
+          title: personShift.title,
+          date: personShift.date,
+          assignmentId: personShift.assignmentId,
+          fromStaffMemberId,
+          fromStaffName,
+          busyStaffIds,
+        },
+        `${personShift.title} · ${fromStaffName}`
+      )}
       title={`${personShift.title} · ${formatTime(personShift.start_time)}–${formatTime(personShift.end_time)}${
         active ? "" : ` · ${ASSIGNMENT_STATUS_LABEL[personShift.status]}`
       }`}
       className={cn(
-        "focus-gold rounded-lg border px-1.5 py-1 text-left transition",
+        "focus-gold cursor-grab rounded-lg border px-1.5 py-1 text-left transition active:cursor-grabbing",
         active
           ? "border-border-gold bg-gold/10 hover:bg-gold/20"
           : // Non viene: resta visibile, perché è un buco da coprire, ma non
             // deve somigliare a una copertura.
-            "border-border bg-bg-1 opacity-60 hover:opacity-100"
+            "border-border bg-bg-1 opacity-60 hover:opacity-100",
+        dragging && "opacity-40"
       )}
     >
       <span

@@ -100,6 +100,19 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
   segnalazione passa da `web/src/lib/reportError.ts`, che oggi scrive solo in
   console: `@sentry/react-native` non sta in un bundle Vite, quando la dashboard
   avrà un DSN proprio lì dentro va `@sentry/react`.
+- **Il drag & drop del Planning è nativo del browser**, nessuna libreria
+  (`web/src/shifts/dragContext.tsx`): il browser dà autoscroll, immagine
+  trascinata e — cosa che qui conta — nessun `click` dopo un trascinamento
+  riuscito, visto che ogni sorgente è già un `<button>` che apre il pannello.
+  Settimana e mese spostano la data; la vista per persona riassegna, e accetta
+  solo dalla **stessa colonna** (un altro giorno *di un'altra persona* sarebbe
+  spostamento e riassegnazione insieme). Resta una scorciatoia: tutto si fa
+  anche dal pannello, quindi il touch che il drag nativo non copre non toglie
+  niente a nessuno.
+  ⚠️ Spostare un turno **manda una notifica** a chi è assegnato e ai candidati
+  accettati (`notify_on_shift_change`): per questo si chiede conferma con il
+  numero vero. Il conteggio sta in `src/features/shifts/notify.ts` ed è un
+  gemello del trigger — se cambia il trigger, va cambiato anche lui.
 - **La presenza si modifica dal pannello del turno**, non dalla pagina Ore: è lì
   che i dati vivono già (`useShiftAssignments`). La pagina Ore aggrega per
   persona sul mese e non conosce le singole assegnazioni.

@@ -2,6 +2,7 @@
 // vero è quello dell'app (src/components/ui), qui servono le forme da scrivania
 // — tabelle dense, campi, pannelli — che sul mobile non esistono.
 
+import { useState } from "react";
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -64,6 +65,70 @@ export function Input({
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={cn(controlClass, className)} {...props} />;
+}
+
+/**
+ * Campo password con l'occhio. Su desktop si digita alla cieca una password
+ * lunga senza il correttore del telefono ad aiutare: poterla rileggere prima
+ * di inviare è la differenza fra entrare e riprovare.
+ */
+export function PasswordInput({
+  className,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [revealed, setRevealed] = useState(false);
+  return (
+    <div className="relative">
+      <input
+        type={revealed ? "text" : "password"}
+        className={cn(controlClass, "pr-10", className)}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => setRevealed((v) => !v)}
+        // Il campo resta l'elemento da tabulare: l'occhio è un di più, e
+        // intercettarlo col Tab rallenterebbe chi compila da tastiera.
+        tabIndex={-1}
+        aria-label={revealed ? "Nascondi la password" : "Mostra la password"}
+        className={cn(
+          "focus-gold absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-xl transition",
+          revealed ? "text-gold" : "text-t4 hover:text-t2"
+        )}
+      >
+        <EyeIcon off={revealed} />
+      </button>
+    </div>
+  );
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {off ? (
+        <>
+          <path d="M10.7 6.1A9.9 9.9 0 0 1 12 5.5c6.2 0 10 6.5 10 6.5a18 18 0 0 1-2.9 3.6M6.5 7.6A17.6 17.6 0 0 0 2 12s3.8 6.5 10 6.5a9.6 9.6 0 0 0 3.9-.8" />
+          <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+          <path d="M3 3l18 18" />
+        </>
+      ) : (
+        <>
+          <path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+        </>
+      )}
+    </svg>
+  );
 }
 
 export function Select({

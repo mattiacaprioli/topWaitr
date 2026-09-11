@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { authErrorMessage, useAuth } from "@/lib/auth";
-import { Button, Field, Input } from "../ui/primitives";
+import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { useToast } from "../ui/Toast";
 import { LINK_ERRORS } from "../lib/recovery";
@@ -79,8 +79,7 @@ export function LoginPage() {
             />
           </Field>
           <Field label="Password">
-            <Input
-              type="password"
+            <PasswordInput
               autoComplete="current-password"
               required
               value={password}

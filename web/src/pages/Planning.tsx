@@ -1,10 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useShift, useVenueShiftsRange } from "@/features/shifts/hooks";
-import { formatTime } from "@/lib/format";
+import {
+  useMoveShiftToDate,
+  useShift,
+  useVenueShiftsRange,
+} from "@/features/shifts/hooks";
+import { useReassignShiftAssignment } from "@/features/assignments/hooks";
+import {
+  reassignNotifyPlan,
+  shiftNotifyRecipients,
+  type ReassignNotifyPlan,
+  type ShiftNotifyRecipients,
+} from "@/features/shifts/notify";
+import { formatDate, formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
+import type { StaffMember } from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
 import {
   addDays,
@@ -21,9 +33,18 @@ import {
   WEEKDAY_NAMES,
 } from "../lib/week";
 import { Button, PageHeader, Pill, QueryError, Spinner } from "../ui/primitives";
+import { ConfirmDialog } from "../ui/ConfirmDialog";
+import { useToast } from "../ui/Toast";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { PeopleWeek } from "../shifts/PeopleWeek";
 import { DuplicateWeekDialog } from "../shifts/DuplicateWeekDialog";
+import {
+  dropClass,
+  ShiftDragProvider,
+  useShiftDrag,
+  type MoveDragPayload,
+  type ReassignDragPayload,
+} from "../shifts/dragContext";
 
 const VIEWS = ["settimana", "mese", "persone"] as const;
 type View = (typeof VIEWS)[number];
@@ -91,6 +112,85 @@ export function PlanningPage() {
     return map;
   }, [data, days]);
 
+  const byId = useMemo(
+    () => new Map((data ?? []).map((s) => [s.id, s])),
+    [data]
+  );
+
+  const toast = useToast();
+  const move = useMoveShiftToDate(venue.id);
+  const reassign = useReassignShiftAssignment(venue.id);
+  const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
+  const busy = move.isPending || reassign.isPending;
+
+  // Un solo punto di esecuzione per ciascuna azione, condiviso fra il percorso
+  // diretto e quello che passa dalla conferma: se fossero due, prima o poi
+  // direbbero cose diverse.
+  function runMove(payload: MoveDragPayload, toDate: string) {
+    setPendingDrop(null);
+    move.mutate(
+      { shiftId: payload.shiftId, date: toDate },
+      {
+        onSuccess: () => toast.show(`Turno spostato a ${formatDate(toDate)}`),
+        onError: (e) => toast.show(e.message, "error"),
+      }
+    );
+  }
+
+  function requestMove(payload: MoveDragPayload, toDate: string) {
+    if (busy) return;
+    const notify = shiftNotifyRecipients(byId.get(payload.shiftId));
+    // Nessuno da avvisare: non c'è niente da confermare.
+    if (notify.total === 0) {
+      runMove(payload, toDate);
+      return;
+    }
+    setPendingDrop({ kind: "move", payload, toDate, notify });
+  }
+
+  function runReassign(payload: ReassignDragPayload, to: StaffMember) {
+    setPendingDrop(null);
+    reassign.mutate(
+      {
+        assignmentId: payload.assignmentId,
+        shiftId: payload.shiftId,
+        toStaffMember: to,
+      },
+      {
+        onSuccess: () => toast.show(`Turno passato a ${to.display_name}`),
+        onError: (e) => toast.show(e.message, "error"),
+      }
+    );
+  }
+
+  function requestReassign(payload: ReassignDragPayload, to: StaffMember) {
+    if (busy) return;
+    // `unique (shift_id, staff_member_id)`: è l'unico rifiuto che vale la pena
+    // spiegare, perché guardando la griglia non si deduce.
+    if (payload.busyStaffIds.includes(to.id)) {
+      toast.show(`${to.display_name} è già su questo turno.`, "error");
+      return;
+    }
+    const shift = byId.get(payload.shiftId);
+    const from = shift?.shift_assignments.find(
+      (a) => a.id === payload.assignmentId
+    );
+    const plan = reassignNotifyPlan({
+      shiftDate: payload.date,
+      shiftCancelled: shift?.status === "cancelled",
+      from: {
+        status: from?.status ?? "assigned",
+        waiterId: from?.staff_member?.waiter_id ?? null,
+      },
+      toWaiterId: to.waiter_id,
+    });
+    if (!plan.notifiesFrom && !plan.notifiesTo) {
+      runReassign(payload, to);
+      return;
+    }
+    setPendingDrop({ kind: "reassign", payload, to, plan });
+  }
+
   function goToday() {
     setMonday(startOfWeek(new Date()));
     setMonth(startOfMonth(new Date()));
@@ -157,69 +257,42 @@ export function PlanningPage() {
       {isError ? <QueryError error={error} /> : null}
       {isPending ? <Spinner /> : null}
 
-      {view === "settimana" ? (
-        <div className="grid grid-cols-7 gap-3">
-          {days.map((day) => {
-            const { name, num } = dayLabel(day);
-            const shifts = byDay.get(day) ?? [];
-            return (
-              <section
-                key={day}
-                className={cn(
-                  "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
-                  isToday(day) ? "border-border-gold" : "border-border-2"
-                )}
-              >
-                <header className="mb-2 flex items-baseline justify-between px-1">
-                  <span
-                    className={cn(
-                      "text-xs font-semibold uppercase tracking-wider",
-                      isToday(day) ? "text-gold" : "text-t3"
-                    )}
-                  >
-                    {name}
-                  </span>
-                  <span className="font-mono text-sm text-t2">{num}</span>
-                </header>
+      <p className="mb-3 text-xs text-t4 print:hidden">
+        {view === "persone"
+          ? "Trascina un turno sulla riga di un'altra persona per riassegnarlo."
+          : "Trascina un turno su un altro giorno per spostarlo."}
+      </p>
 
-                <div className="flex flex-1 flex-col gap-1.5">
-                  {shifts.map((shift) => (
-                    <ShiftCell
-                      key={shift.id}
-                      shift={shift}
-                      onOpen={() => setPanel({ date: day, shift })}
-                    />
-                  ))}
-                </div>
-
-                <button
-                  onClick={() => setPanel({ date: day })}
-                  className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
-                >
-                  + Turno
-                </button>
-              </section>
-            );
-          })}
-        </div>
-      ) : view === "persone" ? (
-        <PeopleWeek
-          days={days}
-          shifts={data ?? []}
-          onOpen={(shift) => setPanel({ date: shift.date, shift })}
-          onCreate={(day, staffMemberId) =>
-            setPanel({ date: day, staffIds: [staffMemberId] })
-          }
-        />
-      ) : (
-        <MonthGrid
-          days={days}
-          month={month}
-          byDay={byDay}
-          onCreate={(day) => setPanel({ date: day })}
-          onOpen={(day, shift) => setPanel({ date: day, shift })}
-        />
-      )}
+      <ShiftDragProvider>
+        {view === "settimana" ? (
+          <WeekGrid
+            days={days}
+            byDay={byDay}
+            onCreate={(day) => setPanel({ date: day })}
+            onOpen={(day, shift) => setPanel({ date: day, shift })}
+            onMove={requestMove}
+          />
+        ) : view === "persone" ? (
+          <PeopleWeek
+            days={days}
+            shifts={data ?? []}
+            onOpen={(shift) => setPanel({ date: shift.date, shift })}
+            onCreate={(day, staffMemberId) =>
+              setPanel({ date: day, staffIds: [staffMemberId] })
+            }
+            onReassign={requestReassign}
+          />
+        ) : (
+          <MonthGrid
+            days={days}
+            month={month}
+            byDay={byDay}
+            onCreate={(day) => setPanel({ date: day })}
+            onOpen={(day, shift) => setPanel({ date: day, shift })}
+            onMove={requestMove}
+          />
+        )}
+      </ShiftDragProvider>
 
       {deepLinkId ? (
         <DeepLinkedShift
@@ -250,7 +323,186 @@ export function PlanningPage() {
           onClose={() => setPanel(null)}
         />
       ) : null}
+
+      {/* Spostare un turno è anche una notifica sul telefono di qualcuno: lo si
+          dice prima, con i numeri veri, non dopo. */}
+      {pendingDrop?.kind === "move" ? (
+        <ConfirmDialog
+          title="Sposta il turno"
+          message={moveMessage(
+            pendingDrop.payload,
+            pendingDrop.toDate,
+            pendingDrop.notify
+          )}
+          confirmLabel="Sposta e avvisa"
+          pending={busy}
+          onConfirm={() => runMove(pendingDrop.payload, pendingDrop.toDate)}
+          onCancel={() => setPendingDrop(null)}
+        />
+      ) : null}
+
+      {pendingDrop?.kind === "reassign" ? (
+        <ConfirmDialog
+          title="Cambia persona"
+          message={reassignMessage(
+            pendingDrop.payload,
+            pendingDrop.to,
+            pendingDrop.plan
+          )}
+          confirmLabel="Riassegna e avvisa"
+          pending={busy}
+          onConfirm={() => runReassign(pendingDrop.payload, pendingDrop.to)}
+          onCancel={() => setPendingDrop(null)}
+        />
+      ) : null}
     </>
+  );
+}
+
+/** Il drop in attesa di conferma: il carico va copiato qui, perché `dragend` lo
+ *  azzera prima che l'utente decida. */
+type PendingDrop =
+  | {
+      kind: "move";
+      payload: MoveDragPayload;
+      toDate: string;
+      notify: ShiftNotifyRecipients;
+    }
+  | {
+      kind: "reassign";
+      payload: ReassignDragPayload;
+      to: StaffMember;
+      plan: ReassignNotifyPlan;
+    };
+
+/** "Anna", "Anna e Bruno", "Anna, Bruno e Carla". */
+function nameList(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}`;
+}
+
+function moveMessage(
+  payload: MoveDragPayload,
+  toDate: string,
+  notify: ShiftNotifyRecipients
+): string {
+  const who =
+    notify.total === 1
+      ? "Una persona riceverà"
+      : `${notify.total} persone riceveranno`;
+  // I nomi solo quando sono pochi: oltre, un elenco lungo non aiuta a decidere.
+  const names =
+    notify.assignees.length > 0 && notify.assignees.length <= 4
+      ? `: ${nameList(notify.assignees)}`
+      : "";
+  const applicants =
+    notify.acceptedApplicants > 0
+      ? ` Nel conteggio ${notify.acceptedApplicants === 1 ? "c'è un candidato accettato" : `ci sono ${notify.acceptedApplicants} candidati accettati`} su questo turno.`
+      : "";
+  return `«${payload.title}» passa da ${formatDate(payload.sourceDate)} a ${formatDate(toDate)}. ${who} la notifica del cambio${names}.${applicants}`;
+}
+
+const SKIP_REASON: Record<NonNullable<ReassignNotifyPlan["fromSkip"]>, string> =
+  {
+    declined: "aveva già rifiutato il turno",
+    "no-account": "non ha un account collegato",
+    past: "il turno è già passato",
+    cancelled: "il turno è annullato",
+  };
+
+function reassignMessage(
+  payload: ReassignDragPayload,
+  to: StaffMember,
+  plan: ReassignNotifyPlan
+): string {
+  const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;
+  if (plan.notifiesFrom && plan.notifiesTo) {
+    return `${head} ${payload.fromStaffName} riceverà «Turno revocato», ${to.display_name} «Nuovo turno assegnato».`;
+  }
+  if (plan.notifiesTo) {
+    return `${head} ${to.display_name} riceverà «Nuovo turno assegnato». ${payload.fromStaffName} non riceverà la notifica: ${SKIP_REASON[plan.fromSkip ?? "no-account"]}.`;
+  }
+  return `${head} ${payload.fromStaffName} riceverà «Turno revocato». ${to.display_name} non ha un account collegato, quindi non riceverà nulla.`;
+}
+
+/**
+ * La settimana da lavorare: sette colonne alte, una per giorno. Ogni colonna è
+ * anche un bersaglio del trascinamento — gli eventi bollono, quindi un rilascio
+ * sopra una card o sopra "+ Turno" lo raccoglie comunque la sezione.
+ */
+function WeekGrid({
+  days,
+  byDay,
+  onCreate,
+  onOpen,
+  onMove,
+}: {
+  days: string[];
+  byDay: Map<string, ShiftWithAssignees[]>;
+  onCreate: (day: string) => void;
+  onOpen: (day: string, shift: ShiftWithAssignees) => void;
+  onMove: (payload: MoveDragPayload, toDate: string) => void;
+}) {
+  const dnd = useShiftDrag();
+
+  return (
+    <div className="grid grid-cols-7 gap-3">
+      {days.map((day) => {
+        const { name, num } = dayLabel(day);
+        const shifts = byDay.get(day) ?? [];
+        const { state, ...dropHandlers } = dnd.dropProps({
+          key: `week:${day}`,
+          accepts: (d) => d.mode === "move" && d.sourceDate !== day,
+          onDrop: (d) => {
+            if (d.mode === "move") onMove(d, day);
+          },
+        });
+
+        return (
+          <section
+            key={day}
+            {...dropHandlers}
+            className={cn(
+              "flex min-h-56 flex-col rounded-2xl border bg-bg-card p-2 print:min-h-40 print:break-inside-avoid",
+              isToday(day) ? "border-border-gold" : "border-border-2",
+              dropClass(state)
+            )}
+          >
+            <header className="mb-2 flex items-baseline justify-between px-1">
+              <span
+                className={cn(
+                  "text-xs font-semibold uppercase tracking-wider",
+                  isToday(day) ? "text-gold" : "text-t3"
+                )}
+              >
+                {name}
+              </span>
+              <span className="font-mono text-sm text-t2">{num}</span>
+            </header>
+
+            <div className="flex flex-1 flex-col gap-1.5">
+              {shifts.map((shift) => (
+                <ShiftCell
+                  key={shift.id}
+                  shift={shift}
+                  onOpen={() => onOpen(day, shift)}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                if (dnd.swallowClick()) return;
+                onCreate(day);
+              }}
+              className="focus-gold mt-1.5 rounded-lg border border-dashed border-border-2 py-1.5 text-xs text-t4 transition hover:border-border-gold hover:text-gold print:hidden"
+            >
+              + Turno
+            </button>
+          </section>
+        );
+      })}
+    </div>
   );
 }
 
@@ -260,13 +512,16 @@ function MonthGrid({
   byDay,
   onCreate,
   onOpen,
+  onMove,
 }: {
   days: string[];
   month: Date;
   byDay: Map<string, ShiftWithAssignees[]>;
   onCreate: (day: string) => void;
   onOpen: (day: string, shift: ShiftWithAssignees) => void;
+  onMove: (payload: MoveDragPayload, toDate: string) => void;
 }) {
+  const dnd = useShiftDrag();
   // Nel mese lo spazio per cella è poco: si mostrano i primi tre turni e si
   // conta il resto, invece di comprimerli fino a renderli illeggibili.
   const MAX_VISIBLE = 3;
@@ -291,10 +546,20 @@ function MonthGrid({
           const today = isToday(day);
           const visible = shifts.slice(0, MAX_VISIBLE);
           const hidden = shifts.length - visible.length;
+          // Anche i giorni fuori mese accettano: sono date vere, e spostare un
+          // turno a cavallo di mese è un gesto legittimo.
+          const { state, ...dropHandlers } = dnd.dropProps({
+            key: `month:${day}`,
+            accepts: (d) => d.mode === "move" && d.sourceDate !== day,
+            onDrop: (d) => {
+              if (d.mode === "move") onMove(d, day);
+            },
+          });
 
           return (
             <section
               key={day}
+              {...dropHandlers}
               className={cn(
                 "group flex min-h-28 flex-col rounded-xl border p-1.5 print:break-inside-avoid",
                 today
@@ -302,7 +567,8 @@ function MonthGrid({
                   : "border-border-2 bg-bg-card",
                 // I giorni fuori mese restano visibili ma arretrano: servono a
                 // completare le settimane, non a essere letti.
-                !inMonth && "opacity-40"
+                !inMonth && "opacity-40",
+                dropClass(state)
               )}
             >
               <header className="mb-1 flex items-center justify-between px-0.5">
@@ -315,7 +581,10 @@ function MonthGrid({
                   {day.slice(8)}
                 </span>
                 <button
-                  onClick={() => onCreate(day)}
+                  onClick={() => {
+                    if (dnd.swallowClick()) return;
+                    onCreate(day);
+                  }}
                   aria-label={`Aggiungi turno il ${day}`}
                   className="focus-gold rounded px-1 text-xs text-t4 opacity-0 transition hover:text-gold group-hover:opacity-100 print:hidden"
                 >
@@ -326,20 +595,39 @@ function MonthGrid({
               <div className="flex flex-1 flex-col gap-1">
                 {visible.map((shift) => {
                   const counts = shiftCounts(shift);
-                  const short =
-                    counts.short && shift.status !== "cancelled";
+                  const cancelled = shift.status === "cancelled";
+                  const short = counts.short && !cancelled;
                   return (
                     <button
                       key={shift.id}
-                      onClick={() => onOpen(day, shift)}
-                      title={`${shift.title} · ${formatTime(shift.start_time)}–${formatTime(shift.end_time)} · ${counts.filled}/${counts.total}`}
+                      onClick={() => {
+                        if (dnd.swallowClick()) return;
+                        onOpen(day, shift);
+                      }}
+                      {...(cancelled
+                        ? {}
+                        : dnd.dragProps(
+                            {
+                              mode: "move",
+                              shiftId: shift.id,
+                              title: shift.title,
+                              sourceDate: shift.date,
+                            },
+                            shift.title
+                          ))}
+                      title={
+                        cancelled
+                          ? `${shift.title} · annullato: riattivalo dal pannello per spostarlo`
+                          : `${shift.title} · ${formatTime(shift.start_time)}–${formatTime(shift.end_time)} · ${counts.filled}/${counts.total}`
+                      }
                       className={cn(
                         "focus-gold flex items-center gap-1 rounded border-l-2 bg-bg-1 py-0.5 pl-1 pr-0.5 text-left transition hover:bg-bg-2",
-                        shift.status === "cancelled"
+                        cancelled
                           ? "border-l-t4 opacity-50"
                           : short
-                            ? "border-l-warning"
-                            : "border-l-success"
+                            ? "cursor-grab border-l-warning active:cursor-grabbing"
+                            : "cursor-grab border-l-success active:cursor-grabbing",
+                        dnd.isSource(shift.id) && "opacity-40"
                       )}
                     >
                       <span className="shrink-0 font-mono text-[10px] text-t4">
@@ -348,7 +636,7 @@ function MonthGrid({
                       <span
                         className={cn(
                           "truncate text-[11px] text-t1",
-                          shift.status === "cancelled" && "line-through"
+                          cancelled && "line-through"
                         )}
                       >
                         {shift.title}
@@ -389,18 +677,42 @@ function ShiftCell({
   shift: ShiftWithAssignees;
   onOpen: () => void;
 }) {
+  const dnd = useShiftDrag();
   const internal = shift.kind === "internal";
   const cancelled = shift.status === "cancelled";
   const { filled, total, short } = shiftCounts(shift);
 
   return (
     <button
-      onClick={onOpen}
+      onClick={() => {
+        if (dnd.swallowClick()) return;
+        onOpen();
+      }}
+      // Un turno annullato non si trascina: `notify_on_shift_change` salta i
+      // turni cancellati, quindi spostarlo non avviserebbe nessuno — e chi lo
+      // ha spostato non lo saprebbe.
+      {...(cancelled
+        ? {}
+        : dnd.dragProps(
+            {
+              mode: "move",
+              shiftId: shift.id,
+              title: shift.title,
+              sourceDate: shift.date,
+            },
+            shift.title
+          ))}
+      title={
+        cancelled
+          ? "Turno annullato: riattivalo dal pannello per spostarlo."
+          : undefined
+      }
       className={cn(
         "focus-gold rounded-lg border p-2 text-left transition hover:border-border-gold",
         cancelled
           ? "border-border bg-bg-1 opacity-50"
-          : "border-border-2 bg-bg-1 hover:bg-bg-2"
+          : "cursor-grab border-border-2 bg-bg-1 hover:bg-bg-2 active:cursor-grabbing",
+        dnd.isSource(shift.id) && "opacity-40"
       )}
     >
       <p
