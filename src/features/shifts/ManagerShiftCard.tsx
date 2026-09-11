@@ -2,6 +2,7 @@ import { Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
+import { cn } from "@/lib/cn";
 import { formatDate, formatRate, formatTime } from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Enums } from "@/types/database";
@@ -22,18 +23,24 @@ export function ManagerShiftCard({
   onPress: () => void;
 }) {
   const internal = shift.kind === "internal";
+  const cancelled = shift.status === "cancelled";
   const applicants = shift.applications[0]?.count ?? 0;
   const { filled: covered, total } = shiftCounts(shift);
   return (
-    <Card className="rounded-3xl border-border-2 p-5" onPress={onPress}>
+    <Card
+      className={cn("rounded-3xl border-border-2 p-5", cancelled && "opacity-60")}
+      onPress={onPress}
+    >
       <View className="flex-row items-start justify-between gap-3">
         <Text className="flex-1 text-base font-sans-bold text-t1">
           {shift.title}
         </Text>
-        {internal ? (
-          <Pill label="Staff" variant="tag" />
-        ) : (
+        {/* Un turno annullato deve dirlo anche se è interno: la pill "Staff"
+            lo rendeva indistinguibile da uno attivo nella lista. */}
+        {cancelled || !internal ? (
           <Pill label={STATUS_LABEL[shift.status]} variant={shift.status} />
+        ) : (
+          <Pill label="Staff" variant="tag" />
         )}
       </View>
       <Text className="mt-1 text-sm text-t2">
@@ -50,7 +57,8 @@ export function ManagerShiftCard({
             : `${applicants} candidatur${applicants === 1 ? "a" : "e"}`}
         </Text>
       </View>
-      {internal ? (
+      {/* Su un annullato la barra sembrerebbe un invito a coprire il turno. */}
+      {internal && !cancelled ? (
         <ProgressBar
           className="mt-2.5"
           progress={total > 0 ? Math.min(1, covered / total) : 0}

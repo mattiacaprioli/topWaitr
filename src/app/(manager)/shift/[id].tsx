@@ -329,6 +329,7 @@ export default function ShiftDetailScreen() {
   const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
   const busy = decision.isPending || statusMutation.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
+  const [restoreVisible, setRestoreVisible] = useState(false);
 
   function onCancelShift() {
     statusMutation.mutate("cancelled", {
@@ -338,6 +339,19 @@ export default function ShiftDetailScreen() {
       },
       onError: () => {
         setCancelVisible(false);
+        toast.show("Operazione non riuscita.", "error");
+      },
+    });
+  }
+
+  function onRestoreShift() {
+    statusMutation.mutate("open", {
+      onSuccess: () => {
+        setRestoreVisible(false);
+        toast.show("Turno ripristinato");
+      },
+      onError: () => {
+        setRestoreVisible(false);
         toast.show("Operazione non riuscita.", "error");
       },
     });
@@ -520,7 +534,19 @@ export default function ShiftDetailScreen() {
               Riapri turno
             </Text>
           </Pressable>
-        ) : null}
+        ) : (
+          /* Annullato: senza questo, un tocco sbagliato costava il turno — si
+             poteva solo ricrearlo da zero e riassegnare tutti. */
+          <Pressable
+            disabled={busy}
+            onPress={() => setRestoreVisible(true)}
+            className="items-center rounded-2xl border border-border-2 bg-bg-2 py-3.5"
+          >
+            <Text className="text-sm font-sans-semibold text-gold">
+              Ripristina turno
+            </Text>
+          </Pressable>
+        )}
 
         {(!internal || !isPast) && shift.status !== "cancelled" ? (
           <Pressable
@@ -716,13 +742,28 @@ export default function ShiftDetailScreen() {
     <ConfirmModal
       visible={cancelVisible}
       title="Annullare il turno?"
-      message="Il turno verrà annullato e i professionisti non lo vedranno più."
+      message="I professionisti coinvolti ricevono una notifica e il turno sparisce dalle loro viste. Potrai ripristinarlo da qui."
       confirmLabel="Annulla turno"
       cancelLabel="Indietro"
       destructive
       pending={statusMutation.isPending}
       onConfirm={onCancelShift}
       onCancel={() => setCancelVisible(false)}
+    />
+
+    <ConfirmModal
+      visible={restoreVisible}
+      title="Ripristinare il turno?"
+      message={
+        isInternal
+          ? "Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
+          : "Il turno torna visibile sul marketplace e i candidati accettati vengono avvisati."
+      }
+      confirmLabel="Ripristina turno"
+      cancelLabel="Indietro"
+      pending={statusMutation.isPending}
+      onConfirm={onRestoreShift}
+      onCancel={() => setRestoreVisible(false)}
     />
     </>
   );
