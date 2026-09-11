@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import {
   NOTIFICATION_CATEGORIES,
@@ -8,39 +8,27 @@ import {
   type NotificationPrefs,
 } from "@/features/notifications/preferences";
 import { LEGAL_URLS } from "@/features/account/legal";
-import { deleteMyAccount } from "@/features/account/api";
+import {
+  deleteAvatarByUrl,
+  deleteMyAccount,
+  updateMyProfile,
+  uploadAvatar,
+} from "@/features/account/api";
 import { cn } from "@/lib/cn";
-import { Button, Card, Input, PageHeader } from "../ui/primitives";
+import { Button, Card, Field, Input, PageHeader } from "../ui/primitives";
+import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
+import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
 
 export function ImpostazioniPage() {
-  const { session, profile, signOut } = useAuth();
+  const { session } = useAuth();
 
   return (
     <>
       <PageHeader title="Impostazioni" subtitle={session?.user.email ?? ""} />
 
       <div className="flex max-w-2xl flex-col gap-8">
-        <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
-            Account
-          </h2>
-          <Card className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-t1">
-                {profile?.full_name ?? "Senza nome"}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-t3">
-                {session?.user.email}
-              </p>
-            </div>
-            <Button onClick={() => void signOut()}>Esci</Button>
-          </Card>
-          <p className="mt-2 px-1 text-xs text-t4">
-            Nome e foto del profilo si modificano dall&apos;app. Il locale si modifica
-            dalla scheda Locale.
-          </p>
-        </section>
+        <AccountSection />
 
         <NotificationPrefsSection />
 
@@ -60,6 +48,154 @@ export function ImpostazioniPage() {
         <DeleteAccountSection />
       </div>
     </>
+  );
+}
+
+/**
+ * Nome e foto del profilo. Fino a ieri si cambiavano solo dall'app: chi gestisce
+ * il locale dalla dashboard si vedeva comparire il proprio nome in chat e nelle
+ * candidature senza avere un posto dove sistemarlo.
+ *
+ * La foto viene ritagliata e ridimensionata dal browser prima di partire (vedi
+ * `lib/avatarFile`), e finisce nel bucket pubblico `avatars`, una cartella per
+ * utente.
+ */
+function AccountSection() {
+  const { session, profile, refreshProfile, signOut } = useAuth();
+  const toast = useToast();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [name, setName] = useState(profile?.full_name ?? "");
+  const [savingName, setSavingName] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+
+  const userId = session!.user.id;
+  const trimmed = name.trim();
+  const dirty = trimmed !== (profile?.full_name ?? "").trim();
+
+  async function saveName() {
+    if (!trimmed || !dirty) return;
+    setSavingName(true);
+    try {
+      await updateMyProfile(userId, { full_name: trimmed });
+      await refreshProfile();
+      toast.show("Nome aggiornato");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Salvataggio non riuscito", "error");
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function onPickPhoto(file: File | undefined) {
+    if (!file) return;
+    const previous = profile?.avatar_url ?? null;
+    setPhotoBusy(true);
+    try {
+      const blob = await prepareAvatar(file);
+      const url = await uploadAvatar(userId, blob);
+      await updateMyProfile(userId, { avatar_url: url });
+      // Prima si aggiorna il profilo, poi si toglie la vecchia: al contrario,
+      // un errore a metà lascerebbe il profilo che punta a un file cancellato.
+      await deleteAvatarByUrl(previous);
+      await refreshProfile();
+      toast.show("Foto aggiornata");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Caricamento non riuscito", "error");
+    } finally {
+      setPhotoBusy(false);
+      // Così riselezionare lo stesso file rilancia l'evento.
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function removePhoto() {
+    const previous = profile?.avatar_url ?? null;
+    if (!previous) return;
+    setPhotoBusy(true);
+    try {
+      await updateMyProfile(userId, { avatar_url: null });
+      await deleteAvatarByUrl(previous);
+      await refreshProfile();
+      toast.show("Foto rimossa");
+    } catch (e) {
+      toast.show(e instanceof Error ? e.message : "Operazione non riuscita", "error");
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-t3">
+        Account
+      </h2>
+      <Card className="flex flex-col gap-5">
+        <div className="flex items-center gap-4">
+          <Avatar
+            url={profile?.avatar_url}
+            name={profile?.full_name ?? session?.user.email ?? "?"}
+            size={72}
+          />
+          <div className="flex min-w-0 flex-col items-start gap-2">
+            <p className="truncate text-xs text-t3">{session?.user.email}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => fileRef.current?.click()}
+                disabled={photoBusy}
+              >
+                {photoBusy
+                  ? "Caricamento…"
+                  : profile?.avatar_url
+                    ? "Cambia foto"
+                    : "Carica una foto"}
+              </Button>
+              {profile?.avatar_url ? (
+                <Button
+                  variant="danger"
+                  disabled={photoBusy}
+                  onClick={() => void removePhoto()}
+                >
+                  Rimuovi
+                </Button>
+              ) : null}
+            </div>
+            <input
+              ref={fileRef}
+              type="file"
+              accept={AVATAR_ACCEPT}
+              hidden
+              onChange={(e) => void onPickPhoto(e.target.files?.[0])}
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Nome e cognome">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Mario Rossi"
+              className="w-64"
+            />
+          </Field>
+          <Button
+            variant="gold"
+            disabled={!dirty || !trimmed || savingName}
+            onClick={() => void saveName()}
+          >
+            {savingName ? "Salvataggio…" : "Salva"}
+          </Button>
+          <Button className="ml-auto" onClick={() => void signOut()}>
+            Esci
+          </Button>
+        </div>
+      </Card>
+      <p className="mt-2 px-1 text-xs text-t4">
+        È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sulle
+        candidature. Il locale — nome, indirizzo, logo — si modifica dalla scheda
+        Locale.
+      </p>
+    </section>
   );
 }
 

@@ -6,6 +6,7 @@ import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useWaiterProfile } from "@/features/waiterProfile/hooks";
 import type { Experience } from "@/features/experiences/api";
 import { Button, Card, PageHeader, Pill, Spinner } from "../ui/primitives";
+import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import { WaiterReviews } from "../reviews/WaiterReviews";
 
@@ -143,29 +144,6 @@ function Profile({ waiterId }: { waiterId: string }) {
         <WaiterReviews waiterId={waiterId} />
       </div>
     </>
-  );
-}
-
-function Avatar({ url, name }: { url: string | null; name: string }) {
-  if (url) {
-    return (
-      <img
-        src={url}
-        alt=""
-        className="h-14 w-14 shrink-0 rounded-full object-cover"
-      />
-    );
-  }
-  // Iniziali: un cerchio vuoto sembrerebbe un'immagine non caricata.
-  const initials = name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
-  return (
-    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-border-gold bg-gold/10 font-serif text-lg text-gold">
-      {initials || "?"}
-    </span>
   );
 }
 

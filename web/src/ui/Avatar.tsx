@@ -1,0 +1,50 @@
+import { cn } from "@/lib/cn";
+
+/**
+ * Foto profilo, con le iniziali come ripiego: un cerchio vuoto sembrerebbe
+ * un'immagine che non ha finito di caricare.
+ */
+export function Avatar({
+  url,
+  name,
+  size = 56,
+  className,
+}: {
+  url: string | null | undefined;
+  name: string;
+  /** Lato in px: l'avatar sta in elenchi fitti e in testa a una scheda. */
+  size?: number;
+  className?: string;
+}) {
+  const style = { width: size, height: size };
+
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt=""
+        style={style}
+        className={cn("shrink-0 rounded-full object-cover", className)}
+      />
+    );
+  }
+
+  const initials =
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? "")
+      .join("") || "?";
+
+  return (
+    <span
+      style={{ ...style, fontSize: Math.round(size / 3) }}
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full border border-border-gold bg-gold/10 font-serif text-gold",
+        className
+      )}
+    >
+      {initials}
+    </span>
+  );
+}
