@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import { useSearchParams } from "react-router-dom";
 import {
   useMoveShiftToDate,
@@ -137,7 +138,7 @@ export function PlanningPage() {
       { shiftId: payload.shiftId, date: toDate },
       {
         onSuccess: () => toast.show(`Turno spostato a ${formatDate(toDate)}`),
-        onError: (e) => toast.show(e.message, "error"),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }
@@ -171,7 +172,7 @@ export function PlanningPage() {
       },
       {
         onSuccess: () => toast.show(`Turno passato a ${to.display_name}`),
-        onError: (e) => toast.show(e.message, "error"),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import {
   useAddStaffMember,
   useFindWaiterByEmail,
@@ -137,10 +138,10 @@ function ManualForm({ onDone }: { onDone: () => void }) {
                         toast.show("Aggiunto allo staff");
                         onDone();
                       },
-                      onError: (e) => toast.show(e.message, "error"),
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
                     }
                   ),
-                onError: (e) => toast.show(e.message, "error"),
+                onError: (e) => toast.show(userErrorMessage(e), "error"),
               }
             )
           }
@@ -267,7 +268,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
                         toast.show("Richiesta inviata");
                         onDone();
                       },
-                      onError: (e) => toast.show(e.message, "error"),
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
                     }
                   )
                 }

@@ -151,12 +151,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
+  // ⚠️ Le quattro funzioni qui sotto restituiscono l'errore **già tradotto**.
+  // Prima tornava il messaggio grezzo di Supabase e la traduzione la faceva chi
+  // chiamava: bastava dimenticarsene una volta — ed è successo, sul login del
+  // web — perché all'utente comparisse "Invalid login credentials". Tradurre
+  // qui è l'unico modo in cui non si può saltare.
+  //
+  // Corollario: chi chiama NON deve ripassare da `authErrorMessage`. Applicarla
+  // a una stringa già italiana non trova nessuna corrispondenza e la degrada
+  // nel generico "Si è verificato un errore", che è peggio dell'inglese perché
+  // perde anche l'informazione.
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error: error?.message ?? null };
+    return { error: error ? authErrorMessage(error.message) : null };
   }
 
   async function signUp({
@@ -173,7 +183,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     });
     if (error) {
       return {
-        error: error.message,
+        error: authErrorMessage(error.message),
         needsConfirmation: false,
         alreadyRegistered: false,
       };
@@ -195,12 +205,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       email,
       redirectTo ? { redirectTo } : undefined
     );
-    return { error: error?.message ?? null };
+    return { error: error ? authErrorMessage(error.message) : null };
   }
 
   async function updatePassword(password: string) {
     const { error } = await supabase.auth.updateUser({ password });
-    return { error: error?.message ?? null };
+    return { error: error ? authErrorMessage(error.message) : null };
   }
 
   async function signOut() {

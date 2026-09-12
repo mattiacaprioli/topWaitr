@@ -14,6 +14,7 @@ import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
 import { qk } from "@/lib/queryKeys";
 import {
@@ -119,7 +120,7 @@ export default function WaiterProfileEditScreen() {
       toast.show("Foto aggiornata");
     } catch (e) {
       toast.show(
-        e instanceof Error ? e.message : "Caricamento non riuscito",
+        userErrorMessage(e, "Caricamento non riuscito"),
         "error"
       );
     } finally {
@@ -139,7 +140,7 @@ export default function WaiterProfileEditScreen() {
       toast.show("Foto rimossa");
     } catch (e) {
       toast.show(
-        e instanceof Error ? e.message : "Operazione non riuscita",
+        userErrorMessage(e, "Operazione non riuscita"),
         "error"
       );
     } finally {

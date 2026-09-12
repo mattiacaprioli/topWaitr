@@ -8,7 +8,7 @@ import { LogoBadge } from "@/components/ui/LogoBadge";
 import { Display } from "@/components/ui/Display";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { ControlledInput } from "@/components/form/ControlledInput";
-import { useAuth, authErrorMessage } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
 import { loginSchema, type LoginForm } from "@/features/auth/schema";
 
@@ -30,7 +30,7 @@ export default function Login() {
     setLoading(true);
     const res = await signIn(values.email.trim(), values.password);
     setLoading(false);
-    if (res.error) setApiError(authErrorMessage(res.error));
+    if (res.error) setApiError(res.error);
     // in caso di successo la navigazione è gestita dai guard nel root layout
   });
 
@@ -41,7 +41,7 @@ export default function Login() {
       return;
     }
     const { error } = await resetPassword(email);
-    if (error) toast.show(authErrorMessage(error), "error");
+    if (error) toast.show(error, "error");
     else toast.show("Email di recupero inviata. Controlla la posta.");
   }
 

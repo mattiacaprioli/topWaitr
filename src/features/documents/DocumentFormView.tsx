@@ -7,6 +7,7 @@ import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { cn } from "@/lib/cn";
+import { userErrorMessage } from "@/lib/errors";
 import { toDateString } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { PickerField } from "@/components/form/ControlledPicker";
@@ -66,7 +67,7 @@ export function DocumentFormView({
       }
     } catch (e) {
       toast.show(
-        e instanceof Error ? e.message : "Selezione non riuscita.",
+        userErrorMessage(e, "Selezione non riuscita."),
         "error"
       );
     } finally {

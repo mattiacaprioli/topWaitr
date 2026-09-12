@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { authErrorMessage, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { isPasswordValid, passwordRules } from "@/features/auth/schema";
 import { cn } from "@/lib/cn";
 import { Button, Field, PasswordInput } from "../ui/primitives";
@@ -38,7 +38,7 @@ export function NuovaPasswordPage() {
     const res = await updatePassword(password);
     setBusy(false);
     if (res.error) {
-      setError(authErrorMessage(res.error));
+      setError(res.error);
       return;
     }
     // La sessione di recupero è a tutti gli effetti una sessione: si entra

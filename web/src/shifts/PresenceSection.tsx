@@ -3,6 +3,7 @@ import {
   useShiftAssignments,
 } from "@/features/assignments/hooks";
 import { assignmentHours } from "@/features/assignments/hours";
+import { userErrorMessage } from "@/lib/errors";
 import { shiftDurationHours } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Input, Spinner } from "../ui/primitives";
@@ -104,7 +105,7 @@ export function PresenceSection({
         campo vuoto per usarla; scrivi un numero solo se le ore sono diverse.
       </p>
       {presence.isError ? (
-        <p className="mt-2 text-xs text-error">{presence.error.message}</p>
+        <p className="mt-2 text-xs text-error">{userErrorMessage(presence.error)}</p>
       ) : null}
     </section>
   );

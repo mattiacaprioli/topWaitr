@@ -11,6 +11,7 @@ import {
 } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import type { Shift } from "@/features/shifts/api";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useVenue } from "../lib/venue";
 import { ShiftPanel } from "../shifts/ShiftPanel";
 import { Card, PageHeader, Pill, Placeholder } from "../ui/primitives";
@@ -124,7 +125,7 @@ export function HomePage() {
                     </p>
                     <p className="mt-0.5 truncate text-xs text-t4">
                       {w.role ?? "Ruolo non indicato"}
-                      {w.ratingCount ? (
+                      {REVIEWS_ENABLED && w.ratingCount ? (
                         <span className="ml-2 text-gold">
                           ★ {w.ratingAvg?.toFixed(1)}
                         </span>

@@ -9,6 +9,7 @@ import { Button, Card, PageHeader, Pill, Spinner } from "../ui/primitives";
 import { Avatar } from "../ui/Avatar";
 import { useToast } from "../ui/Toast";
 import { WaiterReviews } from "../reviews/WaiterReviews";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 
 /**
  * Profilo pubblico di un professionista: scheda a sinistra, recensioni a
@@ -79,7 +80,7 @@ function Profile({ waiterId }: { waiterId: string }) {
                 {roleCity ? (
                   <p className="truncate text-xs text-t3">{roleCity}</p>
                 ) : null}
-                {card && card.rating_count ? (
+                {!REVIEWS_ENABLED ? null : card && card.rating_count ? (
                   <p className="mt-0.5 font-mono text-xs text-gold">
                     ★ {card.rating_avg?.toFixed(1)}{" "}
                     <span className="text-t4">({card.rating_count})</span>
@@ -141,7 +142,7 @@ function Profile({ waiterId }: { waiterId: string }) {
           ) : null}
         </aside>
 
-        <WaiterReviews waiterId={waiterId} />
+        {REVIEWS_ENABLED ? <WaiterReviews waiterId={waiterId} /> : null}
       </div>
     </>
   );

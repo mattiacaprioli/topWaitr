@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { userErrorMessage } from "@/lib/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth";
 import { useSaveVenue } from "@/features/venues/hooks";
@@ -83,7 +84,7 @@ export function LocalePage() {
 
           {save.isError ? (
             <p className="rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
-              {save.error.message}
+              {userErrorMessage(save.error)}
             </p>
           ) : null}
           {save.isSuccess && !isDirty ? (

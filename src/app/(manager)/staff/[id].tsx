@@ -147,7 +147,7 @@ function StaffEditForm({
               <View className="flex-1">
                 <Mono gold>Account app collegato</Mono>
                 <Text className="mt-0.5 text-sm text-t2">
-                  Vedi profilo e recensioni
+                  Vedi profilo ed esperienze
                 </Text>
               </View>
               <Icon name="chevR" size={18} color="#8c857a" />

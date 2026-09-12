@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/ui/NotificationBell";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
 import { RatingBadge } from "@/components/ui/RatingBadge";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { StatCard } from "@/components/ui/StatCard";
 import { ManagerShiftCard } from "@/features/shifts/ManagerShiftCard";
 import { ProUpsellCard } from "@/features/plan/ProLock";
@@ -202,11 +203,13 @@ export default function ManagerHome() {
                         {w.role ? (
                           <Text className="text-xs text-t3">{w.role}</Text>
                         ) : null}
-                        <RatingBadge
-                          avg={w.ratingAvg}
-                          count={w.ratingCount}
-                          className="mt-1"
-                        />
+                        {REVIEWS_ENABLED ? (
+                          <RatingBadge
+                            avg={w.ratingAvg}
+                            count={w.ratingCount}
+                            className="mt-1"
+                          />
+                        ) : null}
                       </View>
                       {w.start && w.end ? (
                         <View className="items-end gap-1">

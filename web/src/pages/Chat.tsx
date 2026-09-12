@@ -1,14 +1,22 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/lib/auth";
-import { useConversations } from "@/features/chat/hooks";
+import { useConversations, useStartConversation } from "@/features/chat/hooks";
 import { useChatThread } from "@/features/chat/useChatThread";
+import { useVenueStaff } from "@/features/staff/hooks";
+import { staffRoleNames } from "@/features/staff/api";
+import { userErrorMessage } from "@/lib/errors";
 import { timeAgo, toTimeString } from "@/lib/format";
 import { cn } from "@/lib/cn";
+import { useVenue } from "../lib/venue";
+import { Avatar } from "../ui/Avatar";
+import { useToast } from "../ui/Toast";
 import {
   Button,
+  Card,
   Input,
   PageHeader,
+  Pill,
   Placeholder,
   QueryError,
   Spinner,
@@ -24,6 +32,7 @@ export function ChatPage() {
   const userId = session!.user.id;
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [picking, setPicking] = useState(false);
   const { data, isPending, isError, error } = useConversations(userId);
 
   if (isPending) return <Spinner />;
@@ -33,16 +42,43 @@ export function ChatPage() {
 
   return (
     <>
-      <PageHeader title="Messaggi" />
+      <PageHeader
+        title="Messaggi"
+        actions={
+          <Button variant="gold" onClick={() => setPicking((v) => !v)}>
+            {picking ? "Annulla" : "+ Nuovo messaggio"}
+          </Button>
+        }
+      />
 
-      {conversations.length === 0 ? (
+      {picking ? (
+        <StaffPicker
+          managerId={userId}
+          onOpened={(conversationId) => {
+            setPicking(false);
+            navigate(`/chat/${conversationId}`);
+          }}
+        />
+      ) : null}
+
+      {/* La lista arriva dal DB con `!inner` sui messaggi: una conversazione
+          appena aperta non c'è ancora. Se l'URL ne indica una si mostra
+          comunque il thread, altrimenti si finirebbe sullo stato vuoto dopo
+          aver appena chiesto di scrivere a qualcuno. */}
+      {conversations.length === 0 && !id ? (
         <Placeholder
           title="Nessuna conversazione"
-          detail="Le chat nascono dai turni: scrivi a una persona del tuo staff dall'organico o dal dettaglio di un turno."
+          detail="Scegli “Nuovo messaggio” per scrivere a una persona del tuo organico, oppure parti dalla sua scheda nello Staff."
         />
       ) : (
         <div className="grid h-[calc(100dvh-12rem)] grid-cols-[20rem_1fr] gap-6">
           <div className="flex flex-col gap-2 overflow-y-auto pr-1">
+            {conversations.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-border-2 p-3 text-xs leading-5 text-t4">
+                Questa conversazione comparirà nell&apos;elenco dopo il primo
+                messaggio.
+              </p>
+            ) : null}
             {conversations.map((c) => {
               const active = c.id === id;
               const mine = c.lastMessage?.sender_id === userId;
@@ -95,6 +131,112 @@ export function ChatPage() {
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * Scelta del destinatario per una chat nuova. L'elenco è l'organico: si scrive
+ * a chi lavora nel locale, e solo a chi ha un account (senza, non c'è nessuno
+ * dall'altra parte). Chi ha già una conversazione resta in lista: riaprirla è
+ * lo stesso gesto, e `getOrCreateConversation` non ne crea una seconda.
+ */
+function StaffPicker({
+  managerId,
+  onOpened,
+}: {
+  managerId: string;
+  onOpened: (conversationId: string) => void;
+}) {
+  const venue = useVenue();
+  const toast = useToast();
+  const [filter, setFilter] = useState("");
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const startConversation = useStartConversation();
+  const { data, isPending, isError, error } = useVenueStaff(venue.id);
+
+  const linked = (data ?? []).filter((m) => m.waiter_id);
+  const needle = filter.trim().toLowerCase();
+  const shown = needle
+    ? linked.filter((m) => m.display_name.toLowerCase().includes(needle))
+    : linked;
+
+  function open(memberId: string, waiterId: string) {
+    setOpeningId(memberId);
+    startConversation.mutate(
+      { waiterId, managerId },
+      {
+        onSuccess: (conv) => onOpened(conv.id),
+        onError: (e) => {
+          setOpeningId(null);
+          toast.show(userErrorMessage(e), "error");
+        },
+      }
+    );
+  }
+
+  return (
+    <Card className="mb-6 flex flex-col gap-3 p-4">
+      {isPending ? (
+        <Spinner />
+      ) : isError ? (
+        <QueryError error={error} />
+      ) : linked.length === 0 ? (
+        <p className="py-6 text-center text-xs text-t4">
+          Nessuno nel tuo organico ha un account collegato: invitali dallo Staff
+          per poterci scrivere.
+        </p>
+      ) : (
+        <>
+          {linked.length > 6 ? (
+            <Input
+              autoFocus
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Cerca una persona…"
+            />
+          ) : null}
+
+          {shown.length === 0 ? (
+            <p className="py-4 text-center text-xs text-t4">
+              Nessun risultato per “{filter.trim()}”.
+            </p>
+          ) : (
+            <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+              {shown.map((member) => (
+                <button
+                  key={member.id}
+                  disabled={startConversation.isPending}
+                  onClick={() => open(member.id, member.waiter_id as string)}
+                  className="focus-gold flex items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-bg-1 disabled:opacity-40"
+                >
+                  <Avatar
+                    url={member.waiter?.avatar_url}
+                    name={member.display_name}
+                    size={32}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-t1">
+                      {member.display_name}
+                    </span>
+                    <span className="block truncate text-xs text-t4">
+                      {staffRoleNames(member) ?? "Ruoli non indicati"}
+                    </span>
+                  </span>
+                  {member.link_status === "pending" ? (
+                    <Pill tone="warning">Invito in attesa</Pill>
+                  ) : null}
+                  <span className="shrink-0 text-xs text-gold">
+                    {openingId === member.id && startConversation.isPending
+                      ? "Apertura…"
+                      : "Scrivi"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </Card>
   );
 }
 

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import { useAuth } from "@/lib/auth";
 import {
   NOTIFICATION_CATEGORIES,
@@ -80,7 +81,7 @@ function AccountSection() {
       await refreshProfile();
       toast.show("Nome aggiornato");
     } catch (e) {
-      toast.show(e instanceof Error ? e.message : "Salvataggio non riuscito", "error");
+      toast.show(userErrorMessage(e, "Salvataggio non riuscito"), "error");
     } finally {
       setSavingName(false);
     }
@@ -100,7 +101,7 @@ function AccountSection() {
       await refreshProfile();
       toast.show("Foto aggiornata");
     } catch (e) {
-      toast.show(e instanceof Error ? e.message : "Caricamento non riuscito", "error");
+      toast.show(userErrorMessage(e, "Caricamento non riuscito"), "error");
     } finally {
       setPhotoBusy(false);
       // Così riselezionare lo stesso file rilancia l'evento.
@@ -118,7 +119,7 @@ function AccountSection() {
       await refreshProfile();
       toast.show("Foto rimossa");
     } catch (e) {
-      toast.show(e instanceof Error ? e.message : "Operazione non riuscita", "error");
+      toast.show(userErrorMessage(e, "Operazione non riuscita"), "error");
     } finally {
       setPhotoBusy(false);
     }
@@ -307,7 +308,7 @@ function DeleteAccountSection() {
       await signOut();
     } catch (e) {
       toast.show(
-        e instanceof Error ? e.message : "Cancellazione non riuscita",
+        userErrorMessage(e, "Cancellazione non riuscita"),
         "error"
       );
       setBusy(false);

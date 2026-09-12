@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { authErrorMessage, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { Button, Field, Input, PasswordInput } from "../ui/primitives";
 import { AuthPanel, AuthShell } from "../ui/AuthShell";
 import { useToast } from "../ui/Toast";
@@ -30,7 +30,10 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     clearLinkNotice();
-    // signIn traduce già l'errore Supabase in italiano (authErrorMessage).
+    // `signIn` restituisce l'errore già in italiano (v. src/lib/auth.tsx): qui
+    // si mostra e basta. Questa riga per un po' ha mostrato il messaggio grezzo
+    // di Supabase — "Invalid login credentials" — fidandosi di un commento che
+    // diceva il contrario di quello che il codice faceva.
     const { error: err } = await signIn(email.trim(), password);
     if (err) setError(err);
     setBusy(false);
@@ -55,7 +58,7 @@ export function LoginPage() {
     );
     setResetting(false);
     if (res.error) {
-      setError(authErrorMessage(res.error));
+      setError(res.error);
       return;
     }
     toast.show(`Email di recupero inviata a ${address}. Controlla la posta.`);

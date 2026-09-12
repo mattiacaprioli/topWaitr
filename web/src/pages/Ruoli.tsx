@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import {
   useArchiveVenueRole,
   useCreateVenueRole,
@@ -67,7 +68,7 @@ function RoleRow({ role }: { role: VenueRole }) {
             onClick={() =>
               archive.mutate(role.id, {
                 onSuccess: () => toast.show("Ruolo eliminato"),
-                onError: (e) => toast.show(e.message, "error"),
+                onError: (e) => toast.show(userErrorMessage(e), "error"),
               })
             }
           >

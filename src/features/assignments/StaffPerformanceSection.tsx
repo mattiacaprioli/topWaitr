@@ -3,6 +3,7 @@ import { Text, View } from "@/tw";
 import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { RatingBadge } from "@/components/ui/RatingBadge";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { StatCard } from "@/components/ui/StatCard";
 import { formatHours } from "@/lib/format";
 import { useStaffPerformance } from "@/features/assignments/hooks";
@@ -35,7 +36,7 @@ export function StaffPerformanceSection({
         <ActivityIndicator color="#EAB54C" className="mt-2 self-start" />
       ) : (
         <>
-          {waiterId ? (
+          {REVIEWS_ENABLED && waiterId ? (
             <View className="flex-row items-center justify-between rounded-2xl border border-border-2 bg-bg-card px-4 py-3">
               <Text className="text-sm text-t2">Valutazione clienti</Text>
               <RatingBadge

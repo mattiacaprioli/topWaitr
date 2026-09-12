@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { authErrorMessage, useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import {
   passwordRules,
   signupSchema,
@@ -57,7 +57,7 @@ export function RegistrazionePage() {
     });
     setBusy(false);
     if (res.error) {
-      setApiError(authErrorMessage(res.error));
+      setApiError(res.error);
       return;
     }
     if (res.alreadyRegistered) {

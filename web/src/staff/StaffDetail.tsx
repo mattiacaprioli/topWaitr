@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { userErrorMessage } from "@/lib/errors";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/auth";
+import { useStartConversation } from "@/features/chat/hooks";
 import {
   useRemoveStaffMember,
   useUpdateStaffMember,
@@ -10,6 +13,7 @@ import {
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { DocumentsPanel } from "./DocumentsPanel";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
@@ -66,7 +70,14 @@ export function StaffDetail({
               </Pill>
             </div>
           </div>
-          <Button onClick={onClose}>Chiudi</Button>
+          <div className="flex shrink-0 gap-2">
+            {/* Scrivere a chi hai davanti è il gesto più frequente su questa
+                scheda: sta in testa, non in fondo alle performance. */}
+            {member.waiter_id ? (
+              <MessageButton waiterId={member.waiter_id} />
+            ) : null}
+            <Button onClick={onClose}>Chiudi</Button>
+          </div>
         </header>
 
         <Anagrafica member={member} />
@@ -78,6 +89,36 @@ export function StaffDetail({
         <RemoveSection memberId={member.id} onRemoved={onClose} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Apre (o riapre) la chat con la persona. Esiste solo per chi ha un account
+ * collegato: senza `waiter_id` non c'è nessuno dall'altra parte, e l'invito in
+ * attesa è proprio il caso in cui scrivere due righe serve di più.
+ */
+function MessageButton({ waiterId }: { waiterId: string }) {
+  const navigate = useNavigate();
+  const { session } = useAuth();
+  const toast = useToast();
+  const startConversation = useStartConversation();
+
+  return (
+    <Button
+      variant="gold"
+      disabled={startConversation.isPending}
+      onClick={() =>
+        startConversation.mutate(
+          { waiterId, managerId: session!.user.id },
+          {
+            onSuccess: (conv) => navigate(`/chat/${conv.id}`),
+            onError: (e) => toast.show(userErrorMessage(e), "error"),
+          }
+        )
+      }
+    >
+      {startConversation.isPending ? "Apertura…" : "Messaggio"}
+    </Button>
   );
 }
 
@@ -160,10 +201,10 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
                     { staffMemberId: member.id, roleIds },
                     {
                       onSuccess: () => toast.show("Scheda aggiornata"),
-                      onError: (e) => toast.show(e.message, "error"),
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
                     }
                   ),
-                onError: (e) => toast.show(e.message, "error"),
+                onError: (e) => toast.show(userErrorMessage(e), "error"),
               }
             )
           }
@@ -204,7 +245,21 @@ function Performance({
         Performance
       </span>
 
-      {waiterId ? (
+      {/* Con le recensioni spente resta il link alla scheda: chi è, cosa sa
+          fare. La media clienti invece non ha più dove vivere. */}
+      {waiterId && !REVIEWS_ENABLED ? (
+        <Card className="flex items-center justify-between gap-3 p-4">
+          <span className="text-sm text-t2">Profilo del professionista</span>
+          <Link
+            to={`/professionista/${waiterId}`}
+            className="focus-gold text-xs text-gold underline underline-offset-2"
+          >
+            Apri
+          </Link>
+        </Card>
+      ) : null}
+
+      {waiterId && REVIEWS_ENABLED ? (
         <Card className="flex items-center justify-between gap-3 p-4">
           <span className="text-sm text-t2">Valutazione clienti</span>
           <span className="flex items-center gap-3">
@@ -322,7 +377,7 @@ function RemoveSection({
               onClick={() =>
                 remove.mutate(memberId, {
                   onSuccess: onRemoved,
-                  onError: (e) => toast.show(e.message, "error"),
+                  onError: (e) => toast.show(userErrorMessage(e), "error"),
                 })
               }
             >

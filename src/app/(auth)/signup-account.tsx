@@ -11,7 +11,7 @@ import { Mono } from "@/components/ui/Mono";
 import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { ControlledInput } from "@/components/form/ControlledInput";
-import { useAuth, authErrorMessage } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import { signupSchema, type SignupForm } from "@/features/auth/schema";
 import { PasswordChecklist } from "@/features/auth/PasswordChecklist";
 import type { Enums } from "@/types/database";
@@ -50,7 +50,7 @@ export default function SignupAccount() {
     });
     setLoading(false);
     if (res.error) {
-      setApiError(authErrorMessage(res.error));
+      setApiError(res.error);
       return;
     }
     if (res.alreadyRegistered) {

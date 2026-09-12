@@ -8,17 +8,10 @@ import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
-import { NoReviews } from "@/components/ui/NoReviews";
-import { RatingSummary } from "@/components/ui/RatingSummary";
-import { ReviewCard } from "@/components/ui/ReviewCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useExperiences } from "@/features/experiences/hooks";
-import {
-  useRatingBreakdown,
-  useWaiterPublicCard,
-  useWaiterReviewsPreview,
-} from "@/features/reviews/hooks";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useMyWaiterProfile } from "@/features/waiterProfile/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
 import { useLeaveVenue, useMyEmployers } from "@/features/staff/hooks";
@@ -33,10 +26,9 @@ import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Tab = "esperienze" | "recensioni" | "statistiche";
+type Tab = "esperienze" | "statistiche";
 const TABS: { id: Tab; label: string }[] = [
   { id: "esperienze", label: "Esperienze" },
-  { id: "recensioni", label: "Recensioni" },
   { id: "statistiche", label: "Statistiche" },
 ];
 
@@ -162,17 +154,9 @@ export default function WaiterProfiloScreen() {
 
   const experiences = useExperiences(userId).data ?? [];
 
-  const card = useWaiterPublicCard(userId).data;
-  const reviews = useWaiterReviewsPreview(userId, 3).data ?? [];
-  const breakdown = useRatingBreakdown(userId).data;
   const employers = useMyEmployers(userId).data ?? [];
   // Solo i due totali: il Profilo non mostra la lista dei turni.
   const history = useMyWorkHistoryTotals(userId);
-  const reviewsCount = card?.rating_count ?? 0;
-  const ratingLabel =
-    reviewsCount > 0
-      ? (card?.rating_avg ?? 0).toFixed(1).replace(".", ",")
-      : "—";
   const subtitle = [role, city].filter(Boolean).join(" · ");
 
   return (
@@ -222,37 +206,31 @@ export default function WaiterProfiloScreen() {
           {subtitle ? (
             <Text className="text-sm text-t2">{subtitle}</Text>
           ) : null}
-
-          {reviewsCount > 0 ? (
-            <View className="mt-0.5 flex-row items-center gap-1.5">
-              <Icon name="star" size={14} color="#EAB54C" />
-              <Text className="text-base font-sans-bold text-t1">
-                {ratingLabel}
-              </Text>
-              <Text className="text-sm text-t3">
-                · {reviewsCount} recensioni verificate
-              </Text>
-            </View>
-          ) : (
-            <View className="mt-0.5 flex-row items-center gap-1.5">
-              <Icon name="starOutline" size={13} color="#5A5348" />
-              <Text className="text-sm text-t3">Ancora nessuna recensione</Text>
-            </View>
-          )}
         </View>
       </View>
 
-      <View className="flex-row items-center gap-2.5">
+      {/* Con le recensioni spente «Condividi profilo» non ha più un pubblico:
+          apriva il QR, che serviva a farsi recensire dai clienti. L'azione
+          principale del profilo diventa quella che c'è sempre stata sotto:
+          tenere i propri dati aggiornati. */}
+      {REVIEWS_ENABLED ? (
+        <View className="flex-row items-center gap-2.5">
+          <GoldButton
+            label="Condividi profilo"
+            onPress={() => router.push("/(waiter)/qr")}
+            className="flex-1"
+          />
+          <GhostButton
+            label="Modifica"
+            onPress={() => router.push("/(waiter)/profilo-edit")}
+          />
+        </View>
+      ) : (
         <GoldButton
-          label="Condividi profilo"
-          onPress={() => router.push("/(waiter)/qr")}
-          className="flex-1"
-        />
-        <GhostButton
-          label="Modifica"
+          label="Modifica profilo"
           onPress={() => router.push("/(waiter)/profilo-edit")}
         />
-      </View>
+      )}
 
       {/* I tuoi locali (staff fisso/a chiamata) */}
       {employers.length > 0 ? (
@@ -358,35 +336,8 @@ export default function WaiterProfiloScreen() {
         </View>
       ) : null}
 
-      {tab === "recensioni" ? (
-        <View className="gap-3">
-          {reviewsCount > 0 ? (
-            <>
-              <RatingSummary
-                avg={card?.rating_avg ?? null}
-                count={card?.rating_count ?? null}
-                breakdown={breakdown}
-              />
-              {reviews.map((r) => (
-                <ReviewCard key={r.id} review={r} />
-              ))}
-              <GhostButton
-                label={`Vedi tutte le ${reviewsCount} recensioni`}
-                onPress={() => router.push("/(waiter)/recensioni")}
-              />
-            </>
-          ) : (
-            <NoReviews onOpenQR={() => router.push("/(waiter)/qr")} />
-          )}
-        </View>
-      ) : null}
-
       {tab === "statistiche" ? (
         <View className="gap-3">
-          <View className="flex-row gap-2.5">
-            <StatCard value={ratingLabel} label="★ media voto" />
-            <StatCard value={String(reviewsCount)} label="recensioni" />
-          </View>
           <View className="flex-row gap-2.5">
             <StatCard value={String(history.count)} label="turni svolti" />
             <StatCard value={formatHours(history.totalHours)} label="ore totali" />

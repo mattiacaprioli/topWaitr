@@ -9,6 +9,7 @@ import type { Enums, Tables } from "@/types/database";
 import type { Shift, ShiftWithVenue } from "@/features/shifts/types";
 import type { StaffMember, StaffRoleRef } from "@/features/staff/api";
 import { isActiveAssignment } from "./status";
+import { UserFacingError } from "@/lib/errors";
 import type { CoverageEmbeds } from "./coverage";
 
 export type Assignment = Tables<"shift_assignments">;
@@ -246,7 +247,7 @@ export async function createInternalShifts(input: {
         s.start_time.slice(0, 5) === plans[i].start_time.slice(0, 5)
     );
   if (!aligned) {
-    throw new Error(
+    throw new UserFacingError(
       `Turni creati (${shifts.length}), ma non è stato possibile riconoscerne l'ordine: fabbisogni e assegnazioni non sono stati applicati. Aprili dal planning e completali a mano.`
     );
   }
@@ -470,7 +471,10 @@ export async function reassignShiftAssignment(
     p_assignment: assignmentId,
     p_staff_member: toStaffMemberId,
   });
-  if (error) throw new Error(error.message);
+  // Le tre eccezioni di quella RPC sono frasi scritte per essere lette
+  // («Questa persona è già su questo turno»): vanno mostrate così come sono,
+  // non sostituite dal messaggio generico.
+  if (error) throw new UserFacingError(error.message);
   return data as string;
 }
 

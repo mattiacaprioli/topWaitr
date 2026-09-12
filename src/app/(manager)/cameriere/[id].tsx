@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Text, View } from "@/tw";
+import { ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
 import { ExperienceTimeline } from "@/components/ui/ExperienceTimeline";
 import { GhostButton } from "@/components/ui/GhostButton";
@@ -8,6 +8,7 @@ import { Mono } from "@/components/ui/Mono";
 import { RatingBadge } from "@/components/ui/RatingBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { WaiterReviewsList } from "@/features/reviews/WaiterReviewsList";
+import { REVIEWS_ENABLED } from "@/features/reviews/config";
 import { useStartConversation } from "@/features/chat/hooks";
 import { useExperiences } from "@/features/experiences/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
@@ -49,11 +50,13 @@ export default function WaiterProfileScreen() {
         <View className="flex-1">
           <Text className="text-lg font-sans-bold text-t1">{name}</Text>
           {roleCity ? <Text className="text-sm text-t3">{roleCity}</Text> : null}
-          <RatingBadge
-            avg={card?.rating_avg ?? null}
-            count={card?.rating_count ?? null}
-            className="mt-1"
-          />
+          {REVIEWS_ENABLED ? (
+            <RatingBadge
+              avg={card?.rating_avg ?? null}
+              count={card?.rating_count ?? null}
+              className="mt-1"
+            />
+          ) : null}
         </View>
       </View>
       {profile?.bio ? (
@@ -87,11 +90,26 @@ export default function WaiterProfileScreen() {
       <View className="px-5 pb-2">
         <ScreenHeader eyebrow="Professionista" title={name} titleClassName="text-2xl" />
       </View>
-      <WaiterReviewsList
-        waiterId={id}
-        headerTop={headerTop}
-        bottomInset={insets.bottom + 24}
-      />
+      {/* Con le recensioni spente resta la scheda: chi è, cosa sa fare, com'è
+          raggiungibile. È la metà che serve comunque a chi ha questa persona
+          in organico. */}
+      {REVIEWS_ENABLED ? (
+        <WaiterReviewsList
+          waiterId={id}
+          headerTop={headerTop}
+          bottomInset={insets.bottom + 24}
+        />
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: insets.bottom + 24,
+          }}
+        >
+          {headerTop}
+        </ScrollView>
+      )}
     </View>
   );
 }

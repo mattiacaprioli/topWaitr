@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -129,7 +130,7 @@ function CancelShiftButton({
                 onDone();
               },
               onError: (e) => {
-                toast.show(e.message, "error");
+                toast.show(userErrorMessage(e), "error");
                 setAsking(false);
               },
             })
@@ -180,7 +181,7 @@ function RestoreShiftButton({
                 onDone();
               },
               onError: (e) => {
-                toast.show(e.message, "error");
+                toast.show(userErrorMessage(e), "error");
                 setAsking(false);
               },
             })

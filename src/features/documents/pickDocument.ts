@@ -1,5 +1,6 @@
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
+import { UserFacingError } from "@/lib/errors";
 import {
   DOCUMENT_MAX_BYTES,
   DOCUMENT_MIME_TYPES,
@@ -28,7 +29,7 @@ export async function pickDocument(): Promise<DocumentFile | null> {
   // Il limite è anche sul bucket, ma di là si torna un 413 con un corpo scarno:
   // tradotto in toast diventerebbe un messaggio che non dice cosa fare.
   if (asset.size != null && asset.size > DOCUMENT_MAX_BYTES) {
-    throw new Error("Il file supera 10 MB. Riducilo e riprova.");
+    throw new UserFacingError("Il file supera 10 MB. Riducilo e riprova.");
   }
 
   // ⚠️ NON `await (await fetch(uri)).blob()`: su React Native quel Blob si

@@ -1,0 +1,86 @@
+/**
+ * Da un errore qualsiasi alla frase da mostrare a chi sta usando l'app.
+ *
+ * Il data layer fa `throw new Error(error.message)` in 85 punti, e quel
+ * messaggio viene da Postgres o da PostgREST: è inglese, parla di constraint e
+ * di row-level security, e a volte cita nomi di colonne. Mostrarlo così non
+ * spiega niente a chi legge e racconta a chiunque com'è fatto il database.
+ *
+ * Qui il messaggio grezzo si traduce in una frase che dice **cosa è successo e
+ * cosa fare**. Quello che non si riconosce diventa il generico: meglio una
+ * frase vaga in italiano che un dettaglio di implementazione in inglese.
+ *
+ * ⚠️ Alcuni messaggi però sono **nostri e scritti apposta** per essere letti —
+ * «Questa persona è già su questo turno», «Il file supera 10 MB». Quelli non
+ * vanno generalizzati, e distinguerli dal testo è impossibile: si marcano alla
+ * sorgente con `UserFacingError`.
+ */
+
+/** Errore il cui `message` è già la frase giusta per l'utente. */
+export class UserFacingError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UserFacingError";
+  }
+}
+
+const PATTERNS: { match: string[]; message: string }[] = [
+  {
+    // Il browser e React Native usano parole diverse per la stessa cosa.
+    match: ["failed to fetch", "network request failed", "load failed"],
+    message: "Connessione assente. Controlla la rete e riprova.",
+  },
+  {
+    match: ["row-level security", "permission denied", "insufficient privilege"],
+    message: "Non hai i permessi per farlo.",
+  },
+  {
+    match: ["duplicate key", "unique constraint"],
+    message: "Esiste già un elemento con questi dati.",
+  },
+  {
+    match: ["foreign key constraint"],
+    message: "Non si può fare: questo dato è collegato ad altro.",
+  },
+  {
+    match: ["check constraint", "invalid input syntax", "violates not-null"],
+    message: "Alcuni dati non sono validi. Controllali e riprova.",
+  },
+  {
+    // Colonna o tabella che il client si aspetta e il server non ha: succede
+    // quando una migration non è ancora stata applicata, o quando l'app è
+    // vecchia. È l'unico caso in cui «riprova» sarebbe un consiglio inutile.
+    match: ["does not exist", "schema cache", "could not find the table"],
+    message: "L'app non è allineata al server. Aggiornala e riprova.",
+  },
+  {
+    match: ["jwt expired", "invalid token", "not authenticated"],
+    message: "Sessione scaduta. Accedi di nuovo.",
+  },
+  {
+    match: ["payload too large", "maximum allowed size", "exceeded the maximum"],
+    message: "Il file è troppo grande.",
+  },
+  {
+    match: ["mime type", "invalid_mime_type"],
+    message: "Tipo di file non supportato.",
+  },
+];
+
+export const GENERIC_ERROR = "Qualcosa non ha funzionato. Riprova.";
+
+export function userErrorMessage(
+  e: unknown,
+  fallback: string = GENERIC_ERROR
+): string {
+  if (e instanceof UserFacingError) return e.message;
+
+  const raw = e instanceof Error ? e.message : typeof e === "string" ? e : "";
+  if (!raw) return fallback;
+
+  const lower = raw.toLowerCase();
+  for (const p of PATTERNS) {
+    if (p.match.some((needle) => lower.includes(needle))) return p.message;
+  }
+  return fallback;
+}

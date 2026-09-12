@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import { useCopyInternalShifts } from "@/features/assignments/hooks";
 import { useVenueShiftsRange } from "@/features/shifts/hooks";
 import { addDaysToDate, formatDate, formatShiftRange } from "@/lib/format";
@@ -81,7 +82,7 @@ export function DuplicateWeekDialog({
           );
           onClose();
         },
-        onError: (e) => toast.show(e.message, "error"),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }
@@ -206,7 +207,7 @@ export function DuplicateWeekDialog({
 
             {copy.isError ? (
               <p className="mb-4 rounded-xl border border-error/40 bg-error/10 px-3 py-2 text-xs text-error">
-                {copy.error.message}
+                {userErrorMessage(copy.error)}
               </p>
             ) : null}
 

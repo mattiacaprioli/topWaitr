@@ -241,6 +241,15 @@ Partenza: «il passo 2 dell'onboarding (competenze + attestati) ha ancora senso?
 - ⚠️ **DA FARE**: applicare le 3 migration; **svuotare a mano il bucket `certifications`** e poi eliminarlo (la migration non lo fa: `delete from storage.buckets` fallisce se non è vuoto, e cancellare le righe di `storage.objects` lascerebbe i blob fatturati); ri-deployare la Edge Function `delete-account` (la CI non deploya le function). `src/types/database.ts` allineato **a mano**.
 - Verificato: `tsc` root + `tsc -p web`, `expo lint`, `vite build web`, `expo export --platform ios`. **Non** verificato dal vivo: upload/apertura reale di un PDF, le policy dello storage, e il fix delle due policy (che va guardato su un account gestore vero).
 
+### Sessione 2026-09-12 (4) — Recensioni e QR NASCOSTI (non rimossi) ✅
+
+Decisione dell'utente: concentrare il prodotto su **una** cosa — il locale organizza i turni col proprio organico; il professionista vede i suoi turni, tiene i propri dati e parla col locale. Reputazione e QR sono un secondo prodotto dentro il primo: *«più avanti valuterò se inserirlo o no»*.
+
+- ⚠️ **È un interruttore, non una cancellazione**: `REVIEWS_ENABLED` in `src/features/reviews/config.ts`. Tabella `reviews`, RLS, trigger, sito `web-review/` e tutto `src/features/reviews/` **restano intatti e funzionanti**; cadono solo i punti d'ingresso. Riaccendere costa una riga.
+- **Gated**: home professionista (celle rating + «Cosa dicono di te»), suo profilo (riga rating sotto il nome, tab Recensioni, celle media voto/recensioni in Statistiche, bottone «Condividi profilo»→QR — l'azione principale è ora «Modifica profilo»), FAB del QR in `(waiter)/(tabs)/_layout.tsx` (galleggiava su **tutte** e quattro le schede), «Chi lavora oggi» lato gestore, `StaffPerformanceSection`, `(manager)/cameriere/[id]` (resta la scheda: chi è, esperienze, lingue, «Invia messaggio»), e sul web `Home`, `StaffDetail` (il link al profilo resta, la media clienti no) e `Professionista`.
+- **Copy riscritte, e queste NON tornano indietro da sole** riaccendendo il flag: le 3 slide del professionista in `introContent.ts` (erano 2 su 3 fra recensioni e QR, ora turni / ore / avvisi+chat), la schermata di fine onboarding, e `(auth)/welcome.tsx`.
+- Le rotte `(waiter)/qr` e `(waiter)/recensioni` **restano registrate**: nessuno le raggiunge più dall'interfaccia, ma non sono state tolte.
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati

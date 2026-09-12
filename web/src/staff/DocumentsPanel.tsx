@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { userErrorMessage } from "@/lib/errors";
 import {
   DOCUMENT_MAX_BYTES,
   DOCUMENT_MIME_TYPES,
@@ -52,7 +53,7 @@ export function DocumentsPanel({ staffMemberId }: { staffMemberId: string }) {
       // raggiungibile da `window.opener`.
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
-      toast.show(e instanceof Error ? e.message : "Apertura non riuscita", "error");
+      toast.show(userErrorMessage(e, "Apertura non riuscita"), "error");
     }
   }
 
@@ -91,7 +92,7 @@ export function DocumentsPanel({ staffMemberId }: { staffMemberId: string }) {
           toast.show("Documento aggiunto");
           reset();
         },
-        onError: (e) => toast.show(e.message, "error"),
+        onError: (e) => toast.show(userErrorMessage(e), "error"),
       }
     );
   }
@@ -149,7 +150,7 @@ export function DocumentsPanel({ staffMemberId }: { staffMemberId: string }) {
                   onClick={() =>
                     remove.mutate(doc, {
                       onSuccess: () => toast.show("Documento eliminato"),
-                      onError: (e) => toast.show(e.message, "error"),
+                      onError: (e) => toast.show(userErrorMessage(e), "error"),
                     })
                   }
                 >
