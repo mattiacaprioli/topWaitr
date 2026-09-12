@@ -24,6 +24,7 @@ import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
 import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
 import { ProLockedCard } from "@/features/plan/ProLock";
 import { useIsPro } from "@/features/plan/hooks";
+import { DocumentsSection } from "@/features/documents/DocumentsSection";
 import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
 import {
   useSetStaffMemberRoles,
@@ -183,6 +184,16 @@ function StaffEditForm({
           />
         )}
 
+        <DocumentsSection
+          staffMemberId={member.id}
+          onAdd={() =>
+            router.push({
+              pathname: "/(manager)/staff/documento/new",
+              params: { staffId: member.id },
+            })
+          }
+        />
+
         <Input
           label="Nome"
           value={name}
@@ -251,7 +262,7 @@ function StaffEditForm({
       <ConfirmModal
         visible={confirmVisible}
         title="Rimuovere dallo staff?"
-        message={`${member.display_name} non sarà più nel tuo organico. Perderai anche lo storico di ore e presenze dei suoi turni (incluso l'export per il commercialista).`}
+        message={`${member.display_name} non sarà più nel tuo organico. Perderai anche lo storico di ore e presenze dei suoi turni (incluso l'export per il commercialista) e i documenti caricati sulla sua scheda.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}

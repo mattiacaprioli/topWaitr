@@ -11,6 +11,7 @@ import {
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
 import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import { RoleCheckboxes } from "./RoleCheckboxes";
+import { DocumentsPanel } from "./DocumentsPanel";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
@@ -69,6 +70,7 @@ export function StaffDetail({
         </header>
 
         <Anagrafica member={member} />
+        <DocumentsPanel staffMemberId={member.id} />
         <Performance
           staffMemberId={member.id}
           waiterId={member.waiter_id ?? null}

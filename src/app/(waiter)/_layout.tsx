@@ -13,6 +13,8 @@ export default function WaiterLayout() {
       <Stack.Screen name="shift/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="storico" options={{ headerShown: false }} />
       <Stack.Screen name="profilo-edit" options={{ headerShown: false }} />
+      <Stack.Screen name="documenti" options={{ headerShown: false }} />
+      <Stack.Screen name="documento/new" options={{ headerShown: false }} />
       <Stack.Screen name="esperienza/new" options={{ headerShown: false }} />
       <Stack.Screen name="esperienza/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="qr" options={{ headerShown: false }} />

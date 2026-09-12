@@ -20,15 +20,15 @@ const ROLES: {
     value: "waiter",
     icon: "user",
     title: "Sono un professionista",
-    sub: "Sala, bar, cucina, accoglienza. Costruisci reputazione e trova turni.",
-    chips: ["RECENSIONI", "BADGE", "TURNI"],
+    sub: "Sala, bar, cucina, accoglienza. Conferma i turni e costruisci la tua reputazione.",
+    chips: ["TURNI", "ORE", "RECENSIONI"],
   },
   {
     value: "manager",
     icon: "users",
     title: "Gestisco un locale",
-    sub: "Ristorante, hotel, catering, eventi. Trova talenti verificati e gestisci lo staff.",
-    chips: ["TALENTI", "TURNI", "STAFF"],
+    sub: "Ristorante, hotel, catering, eventi. Organizza i turni con il tuo organico.",
+    chips: ["TURNI", "STAFF", "ORE"],
   },
 ];
 

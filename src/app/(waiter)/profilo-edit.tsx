@@ -296,8 +296,8 @@ export default function WaiterProfileEditScreen() {
             <View className="flex-row gap-3 rounded-3xl border border-border-2 bg-bg-card p-5">
               <Icon name="shield" size={20} color="#4FC97D" />
               <Text className="flex-1 text-sm leading-5 text-t3">
-                Recensioni, badge e documenti sono verificati e non modificabili:
-                è ciò che rende la tua reputazione affidabile.
+                Le recensioni le scrivono i clienti e non si modificano: è ciò
+                che rende la tua reputazione affidabile.
               </Text>
             </View>
 

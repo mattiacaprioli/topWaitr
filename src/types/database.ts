@@ -485,6 +485,60 @@ export type Database = {
           },
         ]
       }
+      staff_documents: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          mime_type: string | null
+          name: string
+          size_bytes: number | null
+          staff_member_id: string
+          storage_path: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          mime_type?: string | null
+          name: string
+          size_bytes?: number | null
+          staff_member_id: string
+          storage_path: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          mime_type?: string | null
+          name?: string
+          size_bytes?: number | null
+          staff_member_id?: string
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_documents_staff_member_id_fkey"
+            columns: ["staff_member_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_member_roles: {
         Row: {
           created_at: string
@@ -692,7 +746,6 @@ export type Database = {
       waiter_profiles: {
         Row: {
           availability_days: string[] | null
-          certifications: string[] | null
           cv_url: string | null
           documents: string[] | null
           experience: string | null
@@ -702,13 +755,11 @@ export type Database = {
           primary_role: string | null
           rating_avg: number
           rating_count: number
-          skills: string[]
           specializations: string | null
           years_experience: number | null
         }
         Insert: {
           availability_days?: string[] | null
-          certifications?: string[] | null
           cv_url?: string | null
           documents?: string[] | null
           experience?: string | null
@@ -718,13 +769,11 @@ export type Database = {
           primary_role?: string | null
           rating_avg?: number
           rating_count?: number
-          skills?: string[]
           specializations?: string | null
           years_experience?: number | null
         }
         Update: {
           availability_days?: string[] | null
-          certifications?: string[] | null
           cv_url?: string | null
           documents?: string[] | null
           experience?: string | null
@@ -734,7 +783,6 @@ export type Database = {
           primary_role?: string | null
           rating_avg?: number
           rating_count?: number
-          skills?: string[]
           specializations?: string | null
           years_experience?: number | null
         }
@@ -764,6 +812,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_staff_documents: {
+        Args: { p_staff_member: string }
+        Returns: boolean
+      }
       chat_counterpart: {
         Args: { p_is_manager: boolean; p_user: string }
         Returns: {
