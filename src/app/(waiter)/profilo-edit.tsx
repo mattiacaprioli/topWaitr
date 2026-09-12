@@ -11,7 +11,6 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { ControlledChoiceChips } from "@/components/form/ControlledChoiceChips";
 import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
@@ -27,7 +26,7 @@ import {
   useMyWaiterProfile,
   useSaveWaiterProfile,
 } from "@/features/waiterProfile/hooks";
-import { LANGUAGE_OPTIONS, PRIMARY_ROLE_OPTIONS } from "@/features/waiterProfile/api";
+import { LANGUAGE_OPTIONS, PRIMARY_ROLE_EXAMPLES } from "@/features/waiterProfile/api";
 import {
   waiterProfileSchema,
   type WaiterProfileForm,
@@ -243,11 +242,11 @@ export default function WaiterProfileEditScreen() {
                 label="Nome e cognome"
                 placeholder="Marco Rossi"
               />
-              <ControlledChoiceChips
+              <ControlledInput
                 control={control}
                 name="primary_role"
                 label="Ruolo principale"
-                options={PRIMARY_ROLE_OPTIONS}
+                placeholder={PRIMARY_ROLE_EXAMPLES}
               />
               <ControlledInput
                 control={control}

@@ -1,10 +1,20 @@
 import type { Enums } from "@/types/database";
 import { isActiveAssignment, type AssignmentStatus } from "./status";
 
-export type RoleRequirement = { role: string; count: number };
+/**
+ * Un fabbisogno del turno. `role` è il nome da mostrare, `role_id` quello su cui
+ * si fa il match: i ruoli sono righe di `venue_roles`, quindi rinominarne uno
+ * non scollega più niente — cosa che con il confronto per stringa succedeva in
+ * silenzio.
+ */
+export type RoleRequirement = {
+  role_id: string;
+  role: string;
+  count: number;
+};
 export type CoverageAssignment = {
   status: AssignmentStatus;
-  role: string | null;
+  role_id: string | null;
 };
 
 export type CoverageRow = { role: string; required: number; covered: number };
@@ -16,8 +26,13 @@ export type Coverage = {
 };
 
 /**
- * Copertura per ruolo: per ogni fabbisogno conta gli assegnati attivi con quel
- * ruolo. L'eccedenza su un ruolo non copre gli altri (min con il richiesto).
+ * Copertura per ruolo: per ogni fabbisogno conta gli assegnati attivi che
+ * lavorano in **quel** ruolo su **questo** turno. L'eccedenza su un ruolo non
+ * copre gli altri (min con il richiesto).
+ *
+ * Il ruolo è quello scelto sull'assegnazione, non quello dell'anagrafica: chi fa
+ * il cameriere e il barman copre l'uno o l'altro a seconda della sera, e
+ * dedurlo dalla scheda lo faceva contare due volte.
  */
 export function computeCoverage(
   requirements: RoleRequirement[],
@@ -27,7 +42,7 @@ export function computeCoverage(
   const rows: CoverageRow[] = requirements.map((req) => ({
     role: req.role,
     required: req.count,
-    covered: active.filter((a) => a.role === req.role).length,
+    covered: active.filter((a) => a.role_id === req.role_id).length,
   }));
   const required = rows.reduce((s, r) => s + r.required, 0);
   const covered = rows.reduce((s, r) => s + Math.min(r.covered, r.required), 0);
@@ -37,14 +52,32 @@ export function computeCoverage(
 /**
  * Le due relazioni da cui si legge la copertura di un turno, così come le
  * caricano le query (`shift_role_requirements(...)` + `shift_assignments(...)`).
+ * Il nome del ruolo arriva dall'embed su `venue_roles`.
  */
+export type RoleRequirementEmbed = {
+  role_id: string;
+  count: number;
+  role: { name: string } | null;
+};
+
 export type CoverageEmbeds = {
-  shift_role_requirements: RoleRequirement[];
+  shift_role_requirements: RoleRequirementEmbed[];
   shift_assignments: {
     status: AssignmentStatus;
-    staff_member: { role: string | null } | null;
+    role_id: string | null;
   }[];
 };
+
+/** Un fabbisogno come arriva dal DB → come lo vogliono i conteggi. */
+export function toRoleRequirement(r: RoleRequirementEmbed): RoleRequirement {
+  return {
+    role_id: r.role_id,
+    // Il ruolo esiste sempre (FK not null); il fallback copre solo il caso in cui
+    // la RLS nasconda la riga di `venue_roles` a chi sta guardando.
+    role: r.role?.name ?? "Ruolo",
+    count: r.count,
+  };
+}
 
 /**
  * Copertura di un turno già caricato con le sue relazioni: unico punto in cui
@@ -53,10 +86,10 @@ export type CoverageEmbeds = {
  */
 export function shiftCoverage(shift: CoverageEmbeds): Coverage {
   return computeCoverage(
-    shift.shift_role_requirements,
+    shift.shift_role_requirements.map(toRoleRequirement),
     shift.shift_assignments.map((a) => ({
       status: a.status,
-      role: a.staff_member?.role ?? null,
+      role_id: a.role_id,
     }))
   );
 }

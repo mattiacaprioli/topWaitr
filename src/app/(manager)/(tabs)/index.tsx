@@ -81,7 +81,7 @@ export default function ManagerHome() {
         key: `asg-${a.id}`,
         name: sm?.display_name ?? "Staff",
         avatarUri: sm?.waiter?.avatar_url ?? undefined,
-        role: sm?.role ?? null,
+        role: a.role?.name ?? null,
         ratingAvg: sm?.waiter?.waiter_profile?.rating_avg ?? null,
         ratingCount: sm?.waiter?.waiter_profile?.rating_count ?? null,
         date: a.shift?.date ?? "",

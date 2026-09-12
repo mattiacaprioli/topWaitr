@@ -21,7 +21,8 @@ import {
   useFindWaiterByEmail,
   useVenueStaff,
 } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
+import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
@@ -66,6 +67,7 @@ export default function StaffNewScreen() {
 
   const [mode, setMode] = useState<Mode>("manuale");
   const add = useAddStaffMember();
+  const setRoles = useSetStaffMemberRoles();
 
   // Chi è già in organico: serve a distinguere, su un invito, chi è già dentro
   // da chi ha solo un invito in attesa.
@@ -78,7 +80,7 @@ export default function StaffNewScreen() {
 
   // Nuova scheda (manuale)
   const [name, setName] = useState("");
-  const [role, setRole] = useState<string | null>(null);
+  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
 
@@ -104,11 +106,25 @@ export default function StaffNewScreen() {
       {
         venue_id: venueId,
         display_name: name.trim(),
-        role,
         employment_type: empType,
         phone: phone.trim() || null,
       },
-      { onSuccess: () => onAdded("Aggiunto allo staff"), onError: onAddError }
+      {
+        // I ruoli si scrivono dopo l'insert: hanno bisogno dell'id della scheda.
+        onSuccess: (member) =>
+          setRoles.mutate(
+            { staffMemberId: member.id, roleIds },
+            {
+              onSuccess: () => onAdded("Aggiunto allo staff"),
+              onError: () =>
+                toast.show(
+                  "Scheda creata, ma i ruoli non sono stati salvati.",
+                  "error"
+                ),
+            }
+          ),
+        onError: onAddError,
+      }
     );
   }
 
@@ -189,20 +205,11 @@ export default function StaffNewScreen() {
               onChangeText={setName}
               placeholder="Es. Marco Rossi"
             />
-            <View className="gap-2">
-              <Mono>Ruolo</Mono>
-              <View className="flex-row flex-wrap gap-2">
-                {STAFF_ROLES.map((r) => (
-                  <Chip
-                    key={r}
-                    label={r}
-                    active={role === r}
-                    gold={role === r}
-                    onPress={() => setRole(role === r ? null : r)}
-                  />
-                ))}
-              </View>
-            </View>
+            <RoleMultiSelect
+              venueId={venueId}
+              value={roleIds}
+              onChange={setRoleIds}
+            />
             <View className="gap-2">
               <Mono>Tipo</Mono>
               <TypeChips value={empType} onChange={setEmpType} />

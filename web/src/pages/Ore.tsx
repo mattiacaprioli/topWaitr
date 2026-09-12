@@ -129,7 +129,7 @@ export function OrePage() {
                   className="border-b border-border last:border-0"
                 >
                   <td className="px-5 py-2.5 text-t1">{r.display_name}</td>
-                  <td className="px-5 py-2.5 text-t3">{r.role ?? "—"}</td>
+                  <td className="px-5 py-2.5 text-t3">{r.roles ?? "—"}</td>
                   <td className="px-5 py-2.5 text-right font-mono text-t2">
                     {r.shifts_count}
                   </td>

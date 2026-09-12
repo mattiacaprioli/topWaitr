@@ -1,9 +1,9 @@
 import { File } from "expo-file-system";
 import { supabase } from "@/lib/supabase";
-import { PRIMARY_ROLE_OPTIONS } from "@/features/waiterProfile/api";
+import { PRIMARY_ROLE_EXAMPLES } from "@/features/waiterProfile/api";
 
-/** Ruolo principale — riusa la lista curata del profilo cameriere. */
-export { PRIMARY_ROLE_OPTIONS };
+/** Ruolo principale — testo libero, stessi esempi del profilo cameriere. */
+export { PRIMARY_ROLE_EXAMPLES };
 
 /**
  * Skill auto-dichiarate dal cameriere (scelta multipla). Le prime quattro

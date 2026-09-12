@@ -86,7 +86,9 @@ function AssignedRow({
               <Icon name="verified" size={15} color="#EAB54C" />
             ) : null}
           </View>
-          {sm?.role ? <Text className="text-xs text-t3">{sm.role}</Text> : null}
+          <Text className="text-xs text-t3">
+            {assignment.role?.name ?? "Ruolo da assegnare"}
+          </Text>
         </View>
         <Pill
           label={ASSIGNMENT_STATUS_LABEL[assignment.status]}
@@ -152,7 +154,9 @@ function PresenceRow({
         <Avatar uri={sm?.waiter?.avatar_url ?? undefined} name={name} size={44} />
         <View className="flex-1">
           <Text className="text-base font-sans-bold text-t1">{name}</Text>
-          {sm?.role ? <Text className="text-xs text-t3">{sm.role}</Text> : null}
+          <Text className="text-xs text-t3">
+            {assignment.role?.name ?? "Ruolo da assegnare"}
+          </Text>
         </View>
         <View className="flex-row overflow-hidden rounded-full border border-border">
           <Pressable
@@ -355,11 +359,12 @@ export default function ShiftDetailScreen() {
   const presenceRows = assignments.filter((a) => a.status !== "declined");
   const staffRows = isPast ? presenceRows : assignments;
   const roleCoverage = computeCoverage(
-    roleRequirements.map((r) => ({ role: r.role, count: r.count })),
-    assignments.map((a) => ({
-      status: a.status,
-      role: a.staff_member?.role ?? null,
-    }))
+    roleRequirements.map((r) => ({
+      role_id: r.role_id,
+      role: r.role?.name ?? "Ruolo",
+      count: r.count,
+    })),
+    assignments.map((a) => ({ status: a.status, role_id: a.role_id }))
   );
 
   return (

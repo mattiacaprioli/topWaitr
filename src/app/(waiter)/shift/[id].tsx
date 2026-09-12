@@ -200,7 +200,8 @@ export default function WaiterShiftDetailScreen() {
         {myAssignment ? (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t2">
-              Sei stato assegnato a questo turno da {venueName}.
+              Sei stato assegnato a questo turno da {venueName}
+              {myAssignment.role ? ` come ${myAssignment.role.name}` : ""}.
             </Text>
             <View className="mt-2 flex-row">
               <Pill

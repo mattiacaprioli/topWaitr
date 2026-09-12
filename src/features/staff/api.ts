@@ -3,19 +3,39 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type StaffMember = Tables<"staff_members">;
 
+/** Una mansione della persona, come la carica l'embed dell'organico. */
+export type StaffRoleRef = { id: string; name: string; sort_order: number };
+
 /** Roster row + the linked waiter's avatar/name (when waiter_id is set). */
 export type StaffMemberWithWaiter = StaffMember & {
   waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
+  staff_member_roles: { role: StaffRoleRef | null }[];
 };
 
-/** A waiter who already worked here (accepted application) — candidate to add. */
+/**
+ * I nomi dei ruoli di una persona, in un'unica riga ("Cameriere, Barman").
+ * Punto solo: la stessa stringa la mostrano organico, planning e scheda, e
+ * ricomporla a mano ogni volta è il modo in cui due schermate iniziano a
+ * ordinarla diversamente.
+ */
+export function staffRoleNames(member: {
+  staff_member_roles: { role: StaffRoleRef | null }[];
+}): string | null {
+  const names = member.staff_member_roles
+    .map((r) => r.role)
+    .filter((r): r is StaffRoleRef => !!r)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((r) => r.name);
+  return names.length > 0 ? names.join(", ") : null;
+}
+
 export async function getVenueStaff(
   venueId: string
 ): Promise<StaffMemberWithWaiter[]> {
   const { data, error } = await supabase
     .from("staff_members")
     .select(
-      "*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url)"
+      "*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url), staff_member_roles(role:venue_roles(id, name, sort_order))"
     )
     .eq("venue_id", venueId)
     .order("created_at", { ascending: true });

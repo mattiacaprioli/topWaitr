@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
-import { ScrollView, Text, View } from "@/tw";
-import { Avatar } from "@/components/ui/Avatar";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { KeyboardAvoidingView } from "react-native";
+import { ScrollView, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
-import { cn } from "@/lib/cn";
 import {
   SHIFT_RANGE_ERROR,
   formatDate,
@@ -19,8 +14,13 @@ import {
 } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useVenueStaff } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import { useVenueRoles } from "@/features/roles/hooks";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
+import {
+  StaffAssignPicker,
+  defaultRoleFor,
+} from "@/features/assignments/StaffAssignPicker";
 import { useCreateInternalShift } from "@/features/assignments/hooks";
 import { DayPicker } from "@/features/shifts/DayPicker";
 import { ShiftTimeFields } from "@/features/shifts/ShiftTimeFields";
@@ -44,39 +44,49 @@ export function StaffShiftForm({ venueId }: Props) {
   const staff = (staffQuery.data ?? []).filter(
     (m) => m.link_status === "active"
   );
+  const rolesQuery = useVenueRoles(venueId);
+  const roles = rolesQuery.data ?? [];
   const create = useCreateInternalShift(venueId);
 
   const [date, setDate] = useState(new Date());
   const [start, setStart] = useState(defaultTime(18));
   const [end, setEnd] = useState(defaultTime(23));
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Chi è selezionato **e** in che ruolo: la chiave è la persona, il valore il
+  // ruolo che ricopre in questo turno (null = non ancora scelto).
+  const [selected, setSelected] = useState<Record<string, string | null>>({});
   const [note, setNote] = useState("");
   const [targets, setTargets] = useState<Record<string, number>>({});
 
-  function toggle(id: string) {
+  function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+      if (member.id in prev) {
+        const next = { ...prev };
+        delete next[member.id];
+        return next;
+      }
+      return { ...prev, [member.id]: defaultRoleFor(member) };
     });
   }
 
-  function setTarget(role: string, delta: number) {
+  function setRole(staffId: string, roleId: string | null) {
+    setSelected((prev) => ({ ...prev, [staffId]: roleId }));
+  }
+
+  function setTarget(roleId: string, delta: number) {
     setTargets((prev) => ({
       ...prev,
-      [role]: Math.max(0, Math.min(20, (prev[role] ?? 0) + delta)),
+      [roleId]: Math.max(0, Math.min(20, (prev[roleId] ?? 0) + delta)),
     }));
   }
 
-  const selectedMembers = staff.filter((m) => selected.has(m.id));
+  const selectedIds = Object.keys(selected);
 
   function onSubmit() {
     if (!venueId) {
       toast.show("Configura prima il tuo locale.", "error");
       return;
     }
-    if (selected.size === 0) {
+    if (selectedIds.length === 0) {
       toast.show("Seleziona almeno una persona.", "error");
       return;
     }
@@ -85,10 +95,9 @@ export function StaffShiftForm({ venueId }: Props) {
       return;
     }
     const dateStr = toDateString(date);
-    const roleTargets = STAFF_ROLES.map((role) => ({
-      role: role as string,
-      count: targets[role] ?? 0,
-    })).filter((t) => t.count > 0);
+    const roleTargets = roles
+      .map((role) => ({ role_id: role.id, count: targets[role.id] ?? 0 }))
+      .filter((t) => t.count > 0);
     create.mutate(
       {
         title: `Turno · ${formatDate(dateStr)}`,
@@ -96,7 +105,10 @@ export function StaffShiftForm({ venueId }: Props) {
         start_time: toTimeString(start),
         end_time: toTimeString(end),
         description: note.trim() || null,
-        staffIds: [...selected],
+        staff: selectedIds.map((id) => ({
+          staff_member_id: id,
+          role_id: selected[id],
+        })),
         roleTargets,
       },
       {
@@ -134,64 +146,19 @@ export function StaffShiftForm({ venueId }: Props) {
         />
 
         <RoleRequirementsField
+          roles={roles}
           targets={targets}
           onChange={setTarget}
-          assignedRoles={selectedMembers.map((m) => m.role)}
+          assignedRoleIds={selectedIds.map((id) => selected[id])}
         />
 
-        <View className="gap-3">
-          <Mono>Chi chiami</Mono>
-          {staffQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-2" />
-          ) : staff.length === 0 ? (
-            <EmptyState
-              title="Nessuno nello staff"
-              subtitle="Aggiungi prima qualcuno dalla scheda «Staff»."
-            />
-          ) : (
-            <View className="gap-3">
-              {staff.map((m) => {
-                const active = selected.has(m.id);
-                return (
-                  <Card
-                    key={m.id}
-                    className={cn(
-                      "rounded-3xl border-border-2 p-4",
-                      active && "border-gold"
-                    )}
-                    onPress={() => toggle(m.id)}
-                  >
-                    <View className="flex-row items-center gap-3">
-                      <Avatar
-                        uri={m.waiter?.avatar_url ?? undefined}
-                        name={m.display_name}
-                        size={40}
-                      />
-                      <View className="flex-1">
-                        <Text className="text-base font-sans-bold text-t1">
-                          {m.display_name}
-                        </Text>
-                        {m.role ? (
-                          <Text className="text-xs text-t3">{m.role}</Text>
-                        ) : null}
-                      </View>
-                      <View
-                        className={cn(
-                          "h-6 w-6 items-center justify-center rounded-full border",
-                          active ? "border-gold bg-gold" : "border-border"
-                        )}
-                      >
-                        {active ? (
-                          <Icon name="check" size={14} color="#1A1206" />
-                        ) : null}
-                      </View>
-                    </View>
-                  </Card>
-                );
-              })}
-            </View>
-          )}
-        </View>
+        <StaffAssignPicker
+          staff={staff}
+          loading={staffQuery.isLoading}
+          value={selected}
+          onToggle={toggle}
+          onRoleChange={setRole}
+        />
 
         <Input
           label="Note (facoltative)"
@@ -209,11 +176,11 @@ export function StaffShiftForm({ venueId }: Props) {
           label={
             create.isPending
               ? "Assegnazione…"
-              : selected.size > 1
-                ? `Assegna a ${selected.size} persone`
+              : selectedIds.length > 1
+                ? `Assegna a ${selectedIds.length} persone`
                 : "Assegna turno"
           }
-          disabled={create.isPending || selected.size === 0}
+          disabled={create.isPending || selectedIds.length === 0}
           onPress={onSubmit}
         />
       </ScrollView>

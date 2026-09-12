@@ -19,7 +19,9 @@ export const MAX_WEEK_HOURS = 48;
 type LoadAssignment = {
   id: string;
   status: AssignmentStatus;
-  staff_member: { id: string; display_name: string; role: string | null } | null;
+  /** Il ruolo ricoperto su **questo** turno, se è stato scelto. */
+  role: { name: string } | null;
+  staff_member: { id: string; display_name: string } | null;
 };
 
 /** Il minimo che serve al calcolo: un turno con i suoi assegnati. */
@@ -43,6 +45,8 @@ export type PersonShift = {
   start_time: string;
   end_time: string;
   status: AssignmentStatus;
+  /** In che ruolo ci lavora quel giorno (null se non ancora deciso). */
+  role: string | null;
   /** Ore che questo turno aggiunge al carico: 0 se la persona non viene. */
   hours: number;
 };
@@ -50,7 +54,8 @@ export type PersonShift = {
 export type PersonLoad = {
   staffMemberId: string;
   name: string;
-  role: string | null;
+  /** Le mansioni della persona, già composte ("Cameriere, Barman"). */
+  roles: string | null;
   /** Turni per data (`YYYY-MM-DD`). */
   byDay: Map<string, PersonShift[]>;
   /** Ore programmate nell'intervallo. */
@@ -69,7 +74,7 @@ export type PersonLoad = {
  */
 export function computeWeekLoad(
   shifts: LoadShift[],
-  roster: { id: string; display_name: string; role: string | null }[]
+  roster: { id: string; display_name: string; roles: string | null }[]
 ): PersonLoad[] {
   const rows = new Map<string, PersonLoad>();
   const activeDays = new Map<string, Set<string>>();
@@ -77,14 +82,14 @@ export function computeWeekLoad(
   function row(member: {
     id: string;
     display_name: string;
-    role: string | null;
+    roles?: string | null;
   }): PersonLoad {
     const existing = rows.get(member.id);
     if (existing) return existing;
     const created: PersonLoad = {
       staffMemberId: member.id,
       name: member.display_name,
-      role: member.role,
+      roles: member.roles ?? null,
       byDay: new Map(),
       hours: 0,
       daysWorked: 0,
@@ -117,6 +122,7 @@ export function computeWeekLoad(
         start_time: shift.start_time,
         end_time: shift.end_time,
         status: assignment.status,
+        role: assignment.role?.name ?? null,
         hours,
       });
       person.byDay.set(shift.date, list);

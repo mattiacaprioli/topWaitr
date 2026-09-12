@@ -32,7 +32,7 @@ export function buildHoursHtml(
     .map(
       (r) =>
         `<tr><td>${escapeHtml(r.display_name)}</td><td>${escapeHtml(
-          r.role ?? "—"
+          r.roles ?? "—"
         )}</td><td class="n">${r.shifts_count}</td><td class="n">${hoursNumber(
           r.hours
         )}</td></tr>`
@@ -73,7 +73,7 @@ function csvCell(v: string): string {
 export function buildHoursCsv(rows: StaffHoursRow[]): string {
   const header = "Nome;Ruolo;Turni;Ore";
   const lines = rows.map((r) =>
-    [r.display_name, r.role ?? "", String(r.shifts_count), hoursNumber(r.hours)]
+    [r.display_name, r.roles ?? "", String(r.shifts_count), hoursNumber(r.hours)]
       .map(csvCell)
       .join(";")
   );

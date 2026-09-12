@@ -21,7 +21,7 @@ import {
 import { cn } from "@/lib/cn";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Shift, ShiftWithAssignees } from "@/features/shifts/api";
-import type { StaffMember } from "@/features/staff/api";
+import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
 import {
   addDays,
@@ -153,13 +153,21 @@ export function PlanningPage() {
     setPendingDrop({ kind: "move", payload, toDate, notify });
   }
 
-  function runReassign(payload: ReassignDragPayload, to: StaffMember) {
+  function runReassign(payload: ReassignDragPayload, to: StaffMemberWithWaiter) {
     setPendingDrop(null);
     reassign.mutate(
       {
         assignmentId: payload.assignmentId,
         shiftId: payload.shiftId,
-        toStaffMember: to,
+        toStaffMember: {
+          id: to.id,
+          display_name: to.display_name,
+          // Le sue mansioni: la patch ottimistica riproduce con queste la regola
+          // che il server applica per scegliere il ruolo di chi entra.
+          roles: to.staff_member_roles
+            .map((r) => r.role)
+            .filter((r): r is NonNullable<typeof r> => !!r),
+        },
       },
       {
         onSuccess: () => toast.show(`Turno passato a ${to.display_name}`),
@@ -168,7 +176,7 @@ export function PlanningPage() {
     );
   }
 
-  function requestReassign(payload: ReassignDragPayload, to: StaffMember) {
+  function requestReassign(payload: ReassignDragPayload, to: StaffMemberWithWaiter) {
     if (busy) return;
     // `unique (shift_id, staff_member_id)`: è l'unico rifiuto che vale la pena
     // spiegare, perché guardando la griglia non si deduce.
@@ -376,7 +384,7 @@ type PendingDrop =
   | {
       kind: "reassign";
       payload: ReassignDragPayload;
-      to: StaffMember;
+      to: StaffMemberWithWaiter;
       plan: ReassignNotifyPlan;
     };
 
@@ -413,7 +421,7 @@ const SKIP_REASON: Record<NonNullable<ReassignNotifyPlan["fromSkip"]>, string> =
 
 function reassignMessage(
   payload: ReassignDragPayload,
-  to: StaffMember,
+  to: StaffMemberWithWaiter,
   plan: ReassignNotifyPlan
 ): string {
   const head = `«${payload.title}» del ${formatDate(payload.date)} passa da ${payload.fromStaffName} a ${to.display_name}.`;

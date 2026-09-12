@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
-import { ScrollView, Text, View } from "@/tw";
-import { Avatar } from "@/components/ui/Avatar";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { ScrollView, View } from "@/tw";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { Icon } from "@/components/ui/Icon";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
-import { cn } from "@/lib/cn";
 import {
   SHIFT_RANGE_ERROR,
   formatDate,
@@ -19,15 +14,19 @@ import {
 } from "@/lib/format";
 import { useToast } from "@/providers/Toast";
 import { useVenueStaff } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import { useVenueRoles } from "@/features/roles/hooks";
 import { RoleRequirementsField } from "@/features/assignments/RoleRequirementsField";
+import {
+  StaffAssignPicker,
+  defaultRoleFor,
+} from "@/features/assignments/StaffAssignPicker";
 import {
   useShiftAssignments,
   useShiftRoleRequirements,
   useUpdateInternalShift,
 } from "@/features/assignments/hooks";
 import {
-  ASSIGNMENT_STATUS_LABEL,
   isActiveAssignment,
   type AssignmentStatus,
 } from "@/features/assignments/status";
@@ -48,9 +47,16 @@ type SeededProps = {
   initialTargets: Record<string, number>;
   /** Stato dell'assegnazione già a sistema, per membro dell'organico. */
   initialStatuses: Record<string, AssignmentStatus>;
+  /** Ruolo già scelto su questo turno, per membro dell'organico. */
+  initialRoles: Record<string, string | null>;
 };
 
-function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
+function EditForm({
+  shift,
+  initialTargets,
+  initialStatuses,
+  initialRoles,
+}: SeededProps) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(shift.venue_id);
@@ -58,30 +64,37 @@ function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
   const staff = (staffQuery.data ?? []).filter(
     (m) => m.link_status === "active"
   );
+  const rolesQuery = useVenueRoles(shift.venue_id);
+  const roles = rolesQuery.data ?? [];
   const update = useUpdateInternalShift(shift.id);
 
   const [date, setDate] = useState(new Date(`${shift.date}T00:00:00`));
   const [start, setStart] = useState(timeToDate(shift.start_time));
   const [end, setEnd] = useState(timeToDate(shift.end_time));
   const [targets, setTargets] = useState<Record<string, number>>(initialTargets);
-  const [selected, setSelected] = useState<Set<string>>(
-    new Set(Object.keys(initialStatuses))
-  );
+  const [selected, setSelected] =
+    useState<Record<string, string | null>>(initialRoles);
   const [note, setNote] = useState(shift.description ?? "");
 
-  function toggle(id: string) {
+  function toggle(member: StaffMemberWithWaiter) {
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
+      if (member.id in prev) {
+        const next = { ...prev };
+        delete next[member.id];
+        return next;
+      }
+      return { ...prev, [member.id]: defaultRoleFor(member) };
     });
   }
 
-  function setTarget(role: string, delta: number) {
+  function setRole(staffId: string, roleId: string | null) {
+    setSelected((prev) => ({ ...prev, [staffId]: roleId }));
+  }
+
+  function setTarget(roleId: string, delta: number) {
     setTargets((prev) => ({
       ...prev,
-      [role]: Math.max(0, Math.min(20, (prev[role] ?? 0) + delta)),
+      [roleId]: Math.max(0, Math.min(20, (prev[roleId] ?? 0) + delta)),
     }));
   }
 
@@ -90,15 +103,15 @@ function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
     return initialStatuses[id] ?? "assigned";
   }
 
-  const selectedMembers = staff.filter((m) => selected.has(m.id));
+  const selectedIds = Object.keys(selected);
   // Chi ha rifiutato (o è mancato) resta in elenco ma non copre il suo ruolo:
   // contarlo faceva sembrare completo un fabbisogno ancora scoperto.
-  const workingMembers = selectedMembers.filter((m) =>
-    isActiveAssignment(memberStatus(m.id))
-  );
+  const workingRoleIds = selectedIds
+    .filter((id) => isActiveAssignment(memberStatus(id)))
+    .map((id) => selected[id]);
 
   function onSubmit() {
-    if (selected.size === 0) {
+    if (selectedIds.length === 0) {
       toast.show("Seleziona almeno una persona.", "error");
       return;
     }
@@ -114,11 +127,14 @@ function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
         start_time: toTimeString(start),
         end_time: toTimeString(end),
         description: note.trim() || null,
-        roleTargets: STAFF_ROLES.map((role) => ({
-          role: role as string,
-          count: targets[role] ?? 0,
+        roleTargets: roles.map((role) => ({
+          role_id: role.id,
+          count: targets[role.id] ?? 0,
         })),
-        staffIds: [...selected],
+        staff: selectedIds.map((id) => ({
+          staff_member_id: id,
+          role_id: selected[id],
+        })),
       },
       {
         onSuccess: () => {
@@ -155,78 +171,20 @@ function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
         />
 
         <RoleRequirementsField
+          roles={roles}
           targets={targets}
           onChange={setTarget}
-          assignedRoles={workingMembers.map((m) => m.role)}
+          assignedRoleIds={workingRoleIds}
         />
 
-        <View className="gap-3">
-          <Mono>Chi chiami</Mono>
-          {staffQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-2" />
-          ) : staff.length === 0 ? (
-            <EmptyState
-              title="Nessuno nello staff"
-              subtitle="Aggiungi prima qualcuno dalla scheda «Staff»."
-            />
-          ) : (
-            <View className="gap-3">
-              {staff.map((m) => {
-                const active = selected.has(m.id);
-                const status = memberStatus(m.id);
-                const works = isActiveAssignment(status);
-                return (
-                  <Card
-                    key={m.id}
-                    className={cn(
-                      "rounded-3xl border-border-2 p-4",
-                      active && (works ? "border-gold" : "border-error")
-                    )}
-                    onPress={() => toggle(m.id)}
-                  >
-                    <View className="flex-row items-center gap-3">
-                      <Avatar
-                        uri={m.waiter?.avatar_url ?? undefined}
-                        name={m.display_name}
-                        size={40}
-                      />
-                      <View className="flex-1">
-                        <Text className="text-base font-sans-bold text-t1">
-                          {m.display_name}
-                        </Text>
-                        {m.role ? (
-                          <Text className="text-xs text-t3">{m.role}</Text>
-                        ) : null}
-                        {active && !works ? (
-                          <Text className="text-xs font-sans-semibold text-error">
-                            {ASSIGNMENT_STATUS_LABEL[status]} · non copre il
-                            turno
-                          </Text>
-                        ) : null}
-                      </View>
-                      <View
-                        className={cn(
-                          "h-6 w-6 items-center justify-center rounded-full border",
-                          !active && "border-border",
-                          active && works && "border-gold bg-gold",
-                          active && !works && "border-error"
-                        )}
-                      >
-                        {active ? (
-                          works ? (
-                            <Icon name="check" size={14} color="#1A1206" />
-                          ) : (
-                            <Icon name="close" size={14} color="#e55b45" />
-                          )
-                        ) : null}
-                      </View>
-                    </View>
-                  </Card>
-                );
-              })}
-            </View>
-          )}
-        </View>
+        <StaffAssignPicker
+          staff={staff}
+          loading={staffQuery.isLoading}
+          value={selected}
+          onToggle={toggle}
+          onRoleChange={setRole}
+          statusFor={memberStatus}
+        />
 
         <Input
           label="Note (facoltative)"
@@ -242,7 +200,7 @@ function EditForm({ shift, initialTargets, initialStatuses }: SeededProps) {
         <GoldButton
           className="mt-1"
           label={update.isPending ? "Salvataggio…" : "Salva modifiche"}
-          disabled={update.isPending || selected.size === 0}
+          disabled={update.isPending || selectedIds.length === 0}
           onPress={onSubmit}
         />
       </ScrollView>
@@ -264,11 +222,14 @@ export function InternalShiftEditForm({ shift }: { shift: Shift }) {
   }
 
   const initialTargets = Object.fromEntries(
-    (reqsQuery.data ?? []).map((r) => [r.role, r.count])
+    (reqsQuery.data ?? []).map((r) => [r.role_id, r.count])
   );
   const initialStatuses = Object.fromEntries(
     (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.status])
   ) as Record<string, AssignmentStatus>;
+  const initialRoles = Object.fromEntries(
+    (assignmentsQuery.data ?? []).map((a) => [a.staff_member_id, a.role_id])
+  ) as Record<string, string | null>;
 
   return (
     <EditForm
@@ -276,6 +237,7 @@ export function InternalShiftEditForm({ shift }: { shift: Shift }) {
       shift={shift}
       initialTargets={initialTargets}
       initialStatuses={initialStatuses}
+      initialRoles={initialRoles}
     />
   );
 }

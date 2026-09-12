@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth";
 import { formatDate, formatShiftRange } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useVenueCoverage } from "@/features/assignments/hooks";
-import { computeCoverage } from "@/features/assignments/coverage";
+import { shiftCoverage } from "@/features/assignments/coverage";
 import type { CoverageShift } from "@/features/assignments/api";
 
 export default function CoverageScreen() {
@@ -63,16 +63,7 @@ export default function CoverageScreen() {
           <View key={date} className="gap-3">
             <Mono>{formatDate(date)}</Mono>
             {dayShifts.map((s) => {
-              const cov = computeCoverage(
-                s.shift_role_requirements.map((r) => ({
-                  role: r.role,
-                  count: r.count,
-                })),
-                s.shift_assignments.map((a) => ({
-                  status: a.status,
-                  role: a.staff_member?.role ?? null,
-                }))
-              );
+              const cov = shiftCoverage(s);
               return (
                 <Card
                   key={s.id}

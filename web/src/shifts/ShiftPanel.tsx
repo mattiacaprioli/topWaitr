@@ -9,7 +9,12 @@ import {
 } from "@/features/assignments/hooks";
 import { useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useVenueStaff } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { Link } from "react-router-dom";
+import { useVenueRoles } from "@/features/roles/hooks";
+import {
+  staffRoleNames,
+  type StaffMemberWithWaiter,
+} from "@/features/staff/api";
 import { computeCoverage } from "@/features/assignments/coverage";
 import {
   ASSIGNMENT_STATUS_LABEL,
@@ -27,7 +32,7 @@ import { useToast } from "../ui/Toast";
 import { PresenceSection } from "./PresenceSection";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 
-type RoleTarget = { role: string; count: number };
+type RoleTarget = { role_id: string; count: number };
 
 /**
  * Pannello laterale di creazione/modifica turno: il gestore sceglie giorno e
@@ -217,6 +222,7 @@ function InternalForm({
 }) {
   const venue = useVenue();
   const staffQuery = useVenueStaff(venue.id);
+  const rolesQuery = useVenueRoles(venue.id);
   // In creazione non c'è ancora un turno: senza `enabled` il pannello faceva
   // due query con id vuoto ogni volta che si apriva.
   const assignmentsQuery = useShiftAssignments(shift?.id ?? "", !!shift?.id);
@@ -225,7 +231,11 @@ function InternalForm({
   const update = useUpdateInternalShift(shift?.id ?? "");
   const cancelled = shift?.status === "cancelled";
 
-  const [staffIds, setStaffIds] = useState<string[]>(initialStaffIds ?? []);
+  // Chi lavora **e** in che ruolo: la chiave è la persona, il valore il ruolo
+  // che ricopre in questo turno (null = più mansioni, ancora da scegliere).
+  const [staffRoles, setStaffRoles] = useState<Record<string, string | null>>(
+    Object.fromEntries((initialStaffIds ?? []).map((id) => [id, null]))
+  );
   const [roleTargets, setRoleTargets] = useState<RoleTarget[]>([]);
   // Giorni **in più** su cui ripetere lo stesso turno, in creazione.
   const [extraDates, setExtraDates] = useState<string[]>([]);
@@ -252,10 +262,12 @@ function InternalForm({
   // sovrascriverebbe `initialStaffIds` con una lista vuota.
   useEffect(() => {
     if (shift && assignmentsQuery.data) {
-      setStaffIds(
-        assignmentsQuery.data
-          .map((a) => a.staff_member_id)
-          .filter((id): id is string => !!id)
+      setStaffRoles(
+        Object.fromEntries(
+          assignmentsQuery.data
+            .filter((a) => !!a.staff_member_id)
+            .map((a) => [a.staff_member_id, a.role_id])
+        )
       );
     }
   }, [shift, assignmentsQuery.data]);
@@ -263,15 +275,17 @@ function InternalForm({
   useEffect(() => {
     if (roleReqsQuery.data) {
       setRoleTargets(
-        roleReqsQuery.data.map((r) => ({ role: r.role, count: r.count }))
+        roleReqsQuery.data.map((r) => ({ role_id: r.role_id, count: r.count }))
       );
     }
   }, [roleReqsQuery.data]);
 
   const staff = staffQuery.data ?? [];
+  const roles = rolesQuery.data ?? [];
+  const staffIds = useMemo(() => Object.keys(staffRoles), [staffRoles]);
   const selectedStaff = useMemo(
-    () => staff.filter((m) => staffIds.includes(m.id)),
-    [staff, staffIds]
+    () => staff.filter((m) => m.id in staffRoles),
+    [staff, staffRoles]
   );
 
   // Stato reale dell'assegnazione. Chi ha rifiutato (o è stato segnato assente)
@@ -293,29 +307,47 @@ function InternalForm({
   const coverage = useMemo(
     () =>
       computeCoverage(
-        roleTargets,
+        roleTargets.map((t) => ({
+          role_id: t.role_id,
+          role: roles.find((r) => r.id === t.role_id)?.name ?? "Ruolo",
+          count: t.count,
+        })),
         selectedStaff.map((m) => ({
           status: statusById.get(m.id) ?? "assigned",
-          role: m.role,
+          role_id: staffRoles[m.id] ?? null,
         }))
       ),
-    [roleTargets, selectedStaff, statusById]
+    [roleTargets, roles, selectedStaff, staffRoles, statusById]
   );
 
   const workingCount = selectedStaff.filter((m) =>
     isActiveAssignment(staffStatus(m.id))
   ).length;
 
-  function toggleStaff(id: string) {
-    setStaffIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  function toggleStaff(member: StaffMemberWithWaiter) {
+    setStaffRoles((prev) => {
+      if (member.id in prev) {
+        const next = { ...prev };
+        delete next[member.id];
+        return next;
+      }
+      // Con una mansione sola non c'è niente da scegliere; con due il ruolo
+      // resta da decidere, perché indovinarlo falserebbe la copertura.
+      const own = member.staff_member_roles
+        .map((r) => r.role)
+        .filter((r): r is NonNullable<typeof r> => !!r);
+      return { ...prev, [member.id]: own.length === 1 ? own[0].id : null };
+    });
   }
 
-  function setRoleCount(role: string, count: number) {
+  function setStaffRole(staffId: string, roleId: string | null) {
+    setStaffRoles((prev) => ({ ...prev, [staffId]: roleId }));
+  }
+
+  function setRoleCount(roleId: string, count: number) {
     setRoleTargets((prev) => {
-      const rest = prev.filter((t) => t.role !== role);
-      return count > 0 ? [...rest, { role, count }] : rest;
+      const rest = prev.filter((t) => t.role_id !== roleId);
+      return count > 0 ? [...rest, { role_id: roleId, count }] : rest;
     });
   }
 
@@ -355,7 +387,10 @@ function InternalForm({
       start_time: values.start_time,
       end_time: values.end_time,
       description: values.description.trim() || null,
-      staffIds,
+      staff: staffIds.map((id) => ({
+        staff_member_id: id,
+        role_id: staffRoles[id] ?? null,
+      })),
       roleTargets,
     };
     if (shift) {
@@ -458,34 +493,48 @@ function InternalForm({
             </Pill>
           ) : null}
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          {STAFF_ROLES.map((role) => {
-            const count = roleTargets.find((t) => t.role === role)?.count ?? 0;
-            return (
-              <div
-                key={role}
-                className={cn(
-                  "flex items-center justify-between gap-2 rounded-xl border px-3 py-1.5",
-                  count > 0
-                    ? "border-border-gold bg-gold/5"
-                    : "border-border-2 bg-bg-1"
-                )}
-              >
-                <span className="truncate text-xs text-t2">{role}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  max={99}
-                  value={count}
-                  onChange={(e) =>
-                    setRoleCount(role, Math.max(0, Number(e.target.value) || 0))
-                  }
-                  className="w-14 px-2 py-1 text-center font-mono text-xs"
-                />
-              </div>
-            );
-          })}
-        </div>
+        {roles.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border-2 px-3 py-4 text-center text-xs text-t4">
+            Nessun ruolo definito.{" "}
+            <Link to="/ruoli" className="font-semibold text-gold">
+              Creali ora
+            </Link>{" "}
+            per poterli chiedere sui turni.
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {roles.map((role) => {
+              const count =
+                roleTargets.find((t) => t.role_id === role.id)?.count ?? 0;
+              return (
+                <div
+                  key={role.id}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-xl border px-3 py-1.5",
+                    count > 0
+                      ? "border-border-gold bg-gold/5"
+                      : "border-border-2 bg-bg-1"
+                  )}
+                >
+                  <span className="truncate text-xs text-t2">{role.name}</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={99}
+                    value={count}
+                    onChange={(e) =>
+                      setRoleCount(
+                        role.id,
+                        Math.max(0, Number(e.target.value) || 0)
+                      )
+                    }
+                    className="w-14 px-2 py-1 text-center font-mono text-xs"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
       <section>
@@ -499,35 +548,69 @@ function InternalForm({
         ) : (
           <div className="flex flex-col gap-1">
             {staff.map((member) => {
-              const on = staffIds.includes(member.id);
+              const on = member.id in staffRoles;
               const status = staffStatus(member.id);
               const works = isActiveAssignment(status);
+              const own = member.staff_member_roles
+                .map((r) => r.role)
+                .filter((r): r is NonNullable<typeof r> => !!r)
+                .sort((a, b) => a.sort_order - b.sort_order);
+              const chosen = staffRoles[member.id] ?? null;
               return (
-                <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => toggleStaff(member.id)}
-                  className={cn(
-                    "focus-gold flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition",
-                    on && works && "border-border-gold bg-gold/10",
-                    on && !works && "border-error/40 bg-error/5",
-                    !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
-                  )}
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm text-t1">
-                      {member.display_name}
+                <div key={member.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleStaff(member)}
+                    className={cn(
+                      "focus-gold flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition",
+                      on && works && "border-border-gold bg-gold/10",
+                      on && !works && "border-error/40 bg-error/5",
+                      !on && "border-border-2 bg-bg-1 hover:bg-bg-2"
+                    )}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm text-t1">
+                        {member.display_name}
+                      </span>
+                      <span className="block truncate text-xs text-t4">
+                        {staffRoleNames(member) ?? "Ruoli non indicati"}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-t4">
-                      {member.role ?? "Ruolo non indicato"}
-                    </span>
-                  </span>
-                  {on ? (
-                    <Pill tone={works ? "gold" : "error"}>
-                      {ASSIGNMENT_STATUS_LABEL[status]}
-                    </Pill>
+                    {on ? (
+                      <Pill tone={works ? "gold" : "error"}>
+                        {ASSIGNMENT_STATUS_LABEL[status]}
+                      </Pill>
+                    ) : null}
+                  </button>
+
+                  {/* Il ruolo si sceglie solo per chi ne ha più di uno: con una
+                      mansione sola non c'è niente da decidere. */}
+                  {on && own.length > 1 ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-2 pl-3">
+                      <span className="text-xs text-t4">In questo turno:</span>
+                      {own.map((r) => (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() =>
+                            setStaffRole(
+                              member.id,
+                              chosen === r.id ? null : r.id
+                            )
+                          }
+                          className={cn(
+                            "focus-gold rounded-full border px-2.5 py-0.5 text-xs transition",
+                            chosen === r.id
+                              ? "border-border-gold bg-gold/10 text-t1"
+                              : "border-border-2 text-t3 hover:bg-bg-2"
+                          )}
+                        >
+                          {r.name}
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
-                </button>
+                </div>
               );
             })}
           </div>

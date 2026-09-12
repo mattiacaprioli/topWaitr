@@ -151,6 +151,7 @@ export default function WaiterShiftsScreen() {
                       <MyShiftCard
                         shift={a.shift!}
                         status={a.status}
+                        role={a.role?.name}
                         onPress={() => openShift(a.shift!.id)}
                       />
                       <GoldButton
@@ -182,6 +183,7 @@ export default function WaiterShiftsScreen() {
                       key={a.id}
                       shift={a.shift!}
                       status={a.status}
+                      role={a.role?.name}
                       onPress={() => openShift(a.shift!.id)}
                     />
                   ))}

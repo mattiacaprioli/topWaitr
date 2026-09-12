@@ -27,10 +27,13 @@ const STATUS: Record<
 export function MyShiftCard({
   shift,
   status,
+  role,
   onPress,
 }: {
   shift: ShiftWithVenue;
   status: Enums<"assignment_status">;
+  /** Il ruolo per cui è chiamato quel giorno, se il locale l'ha scelto. */
+  role?: string | null;
   onPress: () => void;
 }) {
   const s = STATUS[status];
@@ -47,7 +50,7 @@ export function MyShiftCard({
             {shift.venue?.name ?? "Locale"}
           </Text>
           <Text className="mt-0.5 text-sm text-t3" numberOfLines={1}>
-            {shift.title}
+            {role ? `${shift.title} · ${role}` : shift.title}
           </Text>
         </View>
         <Pill label={s.label} variant={s.variant} />

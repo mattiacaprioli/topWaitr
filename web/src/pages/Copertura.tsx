@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useVenueCoverage } from "@/features/assignments/hooks";
-import { computeCoverage } from "@/features/assignments/coverage";
+import { shiftCoverage } from "@/features/assignments/coverage";
 import { formatDate, formatShiftRange } from "@/lib/format";
 import type { CoverageShift } from "@/features/assignments/api";
 import { useVenue } from "../lib/venue";
@@ -34,14 +34,7 @@ export function CoperturaPage() {
   const totalMissing = useMemo(
     () =>
       (data ?? []).reduce((sum, s) => {
-        const c = computeCoverage(
-          s.shift_role_requirements,
-          s.shift_assignments.map((a) => ({
-            status: a.status,
-            role: a.staff_member?.role ?? null,
-          }))
-        );
-        return sum + c.missing;
+        return sum + shiftCoverage(s).missing;
       }, 0),
     [data]
   );
@@ -86,13 +79,7 @@ export function CoperturaPage() {
 }
 
 function CoverageRow({ shift }: { shift: CoverageShift }) {
-  const coverage = computeCoverage(
-    shift.shift_role_requirements,
-    shift.shift_assignments.map((a) => ({
-      status: a.status,
-      role: a.staff_member?.role ?? null,
-    }))
-  );
+  const coverage = shiftCoverage(shift);
 
   return (
     <Card className="flex flex-wrap items-center justify-between gap-4 p-4">

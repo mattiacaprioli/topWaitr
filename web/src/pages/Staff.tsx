@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useVenueStaff } from "@/features/staff/hooks";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import {
+  staffRoleNames,
+  type StaffMemberWithWaiter,
+} from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
 import { AddStaffPanel } from "../staff/AddStaffPanel";
 import { StaffDetail } from "../staff/StaffDetail";
@@ -36,9 +40,14 @@ export function StaffPage() {
             : `${staff.length} nel tuo organico`
         }
         actions={
-          <Button variant="gold" onClick={() => setAdding((v) => !v)}>
-            {adding ? "Annulla" : "+ Aggiungi"}
-          </Button>
+          <div className="flex gap-2">
+            <Link to="/ruoli">
+              <Button>Ruoli del locale</Button>
+            </Link>
+            <Button variant="gold" onClick={() => setAdding((v) => !v)}>
+              {adding ? "Annulla" : "+ Aggiungi"}
+            </Button>
+          </div>
         }
       />
 
@@ -66,7 +75,7 @@ export function StaffPage() {
                     {member.display_name}
                   </span>
                   <span className="mt-0.5 block truncate text-xs text-t4">
-                    {member.role ?? "Ruolo non indicato"}
+                    {staffRoleNames(member) ?? "Ruoli non indicati"}
                     {member.phone ? ` · ${member.phone}` : ""}
                   </span>
                 </span>

@@ -152,6 +152,7 @@ export default function WaiterHomeScreen() {
                 key={a.id}
                 shift={a.shift!}
                 status={a.status}
+                role={a.role?.name}
                 onPress={() => router.push(`/(waiter)/shift/${a.shift!.id}`)}
               />
             ))}

@@ -65,7 +65,7 @@ export function HomePage() {
         .map((a) => ({
           key: `asg-${a.id}`,
           name: a.staff_member?.display_name ?? "Staff",
-          role: a.staff_member?.role ?? null,
+          role: a.role?.name ?? null,
           ratingAvg: a.staff_member?.waiter?.waiter_profile?.rating_avg ?? null,
           ratingCount:
             a.staff_member?.waiter?.waiter_profile?.rating_count ?? null,

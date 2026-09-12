@@ -41,6 +41,12 @@ export const qk = {
       ["reviews", "page", waiterId, sort, ratingFilter ?? "all", tag ?? "all"] as const,
     breakdown: (waiterId: string) => ["reviews", "breakdown", waiterId] as const,
   },
+  roles: {
+    all: ["roles"] as const,
+    byVenue: (venueId: string) => ["roles", "byVenue", venueId] as const,
+    byStaffMember: (staffMemberId: string) =>
+      ["roles", "byStaffMember", staffMemberId] as const,
+  },
   staff: {
     all: ["staff"] as const,
     byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,

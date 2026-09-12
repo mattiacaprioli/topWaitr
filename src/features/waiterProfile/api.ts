@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import type { Tables } from "@/types/database";
-import { STAFF_ROLES } from "@/features/staff/roles";
 
 export type Profile = Tables<"profiles">;
 export type WaiterProfile = Tables<"waiter_profiles">;
@@ -20,12 +19,13 @@ export type WaiterProfileInput = {
 };
 
 /**
- * Ruolo principale selezionabile (scelta singola). È **la stessa lista** che il
- * locale usa per l'organico e per il fabbisogno dei turni: il ruolo scelto qui
- * viene copiato nell'organico quando il locale aggiunge chi si è candidato, e
- * due elenchi diversi facevano fallire la copertura in silenzio.
+ * Esempi mostrati come placeholder sotto il campo "ruolo principale". Il campo è
+ * **testo libero**: era una lista chiusa finché coincideva con quella
+ * dell'organico, ma i ruoli ora li scrive ogni locale per sé e nessun elenco
+ * fisso potrebbe descrivere tutti. Qui è comunque una vetrina, non un dato che
+ * deve combaciare con qualcosa.
  */
-export const PRIMARY_ROLE_OPTIONS = STAFF_ROLES;
+export const PRIMARY_ROLE_EXAMPLES = "Es. Cameriere, Barman, Chef de rang…";
 
 /** Lingue parlate (scelta multipla). Lista curata → dati normalizzati e filtrabili. */
 export const LANGUAGE_OPTIONS = [

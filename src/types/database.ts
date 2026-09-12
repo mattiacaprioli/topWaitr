@@ -336,6 +336,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          role_id: string | null
           shift_id: string
           staff_member_id: string
           status: Database["public"]["Enums"]["assignment_status"]
@@ -344,6 +345,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          role_id?: string | null
           shift_id: string
           staff_member_id: string
           status?: Database["public"]["Enums"]["assignment_status"]
@@ -352,12 +354,20 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          role_id?: string | null
           shift_id?: string
           staff_member_id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
           worked_hours?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "shift_assignments_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "venue_roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shift_assignments_shift_id_fkey"
             columns: ["shift_id"]
@@ -379,24 +389,31 @@ export type Database = {
           count: number
           created_at: string
           id: string
-          role: string
+          role_id: string
           shift_id: string
         }
         Insert: {
           count?: number
           created_at?: string
           id?: string
-          role: string
+          role_id: string
           shift_id: string
         }
         Update: {
           count?: number
           created_at?: string
           id?: string
-          role?: string
+          role_id?: string
           shift_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shift_role_requirements_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "venue_roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shift_role_requirements_shift_id_fkey"
             columns: ["shift_id"]
@@ -468,6 +485,39 @@ export type Database = {
           },
         ]
       }
+      staff_member_roles: {
+        Row: {
+          created_at: string
+          role_id: string
+          staff_member_id: string
+        }
+        Insert: {
+          created_at?: string
+          role_id: string
+          staff_member_id: string
+        }
+        Update: {
+          created_at?: string
+          role_id?: string
+          staff_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_member_roles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "venue_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_member_roles_staff_member_id_fkey"
+            columns: ["staff_member_id"]
+            isOneToOne: false
+            referencedRelation: "staff_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_members: {
         Row: {
           created_at: string
@@ -477,7 +527,6 @@ export type Database = {
           link_status: Database["public"]["Enums"]["staff_link_status"]
           note: string | null
           phone: string | null
-          role: string | null
           venue_id: string
           waiter_id: string | null
         }
@@ -489,7 +538,6 @@ export type Database = {
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           phone?: string | null
-          role?: string | null
           venue_id: string
           waiter_id?: string | null
         }
@@ -501,7 +549,6 @@ export type Database = {
           link_status?: Database["public"]["Enums"]["staff_link_status"]
           note?: string | null
           phone?: string | null
-          role?: string | null
           venue_id?: string
           waiter_id?: string | null
         }
@@ -518,6 +565,41 @@ export type Database = {
             columns: ["waiter_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      venue_roles: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          venue_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          venue_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          venue_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venue_roles_venue_id_fkey"
+            columns: ["venue_id"]
+            isOneToOne: false
+            referencedRelation: "venues"
             referencedColumns: ["id"]
           },
         ]
@@ -769,7 +851,7 @@ export type Database = {
         Returns: {
           display_name: string
           hours: number
-          role: string
+          roles: string
           shifts_count: number
           staff_member_id: string
         }[]

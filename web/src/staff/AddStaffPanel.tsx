@@ -4,7 +4,8 @@ import {
   useFindWaiterByEmail,
   useVenueStaff,
 } from "@/features/staff/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { useSetStaffMemberRoles } from "@/features/roles/hooks";
+import { RoleCheckboxes } from "./RoleCheckboxes";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
@@ -70,30 +71,22 @@ function ModeTab({
 function ManualForm({ onDone }: { onDone: () => void }) {
   const venue = useVenue();
   const add = useAddStaffMember();
+  const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
   const [name, setName] = useState("");
-  const [role, setRole] = useState<string>(STAFF_ROLES[0]);
+  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
 
   return (
     <>
-      <div className="grid grid-cols-4 items-end gap-3">
+      <div className="grid grid-cols-3 items-end gap-3">
         <Field label="Nome">
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nome e cognome"
           />
-        </Field>
-        <Field label="Ruolo">
-          <Select value={role} onChange={(e) => setRole(e.target.value)}>
-            {STAFF_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
         </Field>
         <Field label="Impiego">
           <Select
@@ -111,6 +104,16 @@ function ManualForm({ onDone }: { onDone: () => void }) {
         </Field>
       </div>
 
+      <div className="mt-4">
+        <Field label="Ruoli">
+          <RoleCheckboxes
+            venueId={venue.id}
+            value={roleIds}
+            onChange={setRoleIds}
+          />
+        </Field>
+      </div>
+
       <div className="mt-4 flex items-center gap-3">
         <Button
           variant="gold"
@@ -120,15 +123,23 @@ function ManualForm({ onDone }: { onDone: () => void }) {
               {
                 venue_id: venue.id,
                 display_name: name.trim(),
-                role,
                 employment_type: empType,
                 phone: phone.trim() || null,
               },
               {
-                onSuccess: () => {
-                  toast.show("Aggiunto allo staff");
-                  onDone();
-                },
+                // I ruoli vivono in una tabella a parte: servono l'id della
+                // scheda, quindi si scrivono subito dopo l'insert.
+                onSuccess: (member) =>
+                  setRoles.mutate(
+                    { staffMemberId: member.id, roleIds },
+                    {
+                      onSuccess: () => {
+                        toast.show("Aggiunto allo staff");
+                        onDone();
+                      },
+                      onError: (e) => toast.show(e.message, "error"),
+                    }
+                  ),
                 onError: (e) => toast.show(e.message, "error"),
               }
             )

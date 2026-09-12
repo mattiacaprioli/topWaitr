@@ -13,7 +13,10 @@ import { useVenueStaff } from "@/features/staff/hooks";
 import { formatHours, formatShiftRange } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/api";
 import { cn } from "@/lib/cn";
-import type { StaffMember } from "@/features/staff/api";
+import {
+  staffRoleNames,
+  type StaffMemberWithWaiter,
+} from "@/features/staff/api";
 import { useVenue } from "../lib/venue";
 import { dayLabel, isToday } from "../lib/week";
 import { Pill, Placeholder, Spinner } from "../ui/primitives";
@@ -43,7 +46,7 @@ export function PeopleWeek({
   /** Casella vuota: un turno nuovo quel giorno, già assegnato a quella persona. */
   onCreate: (date: string, staffMemberId: string) => void;
   /** Turno trascinato sulla riga di un'altra persona dello stesso giorno. */
-  onReassign: (payload: ReassignDragPayload, to: StaffMember) => void;
+  onReassign: (payload: ReassignDragPayload, to: StaffMemberWithWaiter) => void;
 }) {
   const venue = useVenue();
   const staffQuery = useVenueStaff(venue.id);
@@ -66,7 +69,7 @@ export function PeopleWeek({
         (staffQuery.data ?? []).map((m) => ({
           id: m.id,
           display_name: m.display_name,
-          role: m.role,
+          roles: staffRoleNames(m),
         }))
       ),
     [shifts, staffQuery.data]
@@ -127,7 +130,7 @@ export function PeopleWeek({
                     {person.name}
                   </span>
                   <span className="truncate text-xs text-t4">
-                    {person.role ?? "Ruolo non indicato"}
+                    {person.roles ?? "Ruoli non indicati"}
                   </span>
                 </div>
 

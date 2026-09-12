@@ -1,7 +1,7 @@
 import type { Tables } from "@/types/database";
 import type {
   CoverageEmbeds,
-  RoleRequirement,
+  RoleRequirementEmbed,
 } from "@/features/assignments/coverage";
 import type { AssignmentStatus } from "@/features/assignments/status";
 
@@ -30,15 +30,17 @@ export type ShiftWithCount = ShiftWithCoverage;
  * senza conversioni.
  */
 export type ShiftWithAssignees = Shift & {
-  shift_role_requirements: RoleRequirement[];
+  shift_role_requirements: RoleRequirementEmbed[];
   shift_assignments: {
     /** Identità della riga: è l'assegnazione a spostarsi, non la persona. */
     id: string;
     status: AssignmentStatus;
+    /** Il ruolo ricoperto **su questo turno**, non quello dell'anagrafica. */
+    role_id: string | null;
+    role: { id: string; name: string } | null;
     staff_member: {
       id: string;
       display_name: string;
-      role: string | null;
       /** Senza account collegato non c'è nessuno da notificare. */
       waiter_id: string | null;
     } | null;

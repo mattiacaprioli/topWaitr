@@ -18,7 +18,7 @@ import { useAuth } from "@/lib/auth";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useVenueStaff } from "@/features/staff/hooks";
-import type { StaffMemberWithWaiter } from "@/features/staff/api";
+import { staffRoleNames, type StaffMemberWithWaiter } from "@/features/staff/api";
 
 function StaffRow({
   member,
@@ -42,9 +42,9 @@ function StaffRow({
               <Icon name="verified" size={15} color="#EAB54C" />
             ) : null}
           </View>
-          {member.role ? (
-            <Text className="text-xs text-t3">{member.role}</Text>
-          ) : null}
+          <Text className="text-xs text-t3">
+            {staffRoleNames(member) ?? "Ruoli non indicati"}
+          </Text>
           {member.link_status === "pending" ? (
             <View className="mt-1 flex-row">
               <Pill label="Invito in attesa" variant="pending" />
@@ -141,6 +141,28 @@ export default function ManagerStaffScreen() {
               ) : (
                 <ProBadge />
               )}
+            </View>
+          </Card>
+
+          {/* Non è una funzione Pro: senza ruoli non si aggiunge nemmeno una
+              persona all'organico. */}
+          <Card
+            className="rounded-3xl border-border-2 p-4"
+            onPress={() => router.push("/(manager)/ruoli")}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+                <Icon name="clipboard" size={18} color="#EAB54C" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-base font-sans-bold text-t1">
+                  Ruoli del locale
+                </Text>
+                <Text className="text-xs text-t3">
+                  Le mansioni che assegni allo staff e chiedi sui turni
+                </Text>
+              </View>
+              <Icon name="chevR" size={18} color="#8c857a" />
             </View>
           </Card>
 

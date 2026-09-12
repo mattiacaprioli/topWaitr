@@ -35,7 +35,7 @@ export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
     )
     .eq("venue_id", venueId)
     .gte("date", addDaysToDate(todayString(), -1))
@@ -69,7 +69,7 @@ export async function getVenueShiftsRange(
       //   · `id` dell'assegnazione → è ciò che si riassegna;
       //   · `waiter_id` → chi non ha un account collegato non riceve notifiche,
       //     quindi non va contato quando si chiede conferma.
-      "*, shift_role_requirements(role, count), shift_assignments(id, status, staff_member:staff_members(id, display_name, role, waiter_id))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), staff_member:staff_members(id, display_name, waiter_id))"
     )
     .eq("venue_id", venueId)
     .gte("date", from)
@@ -108,7 +108,7 @@ export async function getVenuePastShiftsPage(
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
     )
     .eq("venue_id", venueId)
     .lt("date", todayString())

@@ -14,7 +14,6 @@ import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ControlledInput } from "@/components/form/ControlledInput";
-import { ControlledChoiceChips } from "@/components/form/ControlledChoiceChips";
 import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
@@ -25,7 +24,7 @@ import {
 } from "@/features/onboarding/hooks";
 import {
   CERTIFICATION_OPTIONS,
-  PRIMARY_ROLE_OPTIONS,
+  PRIMARY_ROLE_EXAMPLES,
   SKILL_OPTIONS,
 } from "@/features/onboarding/api";
 import {
@@ -218,11 +217,11 @@ export default function OnboardingScreen() {
                 label="Città"
                 placeholder="Milano"
               />
-              <ControlledChoiceChips
+              <ControlledInput
                 control={control}
                 name="primary_role"
                 label="Ruolo principale"
-                options={PRIMARY_ROLE_OPTIONS}
+                placeholder={PRIMARY_ROLE_EXAMPLES}
               />
             </>
           ) : (

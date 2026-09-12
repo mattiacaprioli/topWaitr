@@ -211,6 +211,22 @@ Riposizionamento: il prodotto è la **gestione dei turni col proprio organico**.
 
 Due dettagli da ricordare: `NotificationList.TYPE_ICON` è un `Record` **esaustivo** sull'enum DB, le tre chiavi `application_*` **devono restare** o `tsc` cade; e `routing.ts` fa ora ritornare `null` su quei tipi, così una vecchia notifica non apre un dettaglio turno che parlerebbe solo di staff.
 
+### Sessione 2026-09-12 (2) — Ruoli personalizzati per locale ✅ (migration DA APPLICARE)
+
+I ruoli erano una **lista fissa di 15 stringhe** nel codice (`STAFF_ROLES`), uguale per tutti, e un dipendente poteva averne **uno solo**. Sbagliato per un prodotto che parla a hotel, catering e discoteche (nessun sommelier, ma il PR e il capo-partita), e sbagliato per la realtà: lo stesso nome fa il cameriere il venerdì e il barman il sabato. Ora l'elenco lo scrive il locale, a ogni persona si assegnano **uno o più** ruoli, e **sul turno si sceglie in quale lavora quel giorno**.
+
+- **DB** `20260912120000_venue_roles.sql`: tabelle `venue_roles` (per locale, con `archived_at`) e `staff_member_roles`; `shift_role_requirements.role` → `role_id`; **nuova** `shift_assignments.role_id`; drop di `staff_members.role`. Backfill da **due** sorgenti — l'organico *e* i fabbisogni dei turni: un ruolo può essere richiesto da un turno senza che nessuno in organico ce l'abbia (è anzi il caso tipico), e saltarlo avrebbe cancellato quel fabbisogno col `not null`.
+  - Trigger `default_assignment_role` (BEFORE INSERT): con **una** mansione sola il ruolo si compila da sé; con due resta null, perché sceglierne uno a caso direbbe «coperto» un turno che non lo è.
+  - Trigger `freeze_assignment_role` (BEFORE UPDATE): `"shift_assignments: linked waiter update"` non restringe le colonne, quindi il professionista avrebbe potuto cambiarsi il ruolo dal client. Ora il valore viene rimesso a posto in silenzio.
+  - ⚠️ `get_venue_hours_summary` ritornava `sm.role`: riscritta (ora `roles`, `string_agg`). **La versione viva era in `20260912090000`, non in `20260910120200`.** Serve `drop function` (si rinomina una colonna del record) e i grant vanno rifatti. L'aggregazione è una **sottoquery**: con un join, `count(*)`/`sum()` gonfiano turni e ore di chi ha due mansioni.
+  - `reassign_shift_assignment` porta il ruolo: quello di chi esce se chi entra lo sa fare, altrimenti il suo unico ruolo, altrimenti null. La stessa regola è ricopiata nella patch ottimistica del drag & drop, o la copertura sfarfallerebbe.
+  - RLS: nel `with check` di `staff_member_roles` e `shift_role_requirements` si verifica **anche** che il ruolo sia del locale giusto — `venue_id` non c'è in quelle tabelle, nessuna FK lo impone.
+- **App**: nuovo modulo `src/features/roles/` (api/hooks + `RoleMultiSelect`), schermata `(manager)/ruoli.tsx` (aggiungi/rinomina/archivia, 5 esempi tappabili nell'empty state), ingresso dalla tab Staff (**non** Pro: senza ruoli non si aggiunge nemmeno una persona). `StaffAssignPicker` estratto — «Chi chiami» era duplicato fra creazione e modifica turno, e la scelta del ruolo li avrebbe fatti divergere. `STAFF_ROLES` → `SUGGESTED_ROLES` (solo suggerimenti); `canonicalRole()` cancellata, non era chiamata da nessuna parte.
+- **Web**: pagina `/ruoli` (link dall'header di Staff, **niente voce di menu**: `NAV` ha già 10 voci ed è configurazione), `RoleCheckboxes` condivisa da `AddStaffPanel` e `StaffDetail`, fabbisogno e scelta del ruolo nel `ShiftPanel`.
+- **`primary_role` del professionista è ora testo libero**: è la sua vetrina, non l'organico di un locale, e nessuna lista fissa potrebbe descrivere tutti.
+- ⚠️ **DA FARE**: applicare la migration (`db push` o SQL editor → in quel caso **rinominare il file** al timestamp remoto). `src/types/database.ts` è stato **allineato a mano** (la rigenerazione alla cieca resta la trappola documentata sopra). Dopo il push serve un **rebuild** dei dev client: le build vecchie chiedono `role` a PostgREST e prendono 400.
+- Verificato: `tsc` root + `tsc -p web`, `expo lint`, `vite build web`, `expo export --platform ios`. **Non** verificato dal vivo: il backfill sui dati reali e i due trigger nuovi.
+
 ---
 
 ## 🔜 In sospeso — prossimi passi immediati
