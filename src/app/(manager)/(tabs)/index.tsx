@@ -267,6 +267,7 @@ export default function ManagerHome() {
                 {upcoming.slice(0, PREVIEW_COUNT).map((shift) => (
                   <ManagerShiftCard
                     key={shift.id}
+                    variant="compact"
                     shift={shift}
                     onPress={() => router.push(`/(manager)/shift/${shift.id}`)}
                   />

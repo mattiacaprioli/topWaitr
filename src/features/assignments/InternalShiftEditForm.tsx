@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import {
   SHIFT_RANGE_ERROR,
-  formatDate,
   isValidShiftRange,
+  shiftSlotLabel,
   toDateString,
   toTimeString,
 } from "@/lib/format";
@@ -122,7 +122,8 @@ function EditForm({
     const dateStr = toDateString(date);
     update.mutate(
       {
-        title: `Turno · ${formatDate(dateStr)}`,
+        // Vedi `StaffShiftForm`: la fascia oraria, non la data.
+        title: shiftSlotLabel(toTimeString(start)),
         date: dateStr,
         start_time: toTimeString(start),
         end_time: toTimeString(end),

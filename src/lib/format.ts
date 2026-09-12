@@ -144,6 +144,79 @@ export function shiftSortKey(shift: ShiftTimes): string {
   return `${shift.date}T${shift.start_time}`;
 }
 
+// Come si chiama un turno che inizia a quest'ora: "Mattina", "Pomeriggio",
+// "Sera", "Notte".
+//
+// Serve perché il titolo di un turno non è un'ancora affidabile: da mobile i
+// form lo scrivevano derivandolo dalla data (la stessa che la card mostra già
+// sotto), dal web è testo libero. Una fascia derivata dall'orario dice sempre
+// qualcosa, e distingue due turni dello stesso giorno — che è il caso normale.
+export function shiftSlotLabel(start: string): string {
+  const hour = Number(start.slice(0, 2));
+  if (hour < 6) return "Notte";
+  if (hour < 12) return "Mattina";
+  if (hour < 17) return "Pomeriggio";
+  if (hour < 22) return "Sera";
+  return "Notte";
+}
+
+// Etichetta di un giorno in un'agenda: "Oggi", "Domani", "gio 12 set".
+//
+// I due giorni vicini si nominano invece di datarsi perché è così che se ne
+// parla: chi apre l'app alle 17 vuole sapere se il turno è *stasera*, non se è
+// il 12 settembre. Oltre domani la data torna a essere l'informazione utile.
+export function formatDayLabel(date: string, now: Date = new Date()): string {
+  const today = todayString(now);
+  if (date === today) return "Oggi";
+  if (date === addDaysToDate(today, 1)) return "Domani";
+  return formatDate(date);
+}
+
+const monthFmt = new Intl.DateTimeFormat("it-IT", {
+  month: "long",
+  year: "numeric",
+});
+
+// "settembre 2026" — l'intestazione sopra il calendario.
+export function formatMonthLabel(date: string): string {
+  return monthFmt.format(new Date(`${date}T00:00:00`));
+}
+
+// Il lunedì della settimana che contiene `date`. La settimana italiana inizia di
+// lunedì, mentre getDay() conta da domenica: domenica (0) appartiene alla
+// settimana che è iniziata sei giorni prima, non a quella che inizia domani.
+export function startOfWeek(date: string): string {
+  const d = new Date(`${date}T00:00:00`);
+  const offset = (d.getDay() + 6) % 7;
+  return addDaysToDate(date, -offset);
+}
+
+const timeAtFmt = new Intl.DateTimeFormat("it-IT", {
+  weekday: "short",
+  day: "numeric",
+});
+
+// Quanto manca all'inizio di un turno: "fra 25 min", "fra 3 ore", "domani alle
+// 19:00", "gio 12 alle 19:00". È `timeAgo` al contrario, per il turno imminente
+// in home: entro la giornata conta il tempo che resta, oltre conta il giorno.
+export function formatRelativeStart(
+  date: string,
+  start: string,
+  now: Date = new Date()
+): string {
+  const at = new Date(`${date}T${start.slice(0, 5)}:00`);
+  const min = Math.round((at.getTime() - now.getTime()) / 60000);
+  if (min <= 0) return "in corso";
+  if (min < 60) return `fra ${min} min`;
+  if (min < 24 * 60 && date === todayString(now)) {
+    const hours = Math.round(min / 60);
+    return `fra ${hours} ${hours === 1 ? "ora" : "ore"}`;
+  }
+  const time = formatTime(start);
+  if (date === addDaysToDate(todayString(now), 1)) return `domani alle ${time}`;
+  return `${timeAtFmt.format(at)} alle ${time}`;
+}
+
 // Date -> "YYYY-MM-DD"
 export function toDateString(d: Date): string {
   const y = d.getFullYear();

@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import {
   SHIFT_RANGE_ERROR,
-  formatDate,
   isValidShiftRange,
+  shiftSlotLabel,
   toDateString,
   toTimeString,
 } from "@/lib/format";
@@ -33,10 +33,12 @@ function defaultTime(hour: number) {
 
 type Props = {
   venueId: string | undefined;
+  /** Il giorno da cui partire, se si arriva dall'agenda con una data scelta. */
+  initialDate?: Date;
 };
 
 /** Assegna un turno a uno o più membri dell'organico. */
-export function StaffShiftForm({ venueId }: Props) {
+export function StaffShiftForm({ venueId, initialDate }: Props) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(venueId);
@@ -48,7 +50,7 @@ export function StaffShiftForm({ venueId }: Props) {
   const roles = rolesQuery.data ?? [];
   const create = useCreateInternalShift(venueId);
 
-  const [date, setDate] = useState(new Date());
+  const [date, setDate] = useState(() => initialDate ?? new Date());
   const [start, setStart] = useState(defaultTime(18));
   const [end, setEnd] = useState(defaultTime(23));
   // Chi è selezionato **e** in che ruolo: la chiave è la persona, il valore il
@@ -100,7 +102,10 @@ export function StaffShiftForm({ venueId }: Props) {
       .filter((t) => t.count > 0);
     create.mutate(
       {
-        title: `Turno · ${formatDate(dateStr)}`,
+        // La fascia oraria, non la data: la data è già una colonna del turno,
+        // e ripeterla nel titolo riempiva la riga più in vista di ogni card
+        // con l'informazione che la riga sotto dava di nuovo.
+        title: shiftSlotLabel(toTimeString(start)),
         date: dateStr,
         start_time: toTimeString(start),
         end_time: toTimeString(end),

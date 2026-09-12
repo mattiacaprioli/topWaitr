@@ -29,8 +29,16 @@ type Props = {
 /** Horizontal strip of day chips (prototype's "Giorno" selector). Bleeds to the
  * screen edge — expects a parent with `p-6` horizontal padding. */
 export function DayPicker({ value, onChange, count = 14 }: Props) {
-  const days = useMemo(() => nextDays(count), [count]);
   const selected = toDateString(value);
+  const days = useMemo(() => {
+    const base = nextDays(count);
+    // Arrivando dall'agenda con un giorno già scelto, quel giorno può cadere
+    // oltre la finestra: senza allungarla non ci sarebbe nessun chip attivo e
+    // il form sembrerebbe puntare a tutt'altra data.
+    if (base.some((d) => toDateString(d) === selected)) return base;
+    const extra = new Date(`${selected}T00:00:00`);
+    return [...base, extra].sort((a, b) => a.getTime() - b.getTime());
+  }, [count, selected]);
   return (
     <ScrollView
       horizontal

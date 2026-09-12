@@ -1,3 +1,4 @@
+import type { StyleProp, ViewStyle } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 export type IconName =
@@ -36,6 +37,8 @@ type Props = {
   size?: number;
   color?: string;
   strokeWidth?: number;
+  /** Per orientare l'icona (una chevron ruotata) o allinearla otticamente. */
+  style?: StyleProp<ViewStyle>;
 };
 
 /** Line icons ported from the prototype (aura-shared.jsx). 24×24 viewBox. */
@@ -44,6 +47,7 @@ export function Icon({
   size = 22,
   color = "currentColor",
   strokeWidth = 1.6,
+  style,
 }: Props) {
   const p = {
     fill: "none",
@@ -53,7 +57,7 @@ export function Icon({
     strokeLinejoin: "round" as const,
   };
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
+    <Svg width={size} height={size} viewBox="0 0 24 24" style={style}>
       {name === "user" && (
         <>
           <Circle {...p} cx={12} cy={8} r={4} />
