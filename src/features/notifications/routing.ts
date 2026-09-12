@@ -23,10 +23,18 @@ export function routeForNotification(
     }
     // shift_unassigned: la delete dell'assegnazione gli toglie anche la lettura
     // del turno (is_my_assigned_shift), quindi non c'è nulla da aprire.
+    //
+    // I tre `application_*` sono notifiche storiche: il marketplace non esiste
+    // più, e il dettaglio turno ora parla solo di assegnazioni — aprirlo direbbe
+    // "turno riservato allo staff" su una candidatura di mesi fa. Restano
+    // leggibili in lista, ma non portano da nessuna parte.
     if (
       type === "shift_cancelled" ||
       type === "staff_removed" ||
-      type === "shift_unassigned"
+      type === "shift_unassigned" ||
+      type === "application_received" ||
+      type === "application_accepted" ||
+      type === "application_rejected"
     )
       return null;
     return relatedId ? `/(waiter)/shift/${relatedId}` : null;

@@ -51,8 +51,8 @@ export default function ManagerProScreen() {
           </Text>
           <Text className="max-w-[300px] text-center text-sm leading-5 text-t2">
             Organizza i turni con il tuo staff, tieni sotto controllo ore e
-            copertura e valuta le performance. Il marketplace e le recensioni
-            restano sempre gratuiti.
+            copertura e valuta le performance. Le recensioni dei clienti restano
+            sempre gratuite.
           </Text>
         </View>
 

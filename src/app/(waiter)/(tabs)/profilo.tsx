@@ -211,7 +211,7 @@ export default function WaiterProfiloScreen() {
             shadowOffset: { width: 0, height: 6 },
           }}
         >
-          <Avatar name={name} size={104} />
+          <Avatar uri={profile?.avatar_url} name={name} size={104} />
         </View>
 
         <View className="items-center gap-1.5">

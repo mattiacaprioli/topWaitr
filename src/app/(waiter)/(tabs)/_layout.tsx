@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ICONS: Record<string, IconName> = {
   index: "home",
-  turni: "search",
+  turni: "calendar",
   messaggi: "message",
   profilo: "user",
 };

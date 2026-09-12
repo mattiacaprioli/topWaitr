@@ -1,6 +1,6 @@
 # Architettura topWaitr
 
-Marketplace di turni per la ristorazione (Expo SDK 56 · React Native 0.85 · Expo
+Gestione dei turni per l'ospitalità (Expo SDK 56 · React Native 0.85 · Expo
 Router · Supabase · NativeWind v4/Tailwind v4). Questo documento è la guida di
 riferimento per come è organizzato il codice e come si aggiunge una feature.
 
@@ -31,14 +31,14 @@ hook di feature. Le funzioni grezze stanno in `features/*/api.ts`.
 - Client e default in [src/lib/queryClient.ts](src/lib/queryClient.ts).
 - **Tutte** le query key passano dalla factory [src/lib/queryKeys.ts](src/lib/queryKeys.ts)
   (`qk.venues.mine(id)`, `qk.shifts.byVenue(id)`, `qk.shifts.detail(id)`,
-  `qk.applications.byShift(id)`). Così l'invalidazione resta coerente.
+  `qk.assignments.byShift(id)`). Così l'invalidazione resta coerente.
 - Le **query** usano `useQuery`; le **mutation** `useMutation` con
   `onSuccess → queryClient.invalidateQueries(...)` (niente più `useFocusEffect`+`load()`).
 - Feedback utente: `onError`/`onSuccess` → `useToast()` ([src/providers/Toast.tsx](src/providers/Toast.tsx)).
-- Esempio di riferimento: candidature in
-  [src/features/applications/hooks.ts](src/features/applications/hooks.ts)
-  (`useApplicationDecision` aggiorna lo stato + sincronizza `positions_filled` +
-  invalida apps e shift detail).
+- Esempio di riferimento: assegnazioni in
+  [src/features/assignments/hooks.ts](src/features/assignments/hooks.ts)
+  (`useRespondToAssignment` e `useSetAssignmentPresence` aggiornano lo stato e
+  invalidano assegnazioni + dettaglio turno).
 
 ## Form — react-hook-form + Zod
 
@@ -75,12 +75,12 @@ hook di feature. Le funzioni grezze stanno in `features/*/api.ts`.
 ## Aggiungere una feature (slice verticale)
 
 Pianifica per **slice verticali** (una funzione utente end-to-end), non orizzontali
-("tutte le UI"). Esempio M5 — "candidarsi a un turno":
+("tutte le UI"). Esempio — "assegnare un turno allo staff":
 
-1. `features/applications/api.ts` → `createApplication(...)`
-2. `features/applications/hooks.ts` → `useApply()` (mutation + invalidazione)
-3. `features/applications/schema.ts` → eventuale schema del messaggio di candidatura
-4. schermata in `app/(waiter)/...` che usa l'hook
+1. `features/assignments/api.ts` → `createInternalShift(...)`
+2. `features/assignments/hooks.ts` → `useCreateInternalShift()` (mutation + invalidazione)
+3. `web/src/shifts/schema.ts` (o il form dell'app) → schema del turno
+4. schermata in `app/(manager)/...` che usa l'hook
 5. RLS lato Supabase (policy) verificata
 
 ### Definition of Done (per ogni slice)

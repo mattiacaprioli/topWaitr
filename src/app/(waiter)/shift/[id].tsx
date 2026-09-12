@@ -1,8 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
+import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -17,25 +15,15 @@ import { InfoRow } from "@/components/ui/InfoRow";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
-import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import { formatDate, formatEuro, formatRate, formatShiftRange, shiftTotal } from "@/lib/format";
+import { formatDate, formatShiftRange } from "@/lib/format";
 import { useShiftWithVenue } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
-import {
-  useApply,
-  useCancelApplication,
-  useMyApplication,
-} from "@/features/applications/hooks";
 import {
   useMyAssignmentForShift,
   useRespondToAssignment,
 } from "@/features/assignments/hooks";
-import {
-  applicationSchema,
-  type ApplicationForm,
-} from "@/features/applications/schema";
 import type { Enums } from "@/types/database";
 
 /** Stato a tutta pagina con back circolare + contenuto centrato (loading/errore/non trovato). */
@@ -58,13 +46,6 @@ function GuardScreen({ children }: { children: ReactNode }) {
   );
 }
 
-const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
-  pending: "In attesa",
-  accepted: "Accettata",
-  rejected: "Rifiutata",
-  cancelled: "Ritirata",
-};
-
 const ASSIGN_STATUS_LABEL: Record<Enums<"assignment_status">, string> = {
   assigned: "Da confermare",
   confirmed: "Confermato",
@@ -82,10 +63,6 @@ export default function WaiterShiftDetailScreen() {
 
   const shiftQuery = useShiftWithVenue(id);
   const shift = shiftQuery.data ?? null;
-  const myAppQuery = useMyApplication(id, waiterId);
-  const myApp = myAppQuery.data ?? null;
-  const apply = useApply(id, waiterId);
-  const cancel = useCancelApplication();
   const myAssignmentQuery = useMyAssignmentForShift(id, waiterId);
   const myAssignment = myAssignmentQuery.data ?? null;
   const respond = useRespondToAssignment();
@@ -103,7 +80,6 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
-  const [withdrawVisible, setWithdrawVisible] = useState(false);
   const [declineVisible, setDeclineVisible] = useState(false);
 
   /** Conferma presenza (o ri-conferma dopo un rifiuto). */
@@ -138,36 +114,7 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
-  function doWithdraw() {
-    if (!myApp) return;
-    cancel.mutate(myApp.id, {
-      onSuccess: () => {
-        setWithdrawVisible(false);
-        toast.show("Candidatura ritirata");
-      },
-      onError: () => {
-        setWithdrawVisible(false);
-        toast.show("Impossibile ritirare la candidatura. Riprova.", "error");
-      },
-    });
-  }
-
-  const { control, handleSubmit, reset } = useForm<ApplicationForm>({
-    resolver: zodResolver(applicationSchema),
-    defaultValues: { message: "" },
-  });
-
-  const onSubmit = handleSubmit(async (values) => {
-    try {
-      await apply.mutateAsync(values.message);
-      toast.show("Candidatura inviata");
-      reset();
-    } catch {
-      toast.show("Impossibile inviare la candidatura. Riprova.", "error");
-    }
-  });
-
-  if (shiftQuery.isLoading || myAppQuery.isLoading || myAssignmentQuery.isLoading) {
+  if (shiftQuery.isLoading || myAssignmentQuery.isLoading) {
     return (
       <GuardScreen>
         <ActivityIndicator color="#EAB54C" />
@@ -194,25 +141,10 @@ export default function WaiterShiftDetailScreen() {
     );
   }
 
-  const internal = shift.kind === "internal";
   const venueName = shift.venue?.name ?? "Locale";
-  const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
-  const remaining = Math.max(0, shift.positions_total - shift.positions_filled);
-  const requirements = shift.requirements ?? [];
-  const isOpen = shift.status === "open";
-  const isFull = remaining === 0;
-  const hasActiveApp = myApp != null && myApp.status !== "cancelled";
-
-  const compenso =
-    total != null
-      ? `${formatEuro(total)} · ${formatRate(shift.hourly_rate)}`
-      : formatRate(shift.hourly_rate);
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior="padding"
-    >
+    <>
       <ScrollView
         className="flex-1 bg-bg-0"
         contentContainerStyle={{
@@ -220,7 +152,6 @@ export default function WaiterShiftDetailScreen() {
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 48,
         }}
-        keyboardShouldPersistTaps="handled"
       >
         <Pressable
           onPress={() => router.back()}
@@ -256,30 +187,7 @@ export default function WaiterShiftDetailScreen() {
               shift.end_time
             )}`}
           />
-          {internal ? null : (
-            <>
-              <InfoRow label="Compenso" value={compenso} gold />
-              <InfoRow
-                label="Posti"
-                value={`${remaining} di ${shift.positions_total} disponibili`}
-              />
-            </>
-          )}
-          {shift.dress_code ? (
-            <InfoRow label="Dress code" value={shift.dress_code} />
-          ) : null}
         </Card>
-
-        {requirements.length > 0 ? (
-          <View className="mt-6">
-            <Mono className="mb-2">Requisiti</Mono>
-            <View className="flex-row flex-wrap gap-2">
-              {requirements.map((r) => (
-                <Pill key={r} label={`✓ ${r.toUpperCase()}`} variant="tag" />
-              ))}
-            </View>
-          </View>
-        ) : null}
 
         {shift.description ? (
           <View className="mt-6">
@@ -288,125 +196,60 @@ export default function WaiterShiftDetailScreen() {
           </View>
         ) : null}
 
-        {internal ? (
-          <>
-            <Mono className="mb-3 mt-8">Turno dello staff</Mono>
-            {myAssignment ? (
-              <Card className="rounded-3xl border-border-2 p-5">
-                <Text className="text-sm text-t2">
-                  Sei stato assegnato a questo turno da {venueName}.
-                </Text>
-                <View className="mt-2 flex-row">
-                  <Pill
-                    label={ASSIGN_STATUS_LABEL[myAssignment.status]}
-                    variant={
-                      myAssignment.status === "confirmed"
-                        ? "accepted"
-                        : myAssignment.status === "declined"
-                          ? "cancelled"
-                          : "pending"
-                    }
-                  />
-                </View>
-                {myAssignment.status === "assigned" ? (
-                  <View className="mt-4 gap-2.5">
-                    <GoldButton
-                      label={respond.isPending ? "Attendere…" : "Conferma presenza"}
-                      disabled={respond.isPending}
-                      onPress={() => onRespond("confirmed")}
-                    />
-                    <GhostButton
-                      label="Non posso"
-                      disabled={respond.isPending}
-                      onPress={() => setDeclineVisible(true)}
-                    />
-                  </View>
-                ) : myAssignment.status === "confirmed" ? (
-                  <Text className="mt-3 text-sm text-t3">
-                    Hai confermato la presenza. A presto!
-                  </Text>
-                ) : (
-                  <View className="mt-3 gap-2.5">
-                    <Text className="text-sm text-t3">
-                      Hai rifiutato questo turno.
-                    </Text>
-                    <GhostButton
-                      label="Ci sono, conferma"
-                      disabled={respond.isPending}
-                      onPress={() => onRespond("confirmed")}
-                    />
-                  </View>
-                )}
-              </Card>
-            ) : (
-              <Card className="rounded-3xl border-border-2 p-5">
-                <Text className="text-sm text-t3">
-                  Questo è un turno riservato allo staff del locale.
-                </Text>
-              </Card>
-            )}
-          </>
-        ) : (
-          <>
-            <Mono className="mb-3 mt-8">Candidatura</Mono>
-
-            {hasActiveApp ? (
+        <Mono className="mb-3 mt-8">Turno dello staff</Mono>
+        {myAssignment ? (
           <Card className="rounded-3xl border-border-2 p-5">
             <Text className="text-sm text-t2">
-              Ti sei candidato a questo turno.
+              Sei stato assegnato a questo turno da {venueName}.
             </Text>
             <View className="mt-2 flex-row">
-              <Pill label={APP_STATUS_LABEL[myApp!.status]} variant={myApp!.status} />
-            </View>
-            {myApp!.message ? (
-              <Text className="mt-3 text-sm text-t3">{myApp!.message}</Text>
-            ) : null}
-            {myApp!.status === "pending" ? (
-              <GhostButton
-                className="mt-4"
-                label={cancel.isPending ? "Ritiro…" : "Ritira candidatura"}
-                disabled={cancel.isPending}
-                onPress={() => setWithdrawVisible(true)}
+              <Pill
+                label={ASSIGN_STATUS_LABEL[myAssignment.status]}
+                variant={
+                  myAssignment.status === "confirmed"
+                    ? "accepted"
+                    : myAssignment.status === "declined"
+                      ? "cancelled"
+                      : "pending"
+                }
               />
-            ) : null}
-          </Card>
-        ) : !isOpen ? (
-          <Card className="rounded-3xl border-border-2 p-5">
-            <Text className="text-sm text-t3">
-              Questo turno non accetta più candidature.
-            </Text>
-          </Card>
-        ) : isFull ? (
-          <Card className="rounded-3xl border-border-2 p-5">
-            <Text className="text-sm text-t3">
-              Tutte le posizioni sono già coperte.
-            </Text>
+            </View>
+            {myAssignment.status === "assigned" ? (
+              <View className="mt-4 gap-2.5">
+                <GoldButton
+                  label={respond.isPending ? "Attendere…" : "Conferma presenza"}
+                  disabled={respond.isPending}
+                  onPress={() => onRespond("confirmed")}
+                />
+                <GhostButton
+                  label="Non posso"
+                  disabled={respond.isPending}
+                  onPress={() => setDeclineVisible(true)}
+                />
+              </View>
+            ) : myAssignment.status === "confirmed" ? (
+              <Text className="mt-3 text-sm text-t3">
+                Hai confermato la presenza. A presto!
+              </Text>
+            ) : (
+              <View className="mt-3 gap-2.5">
+                <Text className="text-sm text-t3">
+                  Hai rifiutato questo turno.
+                </Text>
+                <GhostButton
+                  label="Ci sono, conferma"
+                  disabled={respond.isPending}
+                  onPress={() => onRespond("confirmed")}
+                />
+              </View>
+            )}
           </Card>
         ) : (
           <Card className="rounded-3xl border-border-2 p-5">
-            <ControlledInput
-              control={control}
-              name="message"
-              label="Messaggio (facoltativo)"
-              placeholder="Presentati al locale…"
-              multiline
-              numberOfLines={4}
-              className="h-28"
-              textAlignVertical="top"
-            />
-            <Text className="mt-3 text-xs leading-4 text-t3">
-              Candidandoti, il locale potrà vedere il tuo profilo e
-              accettarti.
+            <Text className="text-sm text-t3">
+              Questo è un turno riservato allo staff del locale.
             </Text>
-            <GoldButton
-              className="mt-4"
-              label={apply.isPending ? "Invio…" : "Conferma candidatura"}
-              disabled={apply.isPending}
-              onPress={onSubmit}
-            />
           </Card>
-            )}
-          </>
         )}
 
         {shift.venue ? (
@@ -420,16 +263,6 @@ export default function WaiterShiftDetailScreen() {
       </ScrollView>
 
       <ConfirmModal
-        visible={withdrawVisible}
-        title="Ritirare la candidatura?"
-        message="Non risulterai più tra i candidati per questo turno."
-        confirmLabel="Ritira"
-        destructive
-        pending={cancel.isPending}
-        onConfirm={doWithdraw}
-        onCancel={() => setWithdrawVisible(false)}
-      />
-      <ConfirmModal
         visible={declineVisible}
         title="Rifiutare il turno?"
         message="Il locale verrà avvisato."
@@ -439,6 +272,6 @@ export default function WaiterShiftDetailScreen() {
         onConfirm={doDecline}
         onCancel={() => setDeclineVisible(false)}
       />
-    </KeyboardAvoidingView>
+    </>
   );
 }

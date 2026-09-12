@@ -58,9 +58,8 @@ function internalPositionsTotal(targetSum: number, activeStaff: number): number 
 }
 
 /**
- * Create an "internal" shift (mode "Chiamo il mio staff") and assign it to the
- * given roster members in one go. Internal shifts don't enter the marketplace
- * feed; positions are pre-filled by the assignees.
+ * Create a shift and assign it to the given roster members in one go.
+ * Positions are pre-filled by the assignees.
  */
 export async function createInternalShift(input: {
   venue_id: string;
@@ -493,8 +492,8 @@ export async function getStaffWorkedShifts(
 }
 
 /**
- * Storico lavoro del professionista ("Le mie ore"): turni interni svolti +
- * candidature marketplace accettate ormai passate, in un'unica lista.
+ * Storico lavoro del professionista ("Le mie ore"): i turni svolti, in
+ * un'unica lista (comprese, per chi ce l'ha, le vecchie candidature accettate).
  *
  * L'unione la fa il database (`get_my_work_history`). Il client non poteva
  * paginare da solo: l'ordinamento è per `shifts.date`, che sta in una tabella
@@ -615,9 +614,9 @@ export async function getMyAssignedUpcoming(
     .sort((a, b) => shiftSortKey(a.shift!).localeCompare(shiftSortKey(b.shift!)));
 }
 
-// Lo storico passato del professionista non si legge più da qui: è paginato e
-// unito alle candidature marketplace da `getMyWorkHistoryPage` (RPC
-// `get_my_work_history`). Questa versione scaricava tutta la storia in un colpo.
+// Lo storico passato del professionista non si legge più da qui: è paginato da
+// `getMyWorkHistoryPage` (RPC `get_my_work_history`). Questa versione scaricava
+// tutta la storia in un colpo.
 
 /** Waiter side: the waiter's assignment for a specific shift, if any. */
 export async function getMyAssignmentForShift(

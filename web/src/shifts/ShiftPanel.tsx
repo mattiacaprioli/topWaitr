@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -26,16 +25,14 @@ import { Button, Field, Input, Pill, Textarea } from "../ui/primitives";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { useToast } from "../ui/Toast";
 import { PresenceSection } from "./PresenceSection";
-import { MarketplaceForm } from "./MarketplaceForm";
 import { internalShiftSchema, type InternalShiftForm } from "./schema";
 
 type RoleTarget = { role: string; count: number };
 
 /**
- * Pannello laterale di creazione/modifica turno, per entrambe le modalità:
- * turni **interni** (il gestore chiama il proprio staff — il caso d'uso da
- * scrivania) e turni **marketplace**, che da qui si pubblicano e si modificano.
- * Le candidature restano su una pagina dedicata, che è dove si decide.
+ * Pannello laterale di creazione/modifica turno: il gestore sceglie giorno e
+ * orario e assegna le persone del proprio organico. È il caso d'uso da
+ * scrivania, ed è il motivo per cui il pannello vive dentro il planning.
  */
 export function ShiftPanel({
   date,
@@ -52,14 +49,6 @@ export function ShiftPanel({
   initialStaffIds?: string[];
   onClose: () => void;
 }) {
-  // In creazione il tipo si sceglie; in modifica lo detta il turno (`kind` non
-  // è cambiabile: un turno interno e uno marketplace hanno tabelle collegate
-  // diverse — assegnazioni contro candidature).
-  const [kind, setKind] = useState<"internal" | "marketplace">(
-    shift?.kind ?? "internal"
-  );
-  const effectiveKind = shift?.kind ?? kind;
-
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div
@@ -73,81 +62,21 @@ export function ShiftPanel({
             <h2 className="font-serif text-xl text-t1">
               {shift ? "Modifica turno" : "Nuovo turno"}
             </h2>
-            <p className="mt-1 text-xs text-t3">
-              {effectiveKind === "internal"
-                ? "Con il tuo staff interno"
-                : "Pubblicato sul marketplace"}
-            </p>
+            <p className="mt-1 text-xs text-t3">Con il tuo staff interno</p>
           </div>
           <Button onClick={onClose} aria-label="Chiudi">
             Chiudi
           </Button>
         </header>
 
-        {!shift ? (
-          <div className="mb-5 grid grid-cols-2 gap-2">
-            <KindOption
-              active={kind === "internal"}
-              onClick={() => setKind("internal")}
-              title="Chiamo il mio staff"
-              detail="Assegni le persone del tuo organico."
-            />
-            <KindOption
-              active={kind === "marketplace"}
-              onClick={() => setKind("marketplace")}
-              title="Cerco un extra"
-              detail="Pubblichi un annuncio, ricevi candidature."
-            />
-          </div>
-        ) : null}
-
-        {effectiveKind === "marketplace" ? (
-          <MarketplaceSection date={date} shift={shift} onClose={onClose} />
-        ) : (
-          <InternalForm
-            date={date}
-            shift={shift}
-            initialStaffIds={initialStaffIds}
-            onClose={onClose}
-          />
-        )}
+        <InternalForm
+          date={date}
+          shift={shift}
+          initialStaffIds={initialStaffIds}
+          onClose={onClose}
+        />
       </div>
     </div>
-  );
-}
-
-function KindOption({
-  active,
-  onClick,
-  title,
-  detail,
-}: {
-  active: boolean;
-  onClick: () => void;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "focus-gold rounded-2xl border p-3 text-left transition",
-        active
-          ? "border-border-gold bg-gold/10"
-          : "border-border-2 bg-bg-card hover:bg-bg-1"
-      )}
-    >
-      <span
-        className={cn(
-          "block text-sm font-semibold",
-          active ? "text-gold" : "text-t1"
-        )}
-      >
-        {title}
-      </span>
-      <span className="mt-0.5 block text-xs leading-4 text-t4">{detail}</span>
-    </button>
   );
 }
 
@@ -182,11 +111,7 @@ function CancelShiftButton({
       {asking ? (
         <ConfirmDialog
           title="Annullare il turno?"
-          message={
-            shift.kind === "internal"
-              ? "Chi è assegnato riceve una notifica e il turno sparisce dalla sua agenda. Potrai ripristinarlo da qui."
-              : "L'annuncio esce dal marketplace e i candidati accettati ricevono una notifica. Potrai ripristinarlo da qui."
-          }
+          message="Chi è assegnato riceve una notifica e il turno sparisce dalla sua agenda. Potrai ripristinarlo da qui."
           confirmLabel="Annulla il turno"
           cancelLabel="Lascialo attivo"
           destructive
@@ -239,11 +164,7 @@ function RestoreShiftButton({
       {asking ? (
         <ConfirmDialog
           title="Ripristinare il turno?"
-          message={
-            shift.kind === "internal"
-              ? "Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
-              : "L'annuncio torna visibile sul marketplace e i candidati accettati vengono avvisati."
-          }
+          message="Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
           confirmLabel="Ripristina turno"
           pending={status.isPending}
           onCancel={() => setAsking(false)}
@@ -279,85 +200,6 @@ function CancelledBanner({
         Turno annullato. Non compare più a chi era assegnato.
       </p>
       <RestoreShiftButton shift={shift} onDone={onDone} />
-    </div>
-  );
-}
-
-function MarketplaceSection({
-  date,
-  shift,
-  onClose,
-}: {
-  date: string;
-  shift?: Shift;
-  onClose: () => void;
-}) {
-  const venue = useVenue();
-  const navigate = useNavigate();
-  const status = useUpdateShiftStatus(shift?.id ?? "", venue.id);
-  const cancelled = shift?.status === "cancelled";
-
-  return (
-    <div className="flex flex-1 flex-col gap-5">
-      {shift ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Pill
-            tone={
-              shift.status === "open"
-                ? "success"
-                : shift.status === "cancelled"
-                  ? "error"
-                  : "neutral"
-            }
-          >
-            {shift.status === "open"
-              ? "Aperto"
-              : shift.status === "closed"
-                ? "Chiuso"
-                : "Annullato"}
-          </Pill>
-          <Pill tone="neutral">
-            {shift.positions_filled}/{shift.positions_total} coperti
-          </Pill>
-          <button
-            onClick={() => navigate("/candidature")}
-            className="focus-gold text-xs text-gold underline underline-offset-2"
-          >
-            Vedi le candidature
-          </button>
-        </div>
-      ) : null}
-
-      <MarketplaceForm date={date} shift={shift} onClose={onClose} />
-
-      {shift ? (
-        <div className="flex flex-wrap gap-2 border-t border-border pt-4">
-          {/* Aperto/chiuso riguarda le candidature: su un turno annullato non
-              vuol dire niente, lì l'unica azione sensata è ripristinarlo. */}
-          {cancelled ? (
-            <RestoreShiftButton shift={shift} onDone={onClose} />
-          ) : (
-            <>
-              <Button
-                onClick={() =>
-                  status.mutate(shift.status === "open" ? "closed" : "open", {
-                    onSuccess: onClose,
-                  })
-                }
-                disabled={status.isPending}
-              >
-                {shift.status === "open"
-                  ? "Chiudi le candidature"
-                  : "Riapri le candidature"}
-              </Button>
-              <CancelShiftButton shift={shift} onDone={onClose} />
-            </>
-          )}
-          {status.isError ? (
-            <p className="w-full text-xs text-error">{status.error.message}</p>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

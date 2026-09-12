@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
 import { ScrollView, Text, View } from "@/tw";
@@ -33,12 +33,10 @@ function defaultTime(hour: number) {
 
 type Props = {
   venueId: string | undefined;
-  /** Rendered at the top of the scroll (the shared mode toggle). */
-  header?: ReactNode;
 };
 
-/** "Chiamo il mio staff": assegna un turno interno a uno o più membri dell'organico. */
-export function StaffShiftForm({ venueId, header }: Props) {
+/** Assegna un turno a uno o più membri dell'organico. */
+export function StaffShiftForm({ venueId }: Props) {
   const router = useRouter();
   const toast = useToast();
   const staffQuery = useVenueStaff(venueId);
@@ -122,8 +120,6 @@ export function StaffShiftForm({ venueId, header }: Props) {
         contentContainerClassName="p-6 gap-7"
         keyboardShouldPersistTaps="handled"
       >
-        {header}
-
         <View className="gap-3">
           <Mono>Giorno</Mono>
           <DayPicker value={date} onChange={setDate} />

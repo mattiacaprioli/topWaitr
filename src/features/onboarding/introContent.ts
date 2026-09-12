@@ -24,9 +24,9 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
       body: "Ogni cliente soddisfatto può recensirti. Le recensioni le porti con te, in ogni locale.",
     },
     {
-      icon: "search",
-      title: "Trova turni su misura",
-      body: "Sfoglia i turni dei locali vicini e candidati in un tap.",
+      icon: "calendar",
+      title: "I tuoi turni, sempre con te",
+      body: "I locali per cui lavori ti assegnano i turni: li confermi e li vedi tutti qui.",
     },
     {
       icon: "qr",
@@ -41,9 +41,9 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
       body: "Crea il tuo organico e assegna i turni in pochi tocchi.",
     },
     {
-      icon: "search",
-      title: "Serve un extra? Trovalo",
-      body: "Pubblica un turno sul marketplace e ricevi candidature dai professionisti.",
+      icon: "clipboard",
+      title: "Copertura sotto controllo",
+      body: "Fabbisogno per ruolo, turni scoperti e ore lavorate, turno per turno.",
     },
     {
       icon: "sparkle",

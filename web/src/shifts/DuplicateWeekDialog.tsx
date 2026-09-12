@@ -15,7 +15,7 @@ import { useToast } from "../ui/Toast";
  */
 type SourceShift = Pick<
   Shift,
-  "id" | "title" | "date" | "start_time" | "end_time" | "kind" | "status"
+  "id" | "title" | "date" | "start_time" | "end_time" | "status"
 >;
 
 /**
@@ -46,19 +46,16 @@ export function DuplicateWeekDialog({
   const dayShift = weekOffset * 7;
   const targetMonday = addDays(monday, dayShift);
 
-  // Copiabili: solo i turni interni ancora validi. Un turno marketplace è un
-  // annuncio con le sue candidature — ripubblicarlo in blocco non è "duplicare
-  // la settimana", è pubblicare annunci nuovi, e va deciso uno per uno.
-  const { copyable, skippedExtra, skippedCancelled } = useMemo(() => {
+  // Copiabili: i turni ancora validi. Un annullato non si duplica — la copia
+  // ricreerebbe proprio quello che il gestore aveva tolto.
+  const { copyable, skippedCancelled } = useMemo(() => {
     const copyable: SourceShift[] = [];
-    let skippedExtra = 0;
     let skippedCancelled = 0;
     for (const s of shifts) {
       if (s.status === "cancelled") skippedCancelled++;
-      else if (s.kind !== "internal") skippedExtra++;
       else copyable.push(s);
     }
-    return { copyable, skippedExtra, skippedCancelled };
+    return { copyable, skippedCancelled };
   }, [shifts]);
 
   // Quanti turni ci sono già nella settimana di destinazione: la copia
@@ -199,17 +196,10 @@ export function DuplicateWeekDialog({
                 ))}
               </div>
 
-              {skippedExtra + skippedCancelled > 0 ? (
+              {skippedCancelled > 0 ? (
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-xs text-t4">
                   Esclusi:
-                  {skippedExtra > 0 ? (
-                    <Pill tone="neutral">
-                      {skippedExtra} extra sul marketplace
-                    </Pill>
-                  ) : null}
-                  {skippedCancelled > 0 ? (
-                    <Pill tone="neutral">{skippedCancelled} annullati</Pill>
-                  ) : null}
+                  <Pill tone="neutral">{skippedCancelled} annullati</Pill>
                 </p>
               ) : null}
             </section>

@@ -85,7 +85,7 @@ export default function WaiterProfileScreen() {
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-5 pb-2">
-        <ScreenHeader eyebrow="Candidato" title={name} titleClassName="text-2xl" />
+        <ScreenHeader eyebrow="Professionista" title={name} titleClassName="text-2xl" />
       </View>
       <WaiterReviewsList
         waiterId={id}

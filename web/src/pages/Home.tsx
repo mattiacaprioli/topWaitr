@@ -1,10 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
-import {
-  usePendingCount,
-  useTodayStaff,
-} from "@/features/applications/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
 import {
@@ -45,30 +41,28 @@ export function HomePage() {
 
   const shifts = useMyShifts(venue.id).data ?? [];
   const pastCount = useVenuePastShiftsCount(venue.id).data ?? 0;
-  const pending = usePendingCount(venue.id).data ?? 0;
-  const todayStaff = useTodayStaff(venue.id).data ?? [];
   const todayAssignments = useTodayAssignments(venue.id).data ?? [];
 
   // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
   // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
   const upcoming = shifts;
-  const openCount = upcoming.filter(
-    (s) => s.kind === "marketplace" && s.status === "open"
-  ).length;
-  // Gli annullati non hanno posti da coprire: esclusi dal KPI.
+  // Gli annullati non hanno posti da coprire: esclusi dai KPI.
   const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
   const counts = activeUpcoming.map((s) => shiftCounts(s));
   const filled = counts.reduce((n, c) => n + c.filled, 0);
   const totalPos = counts.reduce((n, c) => n + c.total, 0);
+  // L'unico numero su cui c'è da agire: turni che partono senza abbastanza
+  // gente. Esce da `counts`, già calcolato: nessuna query in più.
+  const shortCount = counts.filter((c) => c.short).length;
 
-  // "Chi lavora oggi": staff assegnato ai turni interni + professionisti
-  // accettati sui turni marketplace, in un'unica lista. Comprende chi è in sala
-  // adesso su un turno cominciato ieri sera, quindi si ordina per giorno **e**
-  // ora: il solo orario metterebbe un turno delle 22:00 di ieri dopo il pranzo.
+  // "Chi lavora oggi": lo staff assegnato ai turni di oggi. Comprende chi è in
+  // sala adesso su un turno cominciato ieri sera, quindi si ordina per giorno
+  // **e** ora: il solo orario metterebbe un turno delle 22:00 di ieri dopo il
+  // pranzo.
   const workers = useMemo<Worker[]>(
     () =>
-      [
-        ...todayAssignments.map((a) => ({
+      todayAssignments
+        .map((a) => ({
           key: `asg-${a.id}`,
           name: a.staff_member?.display_name ?? "Staff",
           role: a.staff_member?.role ?? null,
@@ -78,21 +72,11 @@ export function HomePage() {
           date: a.shift?.date ?? "",
           start: a.shift?.start_time ?? "",
           end: a.shift?.end_time ?? "",
-        })),
-        ...todayStaff.map((row) => ({
-          key: `app-${row.id}`,
-          name: row.waiter?.full_name ?? "Professionista",
-          role: row.waiter?.waiter_profile?.primary_role ?? null,
-          ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
-          ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
-          date: row.shift?.date ?? "",
-          start: row.shift?.start_time ?? "",
-          end: row.shift?.end_time ?? "",
-        })),
-      ].sort((a, b) =>
-        `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
-      ),
-    [todayAssignments, todayStaff]
+        }))
+        .sort((a, b) =>
+          `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
+        ),
+    [todayAssignments]
   );
 
   const nextShifts = activeUpcoming.slice(0, 5);
@@ -102,17 +86,17 @@ export function HomePage() {
       <PageHeader title={venue.name} subtitle="Come sta andando il locale" />
 
       <div className="mb-6 grid grid-cols-4 gap-3">
-        <Stat value={openCount} label="turni extra aperti" />
+        <Stat value={activeUpcoming.length} label="turni in programma" />
         <Stat
           value={`${filled}/${totalPos}`}
           label="posti coperti"
           tone={totalPos > 0 && filled < totalPos ? "warning" : "normal"}
         />
         <Stat
-          value={pending}
-          label="candidature da valutare"
-          tone={pending > 0 ? "gold" : "normal"}
-          onClick={pending > 0 ? () => navigate("/candidature") : undefined}
+          value={shortCount}
+          label="turni scoperti"
+          tone={shortCount > 0 ? "warning" : "normal"}
+          onClick={() => navigate("/copertura")}
         />
         <Stat value={pastCount} label="turni svolti" />
       </div>

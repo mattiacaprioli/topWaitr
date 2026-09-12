@@ -1,44 +1,30 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   useAddStaffMember,
   useFindWaiterByEmail,
   useVenueStaff,
-  useWorkedWithWaiters,
 } from "@/features/staff/hooks";
-import { canonicalRole, STAFF_ROLES } from "@/features/staff/roles";
+import { STAFF_ROLES } from "@/features/staff/roles";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 import { cn } from "@/lib/cn";
 import { useVenue } from "../lib/venue";
-import {
-  Button,
-  Card,
-  Field,
-  Input,
-  Pill,
-  Select,
-  Spinner,
-} from "../ui/primitives";
+import { Button, Card, Field, Input, Pill, Select } from "../ui/primitives";
 import { useToast } from "../ui/Toast";
 
-type Mode = "storico" | "manuale" | "invita";
+type Mode = "manuale" | "invita";
 
 /**
- * I tre modi di aggiungere una persona all'organico, come nell'app:
- * chi ha già lavorato qui, una scheda manuale (senza account), o un invito via
- * email a chi è già su topWaitr.
+ * I due modi di aggiungere una persona all'organico, come nell'app: una scheda
+ * manuale (per chi non ha un account) o un invito via email a chi è già su
+ * topWaitr.
  */
 export function AddStaffPanel({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>("storico");
+  const [mode, setMode] = useState<Mode>("manuale");
 
   return (
     <Card className="mb-5">
       <div className="mb-4 flex gap-2">
-        <ModeTab
-          active={mode === "storico"}
-          onClick={() => setMode("storico")}
-          label="Ha già lavorato qui"
-        />
         <ModeTab
           active={mode === "manuale"}
           onClick={() => setMode("manuale")}
@@ -51,7 +37,6 @@ export function AddStaffPanel({ onClose }: { onClose: () => void }) {
         />
       </div>
 
-      {mode === "storico" ? <WorkedWithList onDone={onClose} /> : null}
       {mode === "manuale" ? <ManualForm onDone={onClose} /> : null}
       {mode === "invita" ? <InviteForm onDone={onClose} /> : null}
     </Card>
@@ -79,79 +64,6 @@ function ModeTab({
     >
       {label}
     </button>
-  );
-}
-
-function WorkedWithList({ onDone }: { onDone: () => void }) {
-  const venue = useVenue();
-  const { data, isPending } = useWorkedWithWaiters(venue.id);
-  const staff = useVenueStaff(venue.id).data ?? [];
-  const add = useAddStaffMember();
-  const toast = useToast();
-
-  // Chi è già in organico non va riproposto: `waiter_id` è la chiave del legame.
-  const alreadyIn = useMemo(
-    () => new Set(staff.map((s) => s.waiter_id).filter(Boolean)),
-    [staff]
-  );
-
-  if (isPending) return <Spinner />;
-
-  const candidates = (data ?? []).filter((w) => !alreadyIn.has(w.id));
-
-  if (candidates.length === 0) {
-    return (
-      <p className="py-6 text-center text-sm text-t3">
-        Nessun professionista da aggiungere: chi ha lavorato qui è già nel tuo
-        organico, oppure non hai ancora accettato candidature.
-      </p>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {candidates.map((w) => (
-        <div
-          key={w.id}
-          className="flex items-center justify-between gap-3 rounded-xl border border-border-2 bg-bg-1 px-3 py-2"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm text-t1">
-              {w.full_name ?? "Professionista"}
-            </p>
-            <p className="truncate text-xs text-t4">
-              {w.primary_role ?? "Ruolo non indicato"}
-            </p>
-          </div>
-          <Button
-            disabled={add.isPending}
-            onClick={() =>
-              add.mutate(
-                {
-                  venue_id: venue.id,
-                  display_name: w.full_name ?? "Professionista",
-                  // Il ruolo arriva dal profilo di un'altra persona: va
-                  // riportato alla forma canonica o non combacerà mai con un
-                  // fabbisogno.
-                  role: canonicalRole(w.primary_role),
-                  waiter_id: w.id,
-                  employment_type: "a_chiamata",
-                },
-                {
-                  onSuccess: () => {
-                    toast.show("Aggiunto allo staff");
-                    onDone();
-                  },
-                  onError: (e) => toast.show(e.message, "error"),
-                }
-              )
-            }
-          >
-            Aggiungi
-          </Button>
-        </div>
-      ))}
-    </div>
   );
 }
 

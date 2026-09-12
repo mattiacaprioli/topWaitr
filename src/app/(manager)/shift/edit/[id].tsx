@@ -1,26 +1,19 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { View } from "@/tw";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
-import { useToast } from "@/providers/Toast";
-import { useShift, useUpdateShift } from "@/features/shifts/hooks";
-import { ShiftFormView } from "@/features/shifts/ShiftFormView";
-import { formToShiftFields, shiftToForm } from "@/features/shifts/form";
+import { useShift } from "@/features/shifts/hooks";
 import { InternalShiftEditForm } from "@/features/assignments/InternalShiftEditForm";
-import type { ShiftForm } from "@/features/shifts/schema";
 
 export default function EditShiftScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const toast = useToast();
   const insets = useSafeAreaInsets();
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
-  const update = useUpdateShift(id, shift?.venue_id);
 
   if (shiftQuery.isLoading) {
     return (
@@ -49,33 +42,12 @@ export default function EditShiftScreen() {
     );
   }
 
-  const onSubmit = (values: ShiftForm) => {
-    update.mutate(formToShiftFields(values), {
-      onSuccess: () => {
-        toast.show("Turno aggiornato");
-        router.back();
-      },
-      onError: () =>
-        toast.show("Impossibile salvare le modifiche. Riprova.", "error"),
-    });
-  };
-
   return (
     <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
       <View className="px-6">
         <ScreenHeader eyebrow="Turno" title="Modifica turno" />
       </View>
-      {shift.kind === "internal" ? (
-        <InternalShiftEditForm shift={shift} />
-      ) : (
-        <ShiftFormView
-          defaultValues={shiftToForm(shift)}
-          submitLabel="Salva modifiche"
-          pendingLabel="Salvataggio…"
-          pending={update.isPending}
-          onSubmit={onSubmit}
-        />
-      )}
+      <InternalShiftEditForm shift={shift} />
     </View>
   );
 }

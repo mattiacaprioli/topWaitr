@@ -1,9 +1,12 @@
 # topWaitr — Tasks & Roadmap
 
-Tracker delle attività. Aggiornato: **2026-09-09**.
+Tracker delle attività. Aggiornato: **2026-09-12**.
 
 > ⚠️ **Regola**: questo file è il tracker autorevole, ma il 2026-09-09 si è scoperto che tre voci del backlog erano già state implementate senza che nessuno le spuntasse (modifica turni interni, entry point chat da EmployerCard, paginazione candidature). **Aggiornare questo file nello stesso commit della feature**, altrimenti il backlog manda a lavorare su cose già fatte.
-Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **organizzare i turni col proprio staff**; il **marketplace** ("cerco un extra") è secondario/occasionale. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — il marketplace/recensioni resta l'esca gratuita.
+
+> ⚠️ **2026-09-12 — il marketplace non esiste più.** Molte voci qui sotto lo danno per vivo: sono **storia**, non backlog. Vedi «Sessione 2026-09-12 — Rimozione marketplace».
+
+Modello di prodotto (deciso): il **locale** organizza i turni con il **proprio organico**; il **professionista** conferma i turni assegnati, tiene il conto delle ore e costruisce la propria reputazione. Il marketplace ("cerco un extra", candidature) è stato **rimosso** il 2026-09-12. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15, ancora valida: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — le recensioni restano gratuite.
 
 ---
 
@@ -192,7 +195,21 @@ Il punto 6 dell'audit, metà (a). **Fatto**: `gh variable set` per `EXPO_PUBLIC_
 3. **Ripeti su più giorni** in creazione → N turni identici, uno per giorno spuntato.
 4. **Vista Persone** → le ore di una persona coincidono con la somma dei suoi turni, e chi ha rifiutato **non** somma ore.
 5. **Anteprima di stampa** (Cmd+P) sulle tre viste: impaginazione e nessuno sbordo, in particolare il mese su sei righe.
-6. **Profilo professionista** da una candidatura: recensioni, filtri, «Carica altre» e «Invia messaggio».
+6. **Profilo professionista** dall'organico: recensioni, filtri, «Carica altre» e «Invia messaggio».
+
+### Sessione 2026-09-12 — Rimozione marketplace ✅
+
+Riposizionamento: il prodotto è la **gestione dei turni col proprio organico**. La parte "professionista che cerca lavoro" è uscita dal codice. Decisione: **cancellare**, non nascondere dietro un flag — il valore di recupero fra anni è basso, il costo di portarsela dietro (tsc, lint, upgrade SDK) è continuo.
+
+**Cancellati** (10 file + 1 cartella): `src/features/applications/` (api+hooks+schema — verificato marketplace al 100%: ogni funzione leggeva `.from("applications")`), `src/app/(waiter)/candidature.tsx`, `src/features/shifts/{ExtraShiftForm.tsx,extraShiftOptions.ts,ShiftFormView.tsx,form.ts,schema.ts}`, `web/src/pages/Candidature.tsx`, `web/src/shifts/MarketplaceForm.tsx`.
+
+**Riscritti / ridotti**: la tab "Turni" del professionista è ora la sua **agenda personale** (`(waiter)/(tabs)/turni.tsx`: assegnati, "Da confermare" con conferma inline, card verso «Le mie ore») su `useMyAssignedUpcoming` + `useMyWorkHistoryTotals`, nessuna query nuova; nuova card condivisa `features/assignments/MyShiftCard.tsx`. `(waiter)/shift/[id]` e `(manager)/shift/[id]` ridotti al solo ramo interno. `(manager)/shift/new.tsx` senza bivio. `staff/new.tsx` e `AddStaffPanel.tsx` a due modi (⚠️ il default era `"storico"`: portato a `"manuale"`, o si aprivano su un ramo inesistente).
+
+**KPI ridisegnati** (app + web, definizioni allineate): "turni aperti"/"da valutare" → **"turni in programma"** e **"turni scoperti"**, quest'ultimo da `counts.filter(c => c.short)` già calcolato — zero query nuove. `StatCard` ha ora una prop `onPress`.
+
+**DB non toccato**, deliberatamente: `applications`, l'enum `shift_kind`, i tre `notification_type` `application_*`, `get_worked_with_waiters` e i trigger `applications_sync_positions`/`notify_on_shift_change` restano ma sono **inerti** (nessuno scrive più in `applications`). Il DDL sarebbe stato rischio senza beneficio.
+
+Due dettagli da ricordare: `NotificationList.TYPE_ICON` è un `Record` **esaustivo** sull'enum DB, le tre chiavi `application_*` **devono restare** o `tsc` cade; e `routing.ts` fa ora ritornare `null` su quei tipi, così una vecchia notifica non apre un dettaglio turno che parlerebbe solo di staff.
 
 ---
 

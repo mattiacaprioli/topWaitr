@@ -400,11 +400,7 @@ function moveMessage(
     notify.assignees.length > 0 && notify.assignees.length <= 4
       ? `: ${nameList(notify.assignees)}`
       : "";
-  const applicants =
-    notify.acceptedApplicants > 0
-      ? ` Nel conteggio ${notify.acceptedApplicants === 1 ? "c'è un candidato accettato" : `ci sono ${notify.acceptedApplicants} candidati accettati`} su questo turno.`
-      : "";
-  return `«${payload.title}» passa da ${formatDate(payload.sourceDate)} a ${formatDate(toDate)}. ${who} la notifica del cambio${names}.${applicants}`;
+  return `«${payload.title}» passa da ${formatDate(payload.sourceDate)} a ${formatDate(toDate)}. ${who} la notifica del cambio${names}.`;
 }
 
 const SKIP_REASON: Record<NonNullable<ReassignNotifyPlan["fromSkip"]>, string> =
@@ -689,7 +685,6 @@ function ShiftCell({
   onOpen: () => void;
 }) {
   const dnd = useShiftDrag();
-  const internal = shift.kind === "internal";
   const cancelled = shift.status === "cancelled";
   const { filled, total, short } = shiftCounts(shift);
 
@@ -738,9 +733,6 @@ function ShiftCell({
         {formatShiftRange(shift.start_time, shift.end_time)}
       </p>
       <div className="mt-1.5 flex flex-wrap items-center gap-1">
-        <Pill tone={internal ? "neutral" : "gold"}>
-          {internal ? "Staff" : "Extra"}
-        </Pill>
         {cancelled ? (
           <Pill tone="error">Annullato</Pill>
         ) : (

@@ -12,8 +12,8 @@ import { WaiterReviews } from "../reviews/WaiterReviews";
 
 /**
  * Profilo pubblico di un professionista: scheda a sinistra, recensioni a
- * destra. È la pagina in cui si decide se accettare una candidatura, e
- * decidere è un'attività da scrivania — sul telefono le stesse informazioni
+ * destra. È la pagina in cui si guarda la reputazione di chi si ha in
+ * organico, e guardarla è un'attività da scrivania — sul telefono le stesse informazioni
  * stanno una sotto l'altra e si perde il filo tra reputazione e persona.
  *
  * Mostra solo dati pubblici (vista `waiter_public_cards` + recensioni con RLS

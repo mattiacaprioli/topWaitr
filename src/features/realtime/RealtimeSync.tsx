@@ -71,23 +71,16 @@ function useBurstInvalidate(qc: QueryClient, ms = 300) {
  * Due principi, entrambi imparati risolvendo il Disk IO budget esaurito:
  *
  * 1. **Sottoscrivere il meno possibile.** Prima questo componente ascoltava
- *    `shifts` senza filtro; siccome la policy rende ogni turno marketplace
- *    visibile a tutti gli autenticati, ogni modifica di turno di *qualunque*
- *    locale svegliava *tutti* i client — e Realtime valuta la RLS per ogni
- *    subscriber su ogni riga cambiata. Ora il ristoratore ascolta solo il
- *    proprio locale e il professionista non ascolta `shifts` affatto: quello
- *    che lo riguarda gli arriva già dal canale notifiche, che è filtrato per
- *    `user_id` (vedi `useNotificationsRealtime`).
+ *    `shifts` senza filtro, e ogni modifica di turno di *qualunque* locale
+ *    svegliava *tutti* i client — Realtime valuta la RLS per ogni subscriber
+ *    su ogni riga cambiata. Ora il ristoratore ascolta solo il proprio locale e
+ *    il professionista non ascolta `shifts` affatto: quello che lo riguarda gli
+ *    arriva già dal canale notifiche, filtrato per `user_id` (vedi
+ *    `useNotificationsRealtime`).
  *
- * 2. **Invalidare stretto.** Prima un evento su `applications` invalidava
- *    `["applications"]` *e* `["shifts"]`, cioè faceva cadere dalla cache ogni
- *    intervallo del planning, lo storico, i conteggi e ogni dettaglio turno.
- *    Ora si invalidano le chiavi del locale/utente interessato, in una sola
- *    raffica raggruppata.
- *
- * Conseguenza voluta: il feed marketplace del professionista non si aggiorna
- * più da solo mentre lo guardi. Si aggiorna al pull-to-refresh e a ogni
- * rientro nella schermata.
+ * 2. **Invalidare stretto.** Si invalidano le chiavi del locale/utente
+ *    interessato, in una sola raffica raggruppata, invece di far cadere dalla
+ *    cache ogni intervallo del planning, lo storico e ogni dettaglio turno.
  */
 export function RealtimeSync({
   userId,
@@ -130,24 +123,6 @@ export function RealtimeSync({
           invalidate(qk.assignments.coverage(venueId));
         }
       )
-      // `applications` non ha venue_id: non è filtrabile server-side. La RLS
-      // limita comunque il ristoratore alle candidature dei propri turni.
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "applications" },
-        (payload) => {
-          const shiftId = idOf(rowOf(payload), "shift_id");
-          if (shiftId) {
-            invalidate(qk.applications.byShift(shiftId));
-            invalidate(qk.shifts.detail(shiftId));
-          }
-          invalidate(qk.applications.pendingByVenue(venueId));
-          invalidate(qk.applications.todayStaff(venueId));
-          // Le card turno mostrano il numero di candidature.
-          invalidate(qk.shifts.byVenue(venueId));
-          invalidate(qk.shifts.rangeAll(venueId));
-        }
-      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "shift_assignments" },
@@ -178,7 +153,6 @@ export function RealtimeSync({
         },
         () => {
           invalidate(qk.staff.byVenue(venueId));
-          invalidate(qk.staff.workedWith(venueId));
         }
       )
       .on(
@@ -201,20 +175,6 @@ export function RealtimeSync({
 
     const channel = supabase
       .channel(`sync:waiter:${userId}`)
-      // Le proprie candidature, filtrate server-side. Tutte le chiavi
-      // `applications` del professionista sono già per-utente.
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "applications",
-          filter: `waiter_id=eq.${userId}`,
-        },
-        () => {
-          invalidate(qk.applications.all);
-        }
-      )
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "messages" },

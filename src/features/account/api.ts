@@ -27,20 +27,23 @@ export async function updateMyProfile(
  * l'URL identico, browser e CDN continuerebbero a servire la foto vecchia. Chi
  * chiama cancella poi la precedente con `deleteAvatarByUrl`.
  *
- * `file` è un `Blob` e non un percorso: così la funzione vale sia per il web
- * (`File` dall'input) sia, quando l'app adotterà il caricamento, per un blob
- * ricavato dall'image picker.
+ * Prende i byte e non un percorso, così vale per entrambi i client: il web
+ * passa il `File` dell'input, l'app l'`ArrayBuffer` letto dal file scelto
+ * (`new File(uri).arrayBuffer()`, come già fa `uploadCertification`). Un `Blob`
+ * costruito da un `uri` con `fetch` su React Native caricherebbe **0 byte**.
  */
 export async function uploadAvatar(
   userId: string,
-  file: Blob,
-  ext = "jpg"
+  file: Blob | ArrayBuffer,
+  { ext = "jpg", contentType }: { ext?: string; contentType?: string } = {}
 ): Promise<string> {
   const path = `${userId}/${Date.now()}.${ext}`;
   const { error } = await supabase.storage
     .from(AVATARS_BUCKET)
     .upload(path, file, {
-      contentType: file.type || "image/jpeg",
+      contentType:
+        contentType ||
+        (file instanceof Blob && file.type ? file.type : "image/jpeg"),
       upsert: false,
     });
   if (error) throw new Error(error.message);

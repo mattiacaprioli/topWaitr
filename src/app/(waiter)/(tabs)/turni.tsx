@@ -1,280 +1,207 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
-import { Avatar } from "@/components/ui/Avatar";
+import { ScrollView, Text, View } from "@/tw";
 import { Card } from "@/components/ui/Card";
-import { CountBadge } from "@/components/ui/CountBadge";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { Display } from "@/components/ui/Display";
-import { Icon } from "@/components/ui/Icon";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { GhostButton } from "@/components/ui/GhostButton";
 import { GoldButton } from "@/components/ui/GoldButton";
+import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
-import { Pill } from "@/components/ui/Pill";
 import { QueryError } from "@/components/ui/QueryError";
-import { cn } from "@/lib/cn";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import {
+  useMyAssignedUpcoming,
+  useRespondToAssignment,
+} from "@/features/assignments/hooks";
+import { useMyWorkHistoryTotals } from "@/features/assignments/history";
+import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { useAuth } from "@/lib/auth";
-import { formatDate, formatEuro, formatRate, formatShiftRange, shiftTotal } from "@/lib/format";
-import { useOpenShifts } from "@/features/shifts/hooks";
-import { useApply, useMyApplications } from "@/features/applications/hooks";
+import { formatHours } from "@/lib/format";
+import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { useToast } from "@/providers/Toast";
-import type { Enums } from "@/types/database";
-import type { ShiftWithVenue } from "@/features/shifts/types";
 
-const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
-  pending: "in attesa",
-  accepted: "accettata",
-  rejected: "rifiutata",
-  cancelled: "ritirata",
-};
-
-type SortKey = "data" | "pay";
-
-function SortChip({
-  label,
-  active,
-  onPress,
-}: {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={cn(
-        "rounded-full px-4 py-2",
-        active ? "bg-bg-2 border border-border" : ""
-      )}
-    >
-      <Text
-        className={cn(
-          "text-sm font-sans-semibold",
-          active ? "text-t1" : "text-t3"
-        )}
-      >
-        {label}
-      </Text>
-    </Pressable>
-  );
-}
-
-function ShiftCard({
-  shift,
-  waiterId,
-  status,
-  onOpen,
-}: {
-  shift: ShiftWithVenue;
-  waiterId: string;
-  status?: Enums<"application_status">;
-  onOpen: () => void;
-}) {
-  const toast = useToast();
-  const apply = useApply(shift.id, waiterId);
-
-  const venueName = shift.venue?.name ?? "Locale";
-  const total = shiftTotal(shift.hourly_rate, shift.start_time, shift.end_time);
-  const remaining = Math.max(0, shift.positions_total - shift.positions_filled);
-  const requirements = shift.requirements ?? [];
-  const applied = status != null && status !== "cancelled";
-  const full = remaining === 0;
-
-  function onApply() {
-    apply.mutate(undefined, {
-      onSuccess: () => toast.show("Candidatura inviata"),
-      onError: () =>
-        toast.show("Impossibile inviare la candidatura. Riprova.", "error"),
-    });
-  }
-
-  return (
-    <Card className="rounded-3xl border-border-2 p-5">
-      <Pressable onPress={onOpen}>
-        <View className="flex-row items-start gap-3">
-          <Avatar uri={shift.venue?.logo_url} name={venueName} size={48} />
-          <View className="flex-1">
-            <Text
-              className="text-base font-sans-bold text-t1"
-              numberOfLines={1}
-            >
-              {venueName}
-            </Text>
-            <Text className="mt-0.5 text-sm text-t3" numberOfLines={1}>
-              {shift.title}
-            </Text>
-          </View>
-          <View className="items-end">
-            {total != null ? (
-              <>
-                <Text className="text-xl font-sans-bold text-gold">
-                  {formatEuro(total)}
-                </Text>
-                <Text className="mt-0.5 text-[11px] text-t3">
-                  {formatRate(shift.hourly_rate)}
-                </Text>
-              </>
-            ) : (
-              <Mono gold>Da concordare</Mono>
-            )}
-          </View>
-        </View>
-
-        <View className="mt-3 flex-row items-center gap-2">
-          <Icon name="calendar" size={15} color="#8c857a" />
-          <Text className="text-sm text-t2">
-            {formatDate(shift.date)} ·{" "}
-            {formatShiftRange(shift.start_time, shift.end_time)}
-          </Text>
-        </View>
-
-        <View className="mt-3 flex-row flex-wrap items-center gap-2">
-          <Text className="text-sm font-sans-semibold text-t2">
-            {remaining} posti
-          </Text>
-          {requirements.slice(0, 3).map((r) => (
-            <Pill key={r} label={`✓ ${r.toUpperCase()}`} variant="tag" />
-          ))}
-        </View>
-      </Pressable>
-
-      <View className="mt-4">
-        {applied ? (
-          <View className="items-center rounded-full border border-border bg-bg-2 py-3">
-            <Text className="text-sm font-sans-semibold text-t2">
-              Candidatura {APP_STATUS_LABEL[status!]}
-            </Text>
-          </View>
-        ) : full ? (
-          <View className="items-center rounded-full border border-border py-3 opacity-60">
-            <Text className="text-sm font-sans-semibold text-t3">
-              Turno al completo
-            </Text>
-          </View>
-        ) : (
-          <GoldButton
-            label={apply.isPending ? "Invio…" : "Candidati"}
-            disabled={apply.isPending}
-            onPress={onApply}
-          />
-        )}
-      </View>
-    </Card>
-  );
-}
-
+/**
+ * L'agenda del professionista: i turni che i locali gli hanno assegnato.
+ *
+ * La conferma di presenza è inline perché è l'azione più frequente di tutta
+ * l'app da questo lato — farla passare per il dettaglio turno significava due
+ * tocchi in più per la cosa che si fa ogni settimana. Il rifiuto invece resta
+ * dietro una conferma: avvisa il locale e non si torna indietro da soli.
+ */
 export default function WaiterShiftsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
   const { session } = useAuth();
   const waiterId = session!.user.id;
 
-  const [sort, setSort] = useState<SortKey>("data");
-  const shiftsQuery = useOpenShifts();
-  const myAppsQuery = useMyApplications(waiterId);
+  const assignedQuery = useMyAssignedUpcoming(waiterId);
+  const totals = useMyWorkHistoryTotals(waiterId);
+  const respond = useRespondToAssignment();
+  const pull = usePullToRefresh(() =>
+    Promise.all([assignedQuery.refetch(), totals.refetch()])
+  );
 
-  const shifts = useMemo(() => shiftsQuery.data ?? [], [shiftsQuery.data]);
-  const statusByShift = useMemo(() => {
-    const m = new Map<string, Enums<"application_status">>();
-    for (const a of myAppsQuery.data ?? []) m.set(a.shift_id, a.status);
-    return m;
-  }, [myAppsQuery.data]);
-  const pendingCount = (myAppsQuery.data ?? []).filter(
-    (a) => a.status === "pending"
-  ).length;
+  const [declining, setDeclining] = useState<string | null>(null);
 
-  const sorted = useMemo(() => {
-    if (sort !== "pay") return shifts;
-    return [...shifts].sort(
-      (a, b) =>
-        (shiftTotal(b.hourly_rate, b.start_time, b.end_time) ?? -1) -
-        (shiftTotal(a.hourly_rate, a.start_time, a.end_time) ?? -1)
-    );
-  }, [shifts, sort]);
+  const items = (assignedQuery.data ?? []).filter((a) => a.shift != null);
+  const daConfermare = items.filter((a) => a.status === "assigned");
+  const inProgramma = items.filter((a) => a.status !== "assigned");
 
-  if (shiftsQuery.isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-bg-0">
-        <ActivityIndicator color="#EAB54C" />
-      </View>
+  function onConfirm(id: string) {
+    respond.mutate(
+      { id, status: "confirmed" },
+      {
+        onSuccess: () => toast.show("Presenza confermata"),
+        onError: () => toast.show("Operazione non riuscita. Riprova.", "error"),
+      }
     );
   }
 
-  if (shiftsQuery.isError) {
-    return (
-      <View className="flex-1 justify-center bg-bg-0 px-6">
-        <QueryError onRetry={() => shiftsQuery.refetch()} />
-      </View>
+  function doDecline() {
+    if (!declining) return;
+    respond.mutate(
+      { id: declining, status: "declined" },
+      {
+        onSuccess: () => {
+          setDeclining(null);
+          toast.show("Turno rifiutato");
+        },
+        onError: () => {
+          setDeclining(null);
+          toast.show("Operazione non riuscita. Riprova.", "error");
+        },
+      }
     );
   }
+
+  const openShift = (id: string) => router.push(`/(waiter)/shift/${id}`);
 
   return (
-    <ScrollView
-      className="flex-1 bg-bg-0"
-      contentContainerStyle={{
-        paddingTop: insets.top + 12,
-        paddingHorizontal: 20,
-        paddingBottom: insets.bottom + 96,
-        gap: 16,
-        flexGrow: 1,
-      }}
-      refreshControl={
-        <RefreshControl
-          tintColor="#EAB54C"
-          refreshing={shiftsQuery.isRefetching}
-          onRefresh={() => shiftsQuery.refetch()}
-        />
-      }
-    >
-      <View className="flex-row items-center justify-between">
-        <View className="flex-1">
-          <Mono gold>{shifts.length} turni aperti</Mono>
-          <Display className="mt-1 text-4xl">Trova turni</Display>
+    <>
+      <ScrollView
+        className="flex-1 bg-bg-0"
+        contentContainerStyle={{
+          paddingTop: insets.top + 12,
+          paddingHorizontal: 20,
+          paddingBottom: insets.bottom + 96,
+          gap: 16,
+          flexGrow: 1,
+        }}
+        refreshControl={
+          <RefreshControl
+            tintColor="#EAB54C"
+            refreshing={pull.refreshing}
+            onRefresh={pull.onRefresh}
+          />
+        }
+      >
+        <View>
+          <Mono gold>
+            {daConfermare.length > 0
+              ? `${daConfermare.length} da confermare`
+              : `${items.length} in programma`}
+          </Mono>
+          <Display className="mt-1 text-4xl">I miei turni</Display>
         </View>
-        <Pressable
-          onPress={() => router.push("/(waiter)/candidature")}
-          hitSlop={8}
-          className="h-11 w-11 items-center justify-center rounded-full border border-border-2 bg-bg-2"
+
+        <Card
+          className="rounded-3xl border-border-2 p-4"
+          onPress={() => router.push("/(waiter)/storico")}
         >
-          <Icon name="clipboard" size={20} color="#F8F4ED" />
-          <CountBadge count={pendingCount} className="absolute -right-1.5 -top-1.5" />
-        </Pressable>
-      </View>
+          <View className="flex-row items-center gap-3">
+            <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+              <Icon name="clock" size={18} color="#EAB54C" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-sans-bold text-t1">
+                Le mie ore
+              </Text>
+              <Text className="text-xs text-t3">
+                {totals.count} turni svolti · {formatHours(totals.totalHours)}
+              </Text>
+            </View>
+            <Icon name="chevR" size={18} color="#8c857a" />
+          </View>
+        </Card>
 
-      {shifts.length > 0 ? (
-        <View className="flex-row gap-2">
-          <SortChip
-            label="Per data"
-            active={sort === "data"}
-            onPress={() => setSort("data")}
-          />
-          <SortChip
-            label="Più pagati"
-            active={sort === "pay"}
-            onPress={() => setSort("pay")}
-          />
-        </View>
-      ) : null}
+        {assignedQuery.isLoading ? (
+          <ActivityIndicator color="#EAB54C" style={{ marginTop: 40 }} />
+        ) : assignedQuery.isError ? (
+          <QueryError onRetry={() => assignedQuery.refetch()} />
+        ) : items.length === 0 ? (
+          <View className="flex-1 justify-center">
+            <EmptyState
+              title="Nessun turno in programma"
+              subtitle="Quando un locale ti assegna un turno lo trovi qui. In «Le mie ore» c'è lo storico."
+            />
+          </View>
+        ) : (
+          <>
+            {daConfermare.length > 0 ? (
+              <View>
+                <SectionHeader title="Da confermare" />
+                <View className="gap-3">
+                  {daConfermare.map((a) => (
+                    <View key={a.id} className="gap-2">
+                      <MyShiftCard
+                        shift={a.shift!}
+                        status={a.status}
+                        onPress={() => openShift(a.shift!.id)}
+                      />
+                      <GoldButton
+                        label={
+                          respond.isPending
+                            ? "Attendere…"
+                            : "Conferma presenza"
+                        }
+                        disabled={respond.isPending}
+                        onPress={() => onConfirm(a.id)}
+                      />
+                      <GhostButton
+                        label="Non posso"
+                        disabled={respond.isPending}
+                        onPress={() => setDeclining(a.id)}
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ) : null}
 
-      {sorted.length === 0 ? (
-        <View className="flex-1 justify-center">
-          <EmptyState
-            title="Nessun turno disponibile"
-            subtitle="Al momento non ci sono turni aperti. Torna più tardi."
-          />
-        </View>
-      ) : (
-        sorted.map((shift) => (
-          <ShiftCard
-            key={shift.id}
-            shift={shift}
-            waiterId={waiterId}
-            status={statusByShift.get(shift.id)}
-            onOpen={() => router.push(`/(waiter)/shift/${shift.id}`)}
-          />
-        ))
-      )}
-    </ScrollView>
+            {inProgramma.length > 0 ? (
+              <View>
+                <SectionHeader title="In programma" />
+                <View className="gap-3">
+                  {inProgramma.map((a) => (
+                    <MyShiftCard
+                      key={a.id}
+                      shift={a.shift!}
+                      status={a.status}
+                      onPress={() => openShift(a.shift!.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+
+      <ConfirmModal
+        visible={declining != null}
+        title="Rifiutare il turno?"
+        message="Il locale verrà avvisato."
+        confirmLabel="Rifiuta"
+        destructive
+        pending={respond.isPending}
+        onConfirm={doDecline}
+        onCancel={() => setDeclining(null)}
+      />
+    </>
   );
 }

@@ -16,7 +16,7 @@ import {
 
 /**
  * Sezione "Notifiche push" delle Impostazioni: uno switch per categoria
- * (Messaggi / Candidature e turni / Staff). Filtra SOLO la push OS — la notifica
+ * (Messaggi / Turni / Staff). Filtra SOLO la push OS — la notifica
  * in-app resta visibile nella campanella. Condivisa tra cameriere e ristoratore.
  */
 export function NotificationSettings() {

@@ -9,13 +9,6 @@ export type StaffMemberWithWaiter = StaffMember & {
 };
 
 /** A waiter who already worked here (accepted application) — candidate to add. */
-export type WorkedWaiter = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  primary_role: string | null;
-};
-
 export async function getVenueStaff(
   venueId: string
 ): Promise<StaffMemberWithWaiter[]> {
@@ -28,25 +21,6 @@ export async function getVenueStaff(
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data as StaffMemberWithWaiter[] | null) ?? [];
-}
-
-/**
- * Waiters with a past accepted application at this venue — the pool to add to the
- * roster ("Da chi ha già lavorato qui"). Deduped by waiter; PostgREST can't do
- * DISTINCT here, so we collapse client-side.
- *
- * La DISTINCT la fa il database (`get_worked_with_waiters`). Prima scaricava
- * ogni candidatura accettata nella storia del locale, con profilo annidato, per
- * collassarla in JavaScript — e cresceva senza limite.
- */
-export async function getWorkedWithWaiters(
-  venueId: string
-): Promise<WorkedWaiter[]> {
-  const { data, error } = await supabase.rpc("get_worked_with_waiters", {
-    p_venue: venueId,
-  });
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function getStaffMember(id: string): Promise<StaffMember | null> {

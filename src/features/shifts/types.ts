@@ -1,4 +1,4 @@
-import type { Enums, Tables } from "@/types/database";
+import type { Tables } from "@/types/database";
 import type {
   CoverageEmbeds,
   RoleRequirement,
@@ -8,21 +8,18 @@ import type { AssignmentStatus } from "@/features/assignments/status";
 export type Shift = Tables<"shifts">;
 
 /**
- * Turno + candidature contate + le relazioni della copertura: è quanto serve
- * agli elenchi del locale per mostrare "x/y coperti" con `shiftCounts()` senza
- * una seconda query per turno.
- */
-export type ShiftWithCount = Shift &
-  CoverageEmbeds & {
-    applications: { count: number }[];
-  };
-
-/**
  * Turno + le relazioni della copertura per ruolo. Serve alle viste a calendario:
  * "quanto manca" si legge dai ruoli richiesti e da chi viene davvero, non dal
  * conteggio grezzo degli assegnati (che ignora ruoli e rifiuti).
  */
 export type ShiftWithCoverage = Shift & CoverageEmbeds;
+
+/**
+ * Alias storico di `ShiftWithCoverage`: il nome resta perché è quello usato
+ * dagli elenchi del locale. Portava anche `applications(count)` finché il turno
+ * poteva essere un annuncio con delle candidature.
+ */
+export type ShiftWithCount = ShiftWithCoverage;
 
 /**
  * Turno con le sue relazioni **e l'identità** di chi è assegnato. Serve alle
@@ -46,8 +43,6 @@ export type ShiftWithAssignees = Shift & {
       waiter_id: string | null;
     } | null;
   }[];
-  /** Solo lo stato: serve a contare gli accettati di un turno marketplace. */
-  applications: { status: Enums<"application_status"> }[];
 };
 
 export type ShiftWithVenue = Shift & {

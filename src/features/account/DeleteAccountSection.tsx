@@ -13,7 +13,7 @@ import { deleteMyAccount } from "./api";
  * cancellare, da dentro l'app.
  *
  * La copy è diversa per ruolo perché le conseguenze lo sono: il cameriere perde
- * reputazione e candidature ma il locale conserva le ore già lavorate; il
+ * la reputazione ma il locale conserva le ore già lavorate; il
  * ristoratore chiude il locale e fa annullare i turni futuri, con lo storico
  * passato che resta al locale.
  */
@@ -27,7 +27,7 @@ export function DeleteAccountSection() {
 
   const message = isManager
     ? "I tuoi dati personali verranno eliminati e il tuo locale chiuso. I turni futuri saranno annullati e il personale assegnato riceverà una notifica. Lo storico dei turni passati e delle ore resta al locale, per gli obblighi contabili. L'operazione non è reversibile."
-    : "I tuoi dati personali, le recensioni ricevute e le candidature verranno eliminati. I locali per cui hai lavorato conservano le ore già registrate, senza più il tuo account collegato. L'operazione non è reversibile.";
+    : "I tuoi dati personali e le recensioni ricevute verranno eliminati. I locali per cui hai lavorato conservano le ore già registrate, senza più il tuo account collegato. L'operazione non è reversibile.";
 
   async function onConfirm() {
     setPending(true);
@@ -49,7 +49,7 @@ export function DeleteAccountSection() {
       <Text className="text-[13px] leading-5 text-t3">
         {isManager
           ? "Eliminando l'account il locale viene chiuso e i turni futuri annullati."
-          : "Eliminando l'account perdi profilo, recensioni e candidature."}
+          : "Eliminando l'account perdi profilo e recensioni."}
       </Text>
       <View className="mt-1">
         <GhostButton

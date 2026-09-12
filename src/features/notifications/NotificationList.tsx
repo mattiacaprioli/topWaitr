@@ -71,7 +71,7 @@ export function NotificationList({
         <EmptyState
           className="mt-16"
           title="Nessuna notifica"
-          subtitle="Ti avviseremo qui su candidature ed esiti."
+          subtitle="Ti avviseremo qui sui tuoi turni e sui messaggi."
         />
       ) : (
         notifications.map((n) => {

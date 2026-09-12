@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
@@ -15,6 +16,13 @@ import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { ControlledInput } from "@/components/form/ControlledInput";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
+import { qk } from "@/lib/queryKeys";
+import {
+  deleteAvatarByUrl,
+  updateMyProfile,
+  uploadAvatar,
+} from "@/features/account/api";
+import { pickAvatar } from "@/features/account/avatarPicker";
 import {
   useMyWaiterProfile,
   useSaveWaiterProfile,
@@ -31,8 +39,10 @@ export default function WaiterProfileEditScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { session, refreshProfile } = useAuth();
+  const { session, profile, refreshProfile } = useAuth();
+  const qc = useQueryClient();
   const userId = session!.user.id;
+  const [photoBusy, setPhotoBusy] = useState(false);
 
   const profileQuery = useMyWaiterProfile(userId);
   const save = useSaveWaiterProfile(userId);
@@ -87,8 +97,56 @@ export default function WaiterProfileEditScreen() {
     }
   });
 
-  const onPhoto = () =>
-    toast.show("Caricamento foto presto disponibile");
+  /**
+   * Il ritaglio quadrato e il ridimensionamento li fa `pickAvatar`; qui resta
+   * l'ordine che conta: prima il profilo punta alla foto nuova, poi si cancella
+   * la vecchia. Al contrario, un errore a metà lascerebbe il profilo a puntare
+   * a un file che non c'è più.
+   */
+  async function onPhoto() {
+    if (photoBusy) return;
+    const previous = profile?.avatar_url ?? null;
+    try {
+      const picked = await pickAvatar();
+      if (!picked) return; // annullato
+      setPhotoBusy(true);
+      const url = await uploadAvatar(userId, picked.bytes, {
+        contentType: picked.contentType,
+      });
+      await updateMyProfile(userId, { avatar_url: url });
+      await deleteAvatarByUrl(previous);
+      await refreshProfile();
+      qc.invalidateQueries({ queryKey: qk.profile.mine(userId) });
+      toast.show("Foto aggiornata");
+    } catch (e) {
+      toast.show(
+        e instanceof Error ? e.message : "Caricamento non riuscito",
+        "error"
+      );
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  async function onRemovePhoto() {
+    const previous = profile?.avatar_url ?? null;
+    if (!previous || photoBusy) return;
+    setPhotoBusy(true);
+    try {
+      await updateMyProfile(userId, { avatar_url: null });
+      await deleteAvatarByUrl(previous);
+      await refreshProfile();
+      qc.invalidateQueries({ queryKey: qk.profile.mine(userId) });
+      toast.show("Foto rimossa");
+    } catch (e) {
+      toast.show(
+        e instanceof Error ? e.message : "Operazione non riuscita",
+        "error"
+      );
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -142,20 +200,40 @@ export default function WaiterProfileEditScreen() {
                 }}
               >
                 <View>
-                  <Avatar name={watchedName || "Cameriere"} size={96} />
+                  <Avatar
+                    uri={profile?.avatar_url}
+                    name={watchedName || "Professionista"}
+                    size={96}
+                  />
                   <Pressable
                     onPress={onPhoto}
+                    disabled={photoBusy}
                     className="absolute -bottom-1 -right-1 h-9 w-9 items-center justify-center rounded-full border-2 border-bg-0 bg-bg-2"
                   >
-                    <Icon name="camera" size={16} color="#EAB54C" />
+                    {photoBusy ? (
+                      <ActivityIndicator size="small" color="#EAB54C" />
+                    ) : (
+                      <Icon name="camera" size={16} color="#EAB54C" />
+                    )}
                   </Pressable>
                 </View>
               </View>
-              <Pressable onPress={onPhoto} hitSlop={6}>
-                <Text className="text-sm font-sans-semibold text-gold">
-                  Cambia foto
-                </Text>
-              </Pressable>
+              <View className="flex-row items-center gap-4">
+                <Pressable onPress={onPhoto} hitSlop={6} disabled={photoBusy}>
+                  <Text className="font-sans-semibold text-sm text-gold">
+                    {photoBusy
+                      ? "Caricamento…"
+                      : profile?.avatar_url
+                        ? "Cambia foto"
+                        : "Aggiungi foto"}
+                  </Text>
+                </Pressable>
+                {profile?.avatar_url && !photoBusy ? (
+                  <Pressable onPress={onRemovePhoto} hitSlop={6}>
+                    <Text className="font-sans text-sm text-t3">Rimuovi</Text>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
 
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">

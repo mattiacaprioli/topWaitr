@@ -13,14 +13,12 @@ import { Mono } from "@/components/ui/Mono";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { QueryError } from "@/components/ui/QueryError";
 import { Pill } from "@/components/ui/Pill";
-import { RatingBadge } from "@/components/ui/RatingBadge";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { useToast } from "@/providers/Toast";
 import { cn } from "@/lib/cn";
 import {
   formatDate,
   formatHours,
-  formatRate,
   formatShiftRange,
   isShiftOver,
   shiftDurationHours,
@@ -28,7 +26,6 @@ import {
 import { useAuth } from "@/lib/auth";
 import { useShift, useUpdateShiftStatus } from "@/features/shifts/hooks";
 import { useStartConversation } from "@/features/chat/hooks";
-import { useApplicationDecision, useApplications } from "@/features/applications/hooks";
 import {
   useSetAssignmentPresence,
   useShiftAssignments,
@@ -37,7 +34,6 @@ import {
 import { isWorked } from "@/features/assignments/hours";
 import { computeCoverage } from "@/features/assignments/coverage";
 import { ASSIGNMENT_STATUS_LABEL } from "@/features/assignments/status";
-import type { ApplicationWithWaiter } from "@/features/applications/api";
 import type { AssignmentWithStaff } from "@/features/assignments/api";
 import type { Enums } from "@/types/database";
 
@@ -65,13 +61,6 @@ const SHIFT_STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   open: "Aperto",
   closed: "Chiuso",
   cancelled: "Annullato",
-};
-
-const APP_STATUS_LABEL: Record<Enums<"application_status">, string> = {
-  pending: "In attesa",
-  accepted: "Accettata",
-  rejected: "Rifiutata",
-  cancelled: "Ritirata",
 };
 
 /** Riga staff assegnato a un turno interno (vista ristoratore). */
@@ -266,42 +255,6 @@ function PresenceRow({
   );
 }
 
-/** Read-only summary of the applicant's profile data (manager view). */
-function ApplicantProfile({
-  waiter,
-}: {
-  waiter: ApplicationWithWaiter["waiter"];
-}) {
-  const wp = waiter?.waiter_profile ?? null;
-  const bio = waiter?.bio ?? null;
-  const city = waiter?.city ?? null;
-  const experience = wp?.experience ?? null;
-  const languages = wp?.languages ?? [];
-  const specializations = wp?.specializations ?? null;
-
-  if (!bio && !city && !experience && languages.length === 0 && !specializations) {
-    return null;
-  }
-
-  return (
-    <View className="mt-3 gap-1.5 border-t border-border pt-3">
-      {bio ? <Text className="text-sm text-t2">{bio}</Text> : null}
-      {experience ? (
-        <Text className="text-sm text-t3">Esperienza: {experience}</Text>
-      ) : null}
-      {specializations ? (
-        <Text className="text-sm text-t3">
-          Specializzazioni: {specializations}
-        </Text>
-      ) : null}
-      {languages.length > 0 ? (
-        <Text className="text-sm text-t3">Lingue: {languages.join(" · ")}</Text>
-      ) : null}
-      {city ? <Text className="text-sm text-t3">Città: {city}</Text> : null}
-    </View>
-  );
-}
-
 export default function ShiftDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
@@ -313,21 +266,13 @@ export default function ShiftDetailScreen() {
 
   const shiftQuery = useShift(id);
   const shift = shiftQuery.data ?? null;
-  // Un turno è `internal` xor `marketplace`: si aspetta di sapere quale prima
-  // di chiedere i dati dell'uno o dell'altro, invece di chiederli entrambi e
-  // buttarne via metà a ogni apertura.
-  const isInternal = shift?.kind === "internal";
-  const isMarketplace = shift?.kind === "marketplace";
-  const appsQuery = useApplications(id, isMarketplace);
-  const applications = appsQuery.data ?? [];
-  const assignmentsQuery = useShiftAssignments(id, isInternal);
+  const assignmentsQuery = useShiftAssignments(id);
   const assignments = assignmentsQuery.data ?? [];
-  const roleReqsQuery = useShiftRoleRequirements(id, isInternal);
+  const roleReqsQuery = useShiftRoleRequirements(id);
   const roleRequirements = roleReqsQuery.data ?? [];
 
-  const decision = useApplicationDecision(id);
   const statusMutation = useUpdateShiftStatus(id, shift?.venue_id);
-  const busy = decision.isPending || statusMutation.isPending;
+  const busy = statusMutation.isPending;
   const [cancelVisible, setCancelVisible] = useState(false);
   const [restoreVisible, setRestoreVisible] = useState(false);
 
@@ -355,21 +300,6 @@ export default function ShiftDetailScreen() {
         toast.show("Operazione non riuscita.", "error");
       },
     });
-  }
-
-  function onDecision(appId: string, status: Enums<"application_status">) {
-    decision.mutate(
-      { appId, status },
-      {
-        onSuccess: () =>
-          toast.show(
-            status === "accepted"
-              ? "Candidatura accettata"
-              : "Candidatura rifiutata"
-          ),
-        onError: () => toast.show("Operazione non riuscita.", "error"),
-      }
-    );
   }
 
   function onChangeShiftStatus(status: Enums<"shift_status">) {
@@ -416,8 +346,6 @@ export default function ShiftDetailScreen() {
     );
   }
 
-  const internal = shift.kind === "internal";
-  const requirements = shift.requirements ?? [];
   // A turno finito (non a mezzanotte) si passa dalla vista "staff assegnato"
   // a quella delle presenze.
   const isPast = isShiftOver(shift);
@@ -448,14 +376,10 @@ export default function ShiftDetailScreen() {
         eyebrow="Turno"
         title={shift.title}
         right={
-          internal ? (
-            <Pill label="Staff" variant="tag" />
-          ) : (
-            <Pill
-              label={SHIFT_STATUS_LABEL[shift.status]}
-              variant={shift.status}
-            />
-          )
+          <Pill
+            label={SHIFT_STATUS_LABEL[shift.status]}
+            variant={shift.status}
+          />
         }
       />
 
@@ -468,32 +392,11 @@ export default function ShiftDetailScreen() {
             shift.end_time
           )}`}
         />
-        {internal ? null : (
-          <InfoRow label="Compenso" value={formatRate(shift.hourly_rate)} gold />
-        )}
         <InfoRow
-          label={internal ? "Staff" : "Posti"}
-          value={
-            internal
-              ? `${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`
-              : `${shift.positions_filled}/${shift.positions_total} coperte`
-          }
+          label="Staff"
+          value={`${assignments.length} assegnat${assignments.length === 1 ? "o" : "i"}`}
         />
-        {shift.dress_code ? (
-          <InfoRow label="Dress code" value={shift.dress_code} />
-        ) : null}
       </Card>
-
-      {requirements.length > 0 ? (
-        <View className="mt-6">
-          <Mono className="mb-2">Requisiti</Mono>
-          <View className="flex-row flex-wrap gap-2">
-            {requirements.map((r) => (
-              <Pill key={r} label={`✓ ${r.toUpperCase()}`} variant="tag" />
-            ))}
-          </View>
-        </View>
-      ) : null}
 
       {shift.description ? (
         <View className="mt-6">
@@ -549,7 +452,7 @@ export default function ShiftDetailScreen() {
           </Pressable>
         )}
 
-        {(!internal || !isPast) && shift.status !== "cancelled" ? (
+        {!isPast && shift.status !== "cancelled" ? (
           <Pressable
             disabled={busy}
             onPress={() => router.push(`/(manager)/shift/edit/${id}`)}
@@ -562,7 +465,7 @@ export default function ShiftDetailScreen() {
         ) : null}
       </View>
 
-      {internal && roleRequirements.length > 0 ? (
+      {roleRequirements.length > 0 ? (
         <View className="mt-8 gap-3">
           <Mono>Copertura</Mono>
           {roleCoverage.rows.map((row) => {
@@ -600,9 +503,8 @@ export default function ShiftDetailScreen() {
         </View>
       ) : null}
 
-      {internal ? (
-        <View className="mt-8 gap-3">
-          <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
+      <View className="mt-8 gap-3">
+        <Mono>{isPast ? "Presenze" : "Staff assegnato"}</Mono>
           {isPast ? (
             <Text className="-mt-1 text-xs text-t3">
               Segna chi ha svolto il turno e correggi le ore se serve.
@@ -648,96 +550,7 @@ export default function ShiftDetailScreen() {
               );
             })
           )}
-        </View>
-      ) : (
-        <View className="mt-8 gap-3">
-          <Mono>Candidature</Mono>
-          {appsQuery.isError ? (
-            <QueryError
-              onRetry={() => appsQuery.refetch()}
-              subtitle="Non siamo riusciti a caricare le candidature. Riprova."
-            />
-          ) : applications.length === 0 ? (
-            <EmptyState
-              title="Nessuna candidatura"
-              subtitle="Quando qualcuno si candida lo vedrai qui."
-            />
-          ) : (
-            applications.map((app) => (
-              <Card key={app.id} className="rounded-3xl border-border-2 p-5">
-                <Pressable
-                  className="flex-row items-center gap-3"
-                  onPress={() =>
-                    router.push(`/(manager)/cameriere/${app.waiter_id}`)
-                  }
-                >
-                  <Avatar
-                    uri={app.waiter?.avatar_url ?? undefined}
-                    name={app.waiter?.full_name ?? "Cameriere"}
-                    size={44}
-                  />
-                  <View className="flex-1">
-                    <Text className="text-base font-sans-bold text-t1">
-                      {app.waiter?.full_name ?? "Cameriere"}
-                    </Text>
-                    {app.waiter?.waiter_profile?.primary_role ? (
-                      <Text className="text-xs text-t3">
-                        {app.waiter.waiter_profile.primary_role}
-                      </Text>
-                    ) : null}
-                    <RatingBadge
-                      avg={app.waiter?.waiter_profile?.rating_avg ?? null}
-                      count={app.waiter?.waiter_profile?.rating_count ?? null}
-                      className="mt-1"
-                    />
-                    <Pill
-                      label={APP_STATUS_LABEL[app.status]}
-                      variant={app.status}
-                    />
-                  </View>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() => onMessage(app.waiter_id)}
-                    className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2"
-                  >
-                    <Icon name="message" size={16} color="#EAB54C" />
-                  </Pressable>
-                  <Icon name="chevR" size={18} color="#8c857a" />
-                </Pressable>
-
-                {app.message ? (
-                  <Text className="mt-3 text-sm text-t2">{app.message}</Text>
-                ) : null}
-
-                <ApplicantProfile waiter={app.waiter} />
-
-                {app.status === "pending" ? (
-                  <View className="mt-3 flex-row gap-2.5">
-                    <Pressable
-                      disabled={busy}
-                      onPress={() => onDecision(app.id, "accepted")}
-                      className="flex-1 items-center rounded-2xl bg-success py-3"
-                    >
-                      <Text className="text-sm font-sans-semibold text-bg-1">
-                        Accetta
-                      </Text>
-                    </Pressable>
-                    <Pressable
-                      disabled={busy}
-                      onPress={() => onDecision(app.id, "rejected")}
-                      className="flex-1 items-center rounded-2xl border border-border-2 py-3"
-                    >
-                      <Text className="text-sm font-sans-semibold text-error">
-                        Rifiuta
-                      </Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-              </Card>
-            ))
-          )}
-        </View>
-      )}
+      </View>
     </ScrollView>
 
     <ConfirmModal
@@ -755,11 +568,7 @@ export default function ShiftDetailScreen() {
     <ConfirmModal
       visible={restoreVisible}
       title="Ripristinare il turno?"
-      message={
-        isInternal
-          ? "Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
-          : "Il turno torna visibile sul marketplace e i candidati accettati vengono avvisati."
-      }
+      message="Torna attivo con le persone che erano assegnate, e ognuna riceve una notifica."
       confirmLabel="Ripristina turno"
       cancelLabel="Indietro"
       pending={statusMutation.isPending}

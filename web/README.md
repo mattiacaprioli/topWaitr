@@ -100,14 +100,15 @@ dashboard avrà un dominio proprio si passa a `BrowserRouter`.
   segnalazione passa da `web/src/lib/reportError.ts`, che oggi scrive solo in
   console: `@sentry/react-native` non sta in un bundle Vite, quando la dashboard
   avrà un DSN proprio lì dentro va `@sentry/react`.
-- **La foto profilo si carica da qui** (Impostazioni → Account), ed è il primo
-  posto del prodotto in cui si può fare: sull'app il pulsante è ancora un
-  «presto disponibile». Bucket pubblico `avatars`, una cartella per utente
+- **La foto profilo si carica da qui** (Impostazioni → Account) e, dalla stessa
+  base, anche dall'app. Bucket pubblico `avatars`, una cartella per utente
   (migration 20260911130000); il ritaglio quadrato e il ridimensionamento a 512
   px li fa il browser prima di caricare (`web/src/lib/avatarFile.ts`), e ogni
   caricamento usa un nome nuovo perché con l'URL identico la CDN continuerebbe
-  a servire la foto vecchia. Le funzioni stanno in `src/features/account/api.ts`,
-  pronte anche per l'app.
+  a servire la foto vecchia. Le funzioni stanno in `src/features/account/api.ts`
+  e `uploadAvatar` prende i byte (`Blob` dal web, `ArrayBuffer` dall'app), non un
+  percorso: su React Native un `Blob` costruito con `fetch(uri)` caricherebbe
+  zero byte.
 - **Il drag & drop del Planning è nativo del browser**, nessuna libreria
   (`web/src/shifts/dragContext.tsx`): il browser dà autoscroll, immagine
   trascinata e — cosa che qui conta — nessun `click` dopo un trascinamento

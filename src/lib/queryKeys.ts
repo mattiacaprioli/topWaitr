@@ -18,7 +18,6 @@ export const qk = {
   },
   shifts: {
     all: ["shifts"] as const,
-    open: () => ["shifts", "open"] as const,
     byVenue: (venueId: string) => ["shifts", "byVenue", venueId] as const,
     range: (venueId: string, from: string, to: string) =>
       ["shifts", "range", venueId, from, to] as const,
@@ -28,24 +27,6 @@ export const qk = {
     past: (venueId: string) => ["shifts", "past", venueId] as const,
     pastCount: (venueId: string) => ["shifts", "pastCount", venueId] as const,
     detail: (id: string) => ["shifts", "detail", id] as const,
-  },
-  applications: {
-    all: ["applications"] as const,
-    byShift: (shiftId: string) => ["applications", "byShift", shiftId] as const,
-    mine: (shiftId: string, waiterId: string) =>
-      ["applications", "mine", shiftId, waiterId] as const,
-    mineAll: (waiterId: string) => ["applications", "mineAll", waiterId] as const,
-    pageMine: (waiterId: string, filter: string) =>
-      ["applications", "pageMine", waiterId, filter] as const,
-    counts: (waiterId: string) => ["applications", "counts", waiterId] as const,
-    servicesCount: (waiterId: string) =>
-      ["applications", "servicesCount", waiterId] as const,
-    upcoming: (waiterId: string) =>
-      ["applications", "upcoming", waiterId] as const,
-    todayStaff: (venueId: string) =>
-      ["applications", "todayStaff", venueId] as const,
-    pendingByVenue: (venueId: string) =>
-      ["applications", "pendingByVenue", venueId] as const,
   },
   reviews: {
     all: ["reviews"] as const,
@@ -63,7 +44,6 @@ export const qk = {
   staff: {
     all: ["staff"] as const,
     byVenue: (venueId: string) => ["staff", "byVenue", venueId] as const,
-    workedWith: (venueId: string) => ["staff", "workedWith", venueId] as const,
     invites: (waiterId: string) => ["staff", "invites", waiterId] as const,
     employers: (waiterId: string) => ["staff", "employers", waiterId] as const,
     hours: (venueId: string, month: string) =>

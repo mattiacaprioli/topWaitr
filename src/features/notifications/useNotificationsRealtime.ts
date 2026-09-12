@@ -23,9 +23,6 @@ export type IncomingNotification = {
  * canale su `messages`, che porta anche il contenuto.
  */
 const DOMAINS_BY_TYPE: Record<string, readonly (readonly unknown[])[]> = {
-  application_received: [qk.applications.all],
-  application_accepted: [qk.applications.all],
-  application_rejected: [qk.applications.all],
   shift_assigned: [qk.assignments.all],
   shift_unassigned: [qk.assignments.all],
   shift_cancelled: [qk.assignments.all, qk.shifts.all],

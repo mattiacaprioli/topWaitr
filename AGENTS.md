@@ -6,7 +6,9 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before 
 
 # topWaitr
 
-Marketplace di turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. I **professionisti** trovano e si candidano ai turni pubblicati dai **locali**. Niente Stripe nel MVP.
+Gestione dei turni per il settore dell'ospitalità (mercato italiano): ristoranti, hotel, catering, discoteche, pub e agenzie di eventi. I **locali** organizzano i turni con il proprio organico; i **professionisti** confermano i turni assegnati, tengono il conto delle ore e costruiscono la propria reputazione. Niente Stripe nel MVP.
+
+> Il marketplace (professionisti che cercano turni e si candidano ad annunci) è stato rimosso dal codice il 2026-09-12. In DB restano inerti `applications`, l'enum `shift_kind` e i `notification_type` `application_*`: non vanno riesumati senza una decisione di prodotto.
 
 ⚠️ **Vocabolario**: nelle stringhe utente si usa **professionista** (non "cameriere") e **locale** (non "ristorante"/"ristoratore"), perché il prodotto non è più solo per la ristorazione. I nomi interni restano `waiter`/`manager` (enum DB, rotte, tipi): non rinominarli.
 

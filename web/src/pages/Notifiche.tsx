@@ -47,7 +47,7 @@ export function NotifichePage() {
       {items.length === 0 ? (
         <Placeholder
           title="Nessuna notifica"
-          detail="Candidature, risposte dello staff e messaggi arrivano qui."
+          detail="Risposte dello staff, aggiornamenti dei turni e messaggi arrivano qui."
         />
       ) : (
         <div className="flex max-w-3xl flex-col gap-2">

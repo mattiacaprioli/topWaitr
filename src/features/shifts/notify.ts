@@ -9,10 +9,13 @@ import type { ShiftWithAssignees } from "./types";
  * Chi riceve una notifica se cambia la data (o l'orario) di un turno.
  *
  * Gemello client di `notify_on_shift_change()`
- * (`supabase/migrations/20260910120300_notify_triggers.sql`): assegnati attivi
- * **con account collegato** ∪ candidati accettati. Le due condizioni vanno
- * tenute allineate a mano — se il trigger cambia destinatari, questo file va
- * cambiato con lui, o l'interfaccia prometterà avvisi che nessuno riceve.
+ * (`supabase/migrations/20260910120300_notify_triggers.sql`): gli assegnati
+ * attivi **con account collegato**. Le due condizioni vanno tenute allineate a
+ * mano — se il trigger cambia destinatari, questo file va cambiato con lui, o
+ * l'interfaccia prometterà avvisi che nessuno riceve.
+ *
+ * Nota: il trigger fa ancora una `union` con i candidati accettati, ma quel
+ * ramo non produce più righe — nessuno scrive più in `applications`.
  *
  * Serve a dire la verità prima di trascinare un turno su un altro giorno: lo
  * spostamento non è mai solo uno spostamento, è una notifica sul telefono di
@@ -21,13 +24,11 @@ import type { ShiftWithAssignees } from "./types";
 export type ShiftNotifyRecipients = {
   /** Nomi di chi è assegnato e verrà avvisato, per poterli nominare. */
   assignees: string[];
-  acceptedApplicants: number;
   total: number;
 };
 
 export const NO_RECIPIENTS: ShiftNotifyRecipients = {
   assignees: [],
-  acceptedApplicants: 0,
   total: 0,
 };
 
@@ -42,18 +43,7 @@ export function shiftNotifyRecipients(
     .filter((a) => isActiveAssignment(a.status) && a.staff_member?.waiter_id)
     .map((a) => a.staff_member?.display_name ?? "");
 
-  // Il trigger fa una `union`, quindi la stessa persona assegnata *e* candidata
-  // accettata conta una volta sola. In pratica non succede: i turni interni non
-  // hanno candidature e quelli marketplace non hanno assegnazioni.
-  const acceptedApplicants = shift.applications.filter(
-    (a) => a.status === "accepted"
-  ).length;
-
-  return {
-    assignees,
-    acceptedApplicants,
-    total: assignees.length + acceptedApplicants,
-  };
+  return { assignees, total: assignees.length };
 }
 
 /** Perché chi lascia il turno non riceve la revoca. */
