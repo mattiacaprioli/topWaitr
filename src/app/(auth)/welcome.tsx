@@ -28,8 +28,8 @@ export default function Welcome() {
       </Display>
 
       <Text className="mt-7 max-w-[320px] text-center font-sans text-base leading-7 text-t2">
-        Recensioni verificate via scontrino, badge di eccellenza e pagamenti
-        sicuri per chi vive di sala e cucina.
+        Turni sempre in tasca, ore sotto controllo e le recensioni dei clienti
+        che ti seguono di locale in locale.
       </Text>
 
       <GoldButton

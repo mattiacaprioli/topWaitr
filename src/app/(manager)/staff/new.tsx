@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
+import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { Avatar } from "@/components/ui/Avatar";
@@ -11,7 +11,6 @@ import { GoldButton } from "@/components/ui/GoldButton";
 import { Input } from "@/components/ui/Input";
 import { Mono } from "@/components/ui/Mono";
 import { Pill } from "@/components/ui/Pill";
-import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
@@ -21,15 +20,14 @@ import {
   useAddStaffMember,
   useFindWaiterByEmail,
   useVenueStaff,
-  useWorkedWithWaiters,
 } from "@/features/staff/hooks";
-import { canonicalRole, STAFF_ROLES } from "@/features/staff/roles";
+import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
+import { useSetStaffMemberRoles } from "@/features/roles/hooks";
 import type { WaiterLookup } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
-type Mode = "storico" | "manuale" | "invita";
+type Mode = "manuale" | "invita";
 const MODES: { id: Mode; label: string }[] = [
-  { id: "storico", label: "Storico" },
   { id: "manuale", label: "Manuale" },
   { id: "invita", label: "Invita" },
 ];
@@ -67,26 +65,22 @@ export default function StaffNewScreen() {
   const venue = useMyVenue(userId).data ?? null;
   const venueId = venue?.id;
 
-  const [mode, setMode] = useState<Mode>("storico");
+  const [mode, setMode] = useState<Mode>("manuale");
   const add = useAddStaffMember();
+  const setRoles = useSetStaffMemberRoles();
 
-  // Camerieri già in organico (attivi o invitati) — per escluderli,
-  // distinguendo l'invito ancora in attesa dalla presenza effettiva.
+  // Chi è già in organico: serve a distinguere, su un invito, chi è già dentro
+  // da chi ha solo un invito in attesa.
   const staffQuery = useVenueStaff(venueId);
   const existingStatus = new Map<string, Enums<"staff_link_status">>(
     (staffQuery.data ?? [])
       .filter((s): s is typeof s & { waiter_id: string } => !!s.waiter_id)
       .map((s) => [s.waiter_id, s.link_status])
   );
-  const existing = new Set(existingStatus.keys());
-
-  // Dallo storico
-  const workedQuery = useWorkedWithWaiters(venueId);
-  const candidates = (workedQuery.data ?? []).filter((w) => !existing.has(w.id));
 
   // Nuova scheda (manuale)
   const [name, setName] = useState("");
-  const [role, setRole] = useState<string | null>(null);
+  const [roleIds, setRoleIds] = useState<string[]>([]);
   const [empType, setEmpType] = useState<Enums<"employment_type">>("a_chiamata");
   const [phone, setPhone] = useState("");
 
@@ -106,37 +100,31 @@ export default function StaffNewScreen() {
     toast.show("Operazione non riuscita. Riprova.", "error");
   }
 
-  function addFromWorked(w: {
-    id: string;
-    full_name: string | null;
-    primary_role: string | null;
-  }) {
-    if (!venueId) return;
-    add.mutate(
-      {
-        venue_id: venueId,
-        display_name: w.full_name ?? "Cameriere",
-        // Il ruolo arriva dal profilo di un'altra persona: va riportato alla
-        // forma canonica o non combacerà mai con un fabbisogno.
-        role: canonicalRole(w.primary_role),
-        waiter_id: w.id,
-        employment_type: "a_chiamata",
-      },
-      { onSuccess: () => onAdded("Aggiunto allo staff"), onError: onAddError }
-    );
-  }
-
   function addManual() {
     if (!venueId || !name.trim()) return;
     add.mutate(
       {
         venue_id: venueId,
         display_name: name.trim(),
-        role,
         employment_type: empType,
         phone: phone.trim() || null,
       },
-      { onSuccess: () => onAdded("Aggiunto allo staff"), onError: onAddError }
+      {
+        // I ruoli si scrivono dopo l'insert: hanno bisogno dell'id della scheda.
+        onSuccess: (member) =>
+          setRoles.mutate(
+            { staffMemberId: member.id, roleIds },
+            {
+              onSuccess: () => onAdded("Aggiunto allo staff"),
+              onError: () =>
+                toast.show(
+                  "Scheda creata, ma i ruoli non sono stati salvati.",
+                  "error"
+                ),
+            }
+          ),
+        onError: onAddError,
+      }
     );
   }
 
@@ -209,49 +197,7 @@ export default function StaffNewScreen() {
           })}
         </View>
 
-        {mode === "storico" ? (
-          workedQuery.isLoading || staffQuery.isLoading ? (
-            <ActivityIndicator color="#EAB54C" className="mt-6" />
-          ) : workedQuery.isError ? (
-            <QueryError onRetry={() => workedQuery.refetch()} />
-          ) : candidates.length === 0 ? (
-            <EmptyState
-              title="Nessun candidato"
-              subtitle="Qui compaiono i professionisti che hanno già lavorato da te e non sono ancora nel tuo staff. Usa «Manuale» o «Invita»."
-            />
-          ) : (
-            <View className="gap-3">
-              {candidates.map((w) => (
-                <Card key={w.id} className="rounded-3xl border-border-2 p-4">
-                  <View className="flex-row items-center gap-3">
-                    <Avatar
-                      uri={w.avatar_url ?? undefined}
-                      name={w.full_name ?? "Cameriere"}
-                      size={44}
-                    />
-                    <View className="flex-1">
-                      <Text className="text-base font-sans-bold text-t1">
-                        {w.full_name ?? "Cameriere"}
-                      </Text>
-                      {w.primary_role ? (
-                        <Text className="text-xs text-t3">{w.primary_role}</Text>
-                      ) : null}
-                    </View>
-                    <Pressable
-                      disabled={add.isPending}
-                      onPress={() => addFromWorked(w)}
-                      className="rounded-full bg-gold px-4 py-2"
-                    >
-                      <Text className="text-sm font-sans-semibold text-gold-ink">
-                        Aggiungi
-                      </Text>
-                    </Pressable>
-                  </View>
-                </Card>
-              ))}
-            </View>
-          )
-        ) : mode === "manuale" ? (
+        {mode === "manuale" ? (
           <View className="gap-5">
             <Input
               label="Nome"
@@ -259,20 +205,11 @@ export default function StaffNewScreen() {
               onChangeText={setName}
               placeholder="Es. Marco Rossi"
             />
-            <View className="gap-2">
-              <Mono>Ruolo</Mono>
-              <View className="flex-row flex-wrap gap-2">
-                {STAFF_ROLES.map((r) => (
-                  <Chip
-                    key={r}
-                    label={r}
-                    active={role === r}
-                    gold={role === r}
-                    onPress={() => setRole(role === r ? null : r)}
-                  />
-                ))}
-              </View>
-            </View>
+            <RoleMultiSelect
+              venueId={venueId}
+              value={roleIds}
+              onChange={setRoleIds}
+            />
             <View className="gap-2">
               <Mono>Tipo</Mono>
               <TypeChips value={empType} onChange={setEmpType} />

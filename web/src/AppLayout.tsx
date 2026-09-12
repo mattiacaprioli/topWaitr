@@ -15,7 +15,6 @@ const NAV: NavItem[] = [
   { to: "/copertura", label: "Copertura" },
   { to: "/ore", label: "Ore" },
   { to: "/staff", label: "Staff" },
-  { to: "/candidature", label: "Candidature" },
   { to: "/storico", label: "Storico" },
   { to: "/chat", label: "Messaggi", badge: "chat" },
   { to: "/notifiche", label: "Notifiche", badge: "notifiche" },

@@ -3,7 +3,11 @@ import { qk } from "@/lib/queryKeys";
 import type { Enums } from "@/types/database";
 import { addDaysToDate } from "@/lib/format";
 import type { ShiftWithAssignees } from "@/features/shifts/types";
-import type { InternalShiftPlan } from "./api";
+import type {
+  InternalShiftPlan,
+  RoleTargetInput,
+  StaffAssignmentInput,
+} from "./api";
 import {
   createInternalShift,
   createInternalShifts,
@@ -93,8 +97,8 @@ export function useCreateInternalShift(venueId: string | undefined) {
       start_time: string;
       end_time: string;
       description: string | null;
-      staffIds: string[];
-      roleTargets?: { role: string; count: number }[];
+      staff: StaffAssignmentInput[];
+      roleTargets?: RoleTargetInput[];
     }) => createInternalShift({ venue_id: venueId as string, ...input }),
     onSuccess: () => invalidateAfterShiftWrite(qc, venueId),
   });
@@ -136,7 +140,7 @@ export function useCopyInternalShifts(venueId: string | undefined) {
         plans: plans.map((p) => ({
           ...p,
           date: addDaysToDate(p.date, input.dayShift),
-          staffIds: input.withStaff ? p.staffIds : [],
+          staff: input.withStaff ? p.staff : [],
         })),
       });
     },
@@ -172,7 +176,12 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
     mutationFn: (vars: {
       assignmentId: string;
       shiftId: string;
-      toStaffMember: { id: string; display_name: string; role: string | null };
+      toStaffMember: {
+        id: string;
+        display_name: string;
+        /** Le sue mansioni: servono a indovinare il ruolo come fa il server. */
+        roles: { id: string; name: string }[];
+      };
     }) => reassignShiftAssignment(vars.assignmentId, vars.toStaffMember.id),
 
     onMutate: async ({ assignmentId, shiftId, toStaffMember }) => {
@@ -186,22 +195,35 @@ export function useReassignShiftAssignment(venueId: string | undefined) {
             ? s
             : {
                 ...s,
-                shift_assignments: s.shift_assignments.map((a) =>
-                  a.id !== assignmentId
-                    ? a
-                    : {
-                        ...a,
-                        status: "assigned" as const,
-                        staff_member: {
-                          id: toStaffMember.id,
-                          display_name: toStaffMember.display_name,
-                          role: toStaffMember.role,
-                          // Lo rimette a posto il refetch: qui serve solo al
-                          // conteggio dei destinatari, che non è ancora in gioco.
-                          waiter_id: null,
-                        },
-                      }
-                ),
+                shift_assignments: s.shift_assignments.map((a) => {
+                  if (a.id !== assignmentId) return a;
+                  // Stessa regola del server (`reassign_shift_assignment`): chi
+                  // entra tiene il ruolo di chi esce se lo sa fare, altrimenti
+                  // prende il suo unico ruolo, altrimenti resta da scegliere.
+                  // Ricopiarla qui evita che la copertura sfarfalli fra il
+                  // trascinamento e il refetch.
+                  const kept = toStaffMember.roles.find(
+                    (r) => r.id === a.role_id
+                  );
+                  const role =
+                    kept ??
+                    (toStaffMember.roles.length === 1
+                      ? toStaffMember.roles[0]
+                      : null);
+                  return {
+                    ...a,
+                    status: "assigned" as const,
+                    role_id: role?.id ?? null,
+                    role,
+                    staff_member: {
+                      id: toStaffMember.id,
+                      display_name: toStaffMember.display_name,
+                      // Lo rimette a posto il refetch: qui serve solo al
+                      // conteggio dei destinatari, che non è ancora in gioco.
+                      waiter_id: null,
+                    },
+                  };
+                }),
               }
         )
       );

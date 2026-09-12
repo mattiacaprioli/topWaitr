@@ -7,7 +7,7 @@ import { Icon } from "./Icon";
 import { Mono } from "./Mono";
 
 type Props = {
-  /** Mono uppercase eyebrow (e.g. "3 candidature" or "Profilo"). */
+  /** Mono uppercase eyebrow (e.g. "3 turni" or "Profilo"). */
   eyebrow: string;
   title: string;
   goldEyebrow?: boolean;

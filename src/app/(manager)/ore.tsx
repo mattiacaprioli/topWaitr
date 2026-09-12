@@ -145,7 +145,7 @@ export default function VenueHoursScreen() {
                       {r.display_name}
                     </Text>
                     <Text className="text-xs text-t3">
-                      {r.role ?? "—"} · {r.shifts_count} turni
+                      {r.roles ?? "—"} · {r.shifts_count} turni
                     </Text>
                   </View>
                   <Text className="text-sm font-sans-bold text-gold">

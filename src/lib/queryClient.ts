@@ -35,7 +35,7 @@ export const queryClient = new QueryClient({
 
 /**
  * staleTime per i contatori dei badge (campanella, messaggi non letti,
- * candidature da valutare). Sono numeri, non contenuti: il realtime li
+ * turni scoperti). Sono numeri, non contenuti: il realtime li
  * invalida quando cambiano, quindi non serve rinfrescarli a tempo.
  */
 export const BADGE_STALE_TIME = 10 * 60_000;

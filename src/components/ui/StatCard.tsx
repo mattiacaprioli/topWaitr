@@ -1,4 +1,4 @@
-import { Text, View } from "@/tw";
+import { Pressable, Text, View } from "@/tw";
 import { cn } from "@/lib/cn";
 import { Mono } from "./Mono";
 
@@ -6,14 +6,19 @@ import { Mono } from "./Mono";
 export function StatCard({
   value,
   label,
+  onPress,
   className,
 }: {
   value: string;
   label: string;
+  /** Rende la cella toccabile: per i numeri su cui c'è qualcosa da fare. */
+  onPress?: () => void;
   className?: string;
 }) {
+  const Root = onPress ? Pressable : View;
   return (
-    <View
+    <Root
+      onPress={onPress}
       className={cn(
         "flex-1 rounded-2xl border border-border bg-bg-2 px-3.5 pb-3 pt-3.5",
         className
@@ -26,6 +31,6 @@ export function StatCard({
         {value}
       </Text>
       <Mono className="mt-1.5">{label}</Mono>
-    </View>
+    </Root>
   );
 }

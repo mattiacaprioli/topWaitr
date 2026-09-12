@@ -1,21 +1,11 @@
-import type { Enums, Tables } from "@/types/database";
+import type { Tables } from "@/types/database";
 import type {
   CoverageEmbeds,
-  RoleRequirement,
+  RoleRequirementEmbed,
 } from "@/features/assignments/coverage";
 import type { AssignmentStatus } from "@/features/assignments/status";
 
 export type Shift = Tables<"shifts">;
-
-/**
- * Turno + candidature contate + le relazioni della copertura: è quanto serve
- * agli elenchi del locale per mostrare "x/y coperti" con `shiftCounts()` senza
- * una seconda query per turno.
- */
-export type ShiftWithCount = Shift &
-  CoverageEmbeds & {
-    applications: { count: number }[];
-  };
 
 /**
  * Turno + le relazioni della copertura per ruolo. Serve alle viste a calendario:
@@ -23,6 +13,13 @@ export type ShiftWithCount = Shift &
  * conteggio grezzo degli assegnati (che ignora ruoli e rifiuti).
  */
 export type ShiftWithCoverage = Shift & CoverageEmbeds;
+
+/**
+ * Alias storico di `ShiftWithCoverage`: il nome resta perché è quello usato
+ * dagli elenchi del locale. Portava anche `applications(count)` finché il turno
+ * poteva essere un annuncio con delle candidature.
+ */
+export type ShiftWithCount = ShiftWithCoverage;
 
 /**
  * Turno con le sue relazioni **e l'identità** di chi è assegnato. Serve alle
@@ -33,21 +30,21 @@ export type ShiftWithCoverage = Shift & CoverageEmbeds;
  * senza conversioni.
  */
 export type ShiftWithAssignees = Shift & {
-  shift_role_requirements: RoleRequirement[];
+  shift_role_requirements: RoleRequirementEmbed[];
   shift_assignments: {
     /** Identità della riga: è l'assegnazione a spostarsi, non la persona. */
     id: string;
     status: AssignmentStatus;
+    /** Il ruolo ricoperto **su questo turno**, non quello dell'anagrafica. */
+    role_id: string | null;
+    role: { id: string; name: string } | null;
     staff_member: {
       id: string;
       display_name: string;
-      role: string | null;
       /** Senza account collegato non c'è nessuno da notificare. */
       waiter_id: string | null;
     } | null;
   }[];
-  /** Solo lo stato: serve a contare gli accettati di un turno marketplace. */
-  applications: { status: Enums<"application_status"> }[];
 };
 
 export type ShiftWithVenue = Shift & {

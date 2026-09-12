@@ -35,7 +35,7 @@ export async function getMyShifts(venueId: string): Promise<ShiftWithCount[]> {
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
     )
     .eq("venue_id", venueId)
     .gte("date", addDaysToDate(todayString(), -1))
@@ -68,10 +68,8 @@ export async function getVenueShiftsRange(
       // per non fare una query in più a ogni trascinamento:
       //   · `id` dell'assegnazione → è ciò che si riassegna;
       //   · `waiter_id` → chi non ha un account collegato non riceve notifiche,
-      //     quindi non va contato quando si chiede conferma;
-      //   · `applications(status)` → sui turni marketplace i destinatari della
-      //     notifica sono i candidati accettati.
-      "*, shift_role_requirements(role, count), shift_assignments(id, status, staff_member:staff_members(id, display_name, role, waiter_id)), applications(status)"
+      //     quindi non va contato quando si chiede conferma.
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(id, status, role_id, role:venue_roles(id, name), staff_member:staff_members(id, display_name, waiter_id))"
     )
     .eq("venue_id", venueId)
     .gte("date", from)
@@ -110,7 +108,7 @@ export async function getVenuePastShiftsPage(
       // Le relazioni della copertura, non un conteggio grezzo degli assegnati:
       // gli elenchi mostrano "x/y" con `shiftCounts()`, che sui turni interni
       // ragiona per ruolo e ignora chi ha rifiutato.
-      "*, applications(count), shift_role_requirements(role, count), shift_assignments(status, staff_member:staff_members(role))"
+      "*, shift_role_requirements(role_id, count, role:venue_roles(name)), shift_assignments(status, role_id)"
     )
     .eq("venue_id", venueId)
     .lt("date", todayString())
@@ -143,35 +141,10 @@ export async function getVenuePastShiftsCount(venueId: string): Promise<number> 
 }
 
 /**
- * Quanti turni al massimo tiene il feed marketplace. È l'unica query dell'app
- * che cresce con la piattaforma invece che con l'utente: senza tetto, il giorno
- * in cui ci sono mille locali attivi ogni professionista se li scarica tutti a
- * ogni apertura. Il tetto è il turno più vicino nel tempo, che è anche l'unico
- * che qualcuno guarda davvero.
- *
- * TODO quando il feed diventerà lungo: scroll infinito (keyset su date +
- * start_time) e/o filtro per città, sul modello di `getVenuePastShiftsPage`.
+ * Il turno con il suo locale: è la query del dettaglio turno lato
+ * professionista, dove servono nome e logo del locale, e `venue.owner_id` per
+ * aprire la chat.
  */
-export const OPEN_SHIFTS_LIMIT = 100;
-
-/** Open, non-past shifts across all venues — the waiter's marketplace feed. */
-export async function getOpenShifts(): Promise<ShiftWithVenue[]> {
-  const { data, error } = await supabase
-    .from("shifts")
-    .select("*, venue:venues(*)")
-    .eq("status", "open")
-    .eq("kind", "marketplace")
-    // Da ieri: un turno notturno ancora in corso è ancora un turno da coprire.
-    .gte("date", addDaysToDate(todayString(), -1))
-    .order("date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(OPEN_SHIFTS_LIMIT);
-  if (error) throw new Error(error.message);
-  return ((data as ShiftWithVenue[] | null) ?? []).filter(
-    (s) => !isShiftOver(s)
-  );
-}
-
 export async function getShiftWithVenue(
   id: string
 ): Promise<ShiftWithVenue | null> {

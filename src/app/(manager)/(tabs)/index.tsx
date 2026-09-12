@@ -21,7 +21,6 @@ import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { formatShiftRange, todayString } from "@/lib/format";
 import { useMyVenue } from "@/features/venues/hooks";
 import { useMyShifts, useVenuePastShiftsCount } from "@/features/shifts/hooks";
-import { usePendingCount, useTodayStaff } from "@/features/applications/hooks";
 import { useTodayAssignments } from "@/features/assignments/hooks";
 import { shiftCounts } from "@/features/assignments/coverage";
 import { useUnreadCount } from "@/features/notifications/hooks";
@@ -54,38 +53,35 @@ export default function ManagerHome() {
   const shiftsQuery = useMyShifts(venue?.id);
   const shifts = shiftsQuery.data ?? [];
   const pastCount = useVenuePastShiftsCount(venue?.id).data ?? 0;
-  const staffQuery = useTodayStaff(venue?.id);
-  const todayStaff = staffQuery.data ?? [];
   const assignQuery = useTodayAssignments(venue?.id);
   const todayAssignments = assignQuery.data ?? [];
-  const pending = usePendingCount(venue?.id).data ?? 0;
   const unread = useUnreadCount(userId).data ?? 0;
 
   // `getMyShifts` torna già solo i turni non conclusi (turni notturni inclusi):
   // qui non serve più rifiltrare per data, che tagliava fuori proprio quelli.
   const upcoming = shifts;
-  const openCount = upcoming.filter(
-    (s) => s.kind === "marketplace" && s.status === "open"
-  ).length;
-  // Gli annullati non hanno posti da coprire: esclusi dal KPI.
+  // Gli annullati non hanno posti da coprire: esclusi dai KPI.
   const activeUpcoming = upcoming.filter((s) => s.status !== "cancelled");
   const counts = activeUpcoming.map((s) => shiftCounts(s));
   const filled = counts.reduce((n, c) => n + c.filled, 0);
   const totalPos = counts.reduce((n, c) => n + c.total, 0);
+  // L'unico numero su cui c'è da agire: turni che partono senza abbastanza
+  // gente. Esce da `counts`, già calcolato: nessuna query in più.
+  const shortCount = counts.filter((c) => c.short).length;
 
-  // "Chi lavora oggi": staff assegnato ai turni interni + camerieri accettati
-  // sui turni marketplace, in un'unica lista. Include chi è in sala adesso su un
-  // turno cominciato ieri sera, quindi si ordina per giorno **e** ora: il solo
-  // orario metterebbe un turno iniziato alle 22:00 di ieri dopo il pranzo di oggi.
-  const workers: TodayWorker[] = [
-    ...todayAssignments.map((a) => {
+  // "Chi lavora oggi": lo staff assegnato ai turni di oggi. Include chi è in
+  // sala adesso su un turno cominciato ieri sera, quindi si ordina per giorno
+  // **e** ora: il solo orario metterebbe un turno iniziato alle 22:00 di ieri
+  // dopo il pranzo di oggi.
+  const workers: TodayWorker[] = todayAssignments
+    .map((a) => {
       const sm = a.staff_member;
       const waiterId = sm?.waiter_id ?? null;
       return {
         key: `asg-${a.id}`,
         name: sm?.display_name ?? "Staff",
         avatarUri: sm?.waiter?.avatar_url ?? undefined,
-        role: sm?.role ?? null,
+        role: a.role?.name ?? null,
         ratingAvg: sm?.waiter?.waiter_profile?.rating_avg ?? null,
         ratingCount: sm?.waiter?.waiter_profile?.rating_count ?? null,
         date: a.shift?.date ?? "",
@@ -95,28 +91,13 @@ export default function ManagerHome() {
           ? () => router.push(`/(manager)/cameriere/${waiterId}`)
           : undefined,
       };
-    }),
-    ...todayStaff.map((row) => ({
-      key: `app-${row.id}`,
-      name: row.waiter?.full_name ?? "Cameriere",
-      avatarUri: row.waiter?.avatar_url ?? undefined,
-      role: row.waiter?.waiter_profile?.primary_role ?? null,
-      ratingAvg: row.waiter?.waiter_profile?.rating_avg ?? null,
-      ratingCount: row.waiter?.waiter_profile?.rating_count ?? null,
-      date: row.shift?.date ?? "",
-      start: row.shift?.start_time ?? "",
-      end: row.shift?.end_time ?? "",
-      onPress: () => router.push(`/(manager)/cameriere/${row.waiter_id}`),
-    })),
-  ].sort((a, b) =>
-    `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`)
-  );
+    })
+    .sort((a, b) => `${a.date}T${a.start}`.localeCompare(`${b.date}T${b.start}`));
 
   const { refreshing, onRefresh } = usePullToRefresh(() =>
     Promise.all([
       venueQuery.refetch(),
       shiftsQuery.refetch(),
-      staffQuery.refetch(),
       assignQuery.refetch(),
     ])
   );
@@ -160,7 +141,7 @@ export default function ManagerHome() {
         <View className="mt-6">
           <EmptyState
             title="Configura il tuo locale"
-            subtitle="Aggiungi le informazioni del tuo locale per iniziare a pubblicare turni."
+            subtitle="Aggiungi le informazioni del tuo locale per iniziare a organizzare i turni."
           />
           <GoldButton
             className="mt-2"
@@ -176,8 +157,15 @@ export default function ManagerHome() {
           <View className="gap-2.5">
             <Mono>A colpo d&apos;occhio</Mono>
             <View className="flex-row gap-2.5">
-              <StatCard value={String(openCount)} label="turni aperti" />
-              <StatCard value={String(pending)} label="da valutare" />
+              <StatCard
+                value={String(activeUpcoming.length)}
+                label="turni in programma"
+              />
+              <StatCard
+                value={String(shortCount)}
+                label="turni scoperti"
+                onPress={() => router.push("/(manager)/(tabs)/turni")}
+              />
             </View>
             <View className="flex-row gap-2.5">
               <StatCard
@@ -269,7 +257,7 @@ export default function ManagerHome() {
             ) : upcoming.length === 0 ? (
               <EmptyState
                 title="Nessun turno in programma"
-                subtitle="Pubblica un turno dalla scheda «Turni»."
+                subtitle="Crea un turno dalla scheda «Turni»."
               />
             ) : (
               <View className="gap-3">

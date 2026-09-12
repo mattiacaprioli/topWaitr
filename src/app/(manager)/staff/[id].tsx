@@ -24,12 +24,23 @@ import { StaffHoursSection } from "@/features/assignments/StaffHoursSection";
 import { StaffPerformanceSection } from "@/features/assignments/StaffPerformanceSection";
 import { ProLockedCard } from "@/features/plan/ProLock";
 import { useIsPro } from "@/features/plan/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { DocumentsSection } from "@/features/documents/DocumentsSection";
+import { RoleMultiSelect } from "@/features/roles/RoleMultiSelect";
+import {
+  useSetStaffMemberRoles,
+  useStaffMemberRoles,
+} from "@/features/roles/hooks";
 import type { StaffMember } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
 
 /** Editable form — state seeded from props (mounted with key={member.id}). */
-function StaffEditForm({ member }: { member: StaffMember }) {
+function StaffEditForm({
+  member,
+  initialRoleIds,
+}: {
+  member: StaffMember;
+  initialRoleIds: string[];
+}) {
   const router = useRouter();
   const toast = useToast();
   const insets = useSafeAreaInsets();
@@ -37,12 +48,13 @@ function StaffEditForm({ member }: { member: StaffMember }) {
   const managerId = session!.user.id;
   const isPro = useIsPro();
   const update = useUpdateStaffMember();
+  const setRoles = useSetStaffMemberRoles();
   const remove = useRemoveStaffMember();
   const startConversation = useStartConversation();
-  const busy = update.isPending || remove.isPending;
+  const busy = update.isPending || setRoles.isPending || remove.isPending;
 
   const [name, setName] = useState(member.display_name);
-  const [role, setRole] = useState<string | null>(member.role);
+  const [roleIds, setRoleIds] = useState<string[]>(initialRoleIds);
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     member.employment_type
   );
@@ -58,17 +70,27 @@ function StaffEditForm({ member }: { member: StaffMember }) {
         id: member.id,
         fields: {
           display_name: name.trim(),
-          role,
           employment_type: empType,
           phone: phone.trim() || null,
           note: note.trim() || null,
         },
       },
       {
-        onSuccess: () => {
-          toast.show("Scheda aggiornata");
-          router.back();
-        },
+        // I ruoli stanno in una tabella a parte: due scritture, un solo gesto.
+        // Se la seconda fallisce la scheda è comunque salvata, quindi l'errore
+        // parla di ruoli e non di "salvataggio non riuscito".
+        onSuccess: () =>
+          setRoles.mutate(
+            { staffMemberId: member.id, roleIds },
+            {
+              onSuccess: () => {
+                toast.show("Scheda aggiornata");
+                router.back();
+              },
+              onError: () =>
+                toast.show("Ruoli non salvati. Riprova.", "error"),
+            }
+          ),
         onError: () => toast.show("Impossibile salvare. Riprova.", "error"),
       }
     );
@@ -162,6 +184,16 @@ function StaffEditForm({ member }: { member: StaffMember }) {
           />
         )}
 
+        <DocumentsSection
+          staffMemberId={member.id}
+          onAdd={() =>
+            router.push({
+              pathname: "/(manager)/staff/documento/new",
+              params: { staffId: member.id },
+            })
+          }
+        />
+
         <Input
           label="Nome"
           value={name}
@@ -169,20 +201,11 @@ function StaffEditForm({ member }: { member: StaffMember }) {
           placeholder="Es. Marco Rossi"
         />
 
-        <View className="gap-2">
-          <Mono>Ruolo</Mono>
-          <View className="flex-row flex-wrap gap-2">
-            {STAFF_ROLES.map((r) => (
-              <Chip
-                key={r}
-                label={r}
-                active={role === r}
-                gold={role === r}
-                onPress={() => setRole(role === r ? null : r)}
-              />
-            ))}
-          </View>
-        </View>
+        <RoleMultiSelect
+          venueId={member.venue_id}
+          value={roleIds}
+          onChange={setRoleIds}
+        />
 
         <View className="gap-2">
           <Mono>Tipo</Mono>
@@ -239,7 +262,7 @@ function StaffEditForm({ member }: { member: StaffMember }) {
       <ConfirmModal
         visible={confirmVisible}
         title="Rimuovere dallo staff?"
-        message={`${member.display_name} non sarà più nel tuo organico. Perderai anche lo storico di ore e presenze dei suoi turni (incluso l'export per il commercialista).`}
+        message={`${member.display_name} non sarà più nel tuo organico. Perderai anche lo storico di ore e presenze dei suoi turni (incluso l'export per il commercialista) e i documenti caricati sulla sua scheda.`}
         confirmLabel="Rimuovi"
         destructive
         pending={remove.isPending}
@@ -254,8 +277,11 @@ export default function StaffMemberScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const memberQuery = useStaffMember(id);
   const member = memberQuery.data ?? null;
+  // I ruoli seedano lo stato del form, che si monta con `key` e non si
+  // risincronizza in un effetto: vanno attesi qui, non dentro il form.
+  const rolesQuery = useStaffMemberRoles(id);
 
-  if (memberQuery.isLoading) {
+  if (memberQuery.isLoading || rolesQuery.isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-bg-0">
         <ActivityIndicator color="#EAB54C" />
@@ -282,5 +308,11 @@ export default function StaffMemberScreen() {
     );
   }
 
-  return <StaffEditForm key={member.id} member={member} />;
+  return (
+    <StaffEditForm
+      key={member.id}
+      member={member}
+      initialRoleIds={(rolesQuery.data ?? []).map((r) => r.id)}
+    />
+  );
 }

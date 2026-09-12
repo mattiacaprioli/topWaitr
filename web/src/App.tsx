@@ -16,7 +16,7 @@ import { PlanningPage } from "./pages/Planning";
 import { CoperturaPage } from "./pages/Copertura";
 import { OrePage } from "./pages/Ore";
 import { StaffPage } from "./pages/Staff";
-import { CandidaturePage } from "./pages/Candidature";
+import { RuoliPage } from "./pages/Ruoli";
 import { ProfessionistaPage } from "./pages/Professionista";
 import { LocalePage } from "./pages/Locale";
 import { ImpostazioniPage } from "./pages/Impostazioni";
@@ -68,9 +68,10 @@ export function App() {
           <Route path="/copertura" element={<CoperturaPage />} />
           <Route path="/ore" element={<OrePage />} />
           <Route path="/staff" element={<StaffPage />} />
-          <Route path="/candidature" element={<CandidaturePage />} />
-          {/* Profilo pubblico: si arriva da una candidatura o dall'organico,
-              non c'è una voce di menu (non è una lista da sfogliare). */}
+          <Route path="/ruoli" element={<RuoliPage />} />
+          <Route path="/ruoli" element={<RuoliPage />} />
+          {/* Profilo pubblico: si arriva dall'organico o dal dettaglio di un
+              turno, non c'è una voce di menu (non è una lista da sfogliare). */}
           <Route
             path="/professionista/:id"
             element={<ProfessionistaPage />}

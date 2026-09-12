@@ -8,7 +8,6 @@ import {
   getMyPendingInvites,
   getStaffMember,
   getVenueStaff,
-  getWorkedWithWaiters,
   leaveVenue,
   removeStaffMember,
   respondToInvite,
@@ -36,14 +35,6 @@ export function useStaffMember(id: string) {
   return useQuery({
     queryKey: [...qk.staff.all, "detail", id] as const,
     queryFn: () => getStaffMember(id),
-  });
-}
-
-export function useWorkedWithWaiters(venueId: string | undefined) {
-  return useQuery({
-    queryKey: qk.staff.workedWith(venueId ?? ""),
-    queryFn: () => getWorkedWithWaiters(venueId as string),
-    enabled: !!venueId,
   });
 }
 

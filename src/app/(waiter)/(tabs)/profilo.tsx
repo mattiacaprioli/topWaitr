@@ -211,7 +211,7 @@ export default function WaiterProfiloScreen() {
             shadowOffset: { width: 0, height: 6 },
           }}
         >
-          <Avatar name={name} size={104} />
+          <Avatar uri={profile?.avatar_url} name={name} size={104} />
         </View>
 
         <View className="items-center gap-1.5">
@@ -263,6 +263,28 @@ export default function WaiterProfiloScreen() {
           ))}
         </View>
       ) : null}
+
+      {/* Fuori dai tab qui sotto, che sono la parte **pubblica** del profilo:
+          i documenti li vede solo il locale a cui li carichi. */}
+      <Card
+        className="rounded-3xl border-border-2 p-4"
+        onPress={() => router.push("/(waiter)/documenti")}
+      >
+        <View className="flex-row items-center gap-3">
+          <View className="h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-2">
+            <Icon name="clipboard" size={18} color="#EAB54C" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-base font-sans-bold text-t1">
+              I tuoi documenti
+            </Text>
+            <Text className="text-xs text-t3">
+              HACCP, contratti, attestati · privati
+            </Text>
+          </View>
+          <Icon name="chevR" size={18} color="#8c857a" />
+        </View>
+      </Card>
 
       {/* Tabs */}
       <View className="flex-row gap-1 rounded-2xl border border-border bg-bg-card p-1">

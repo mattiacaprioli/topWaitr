@@ -3,18 +3,31 @@ import type { Tables, TablesInsert, TablesUpdate } from "@/types/database";
 
 export type StaffMember = Tables<"staff_members">;
 
+/** Una mansione della persona, come la carica l'embed dell'organico. */
+export type StaffRoleRef = { id: string; name: string; sort_order: number };
+
 /** Roster row + the linked waiter's avatar/name (when waiter_id is set). */
 export type StaffMemberWithWaiter = StaffMember & {
   waiter: Pick<Tables<"profiles">, "id" | "full_name" | "avatar_url"> | null;
+  staff_member_roles: { role: StaffRoleRef | null }[];
 };
 
-/** A waiter who already worked here (accepted application) — candidate to add. */
-export type WorkedWaiter = {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  primary_role: string | null;
-};
+/**
+ * I nomi dei ruoli di una persona, in un'unica riga ("Cameriere, Barman").
+ * Punto solo: la stessa stringa la mostrano organico, planning e scheda, e
+ * ricomporla a mano ogni volta è il modo in cui due schermate iniziano a
+ * ordinarla diversamente.
+ */
+export function staffRoleNames(member: {
+  staff_member_roles: { role: StaffRoleRef | null }[];
+}): string | null {
+  const names = member.staff_member_roles
+    .map((r) => r.role)
+    .filter((r): r is StaffRoleRef => !!r)
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((r) => r.name);
+  return names.length > 0 ? names.join(", ") : null;
+}
 
 export async function getVenueStaff(
   venueId: string
@@ -22,31 +35,12 @@ export async function getVenueStaff(
   const { data, error } = await supabase
     .from("staff_members")
     .select(
-      "*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url)"
+      "*, waiter:profiles!staff_members_waiter_id_fkey(id, full_name, avatar_url), staff_member_roles(role:venue_roles(id, name, sort_order))"
     )
     .eq("venue_id", venueId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return (data as StaffMemberWithWaiter[] | null) ?? [];
-}
-
-/**
- * Waiters with a past accepted application at this venue — the pool to add to the
- * roster ("Da chi ha già lavorato qui"). Deduped by waiter; PostgREST can't do
- * DISTINCT here, so we collapse client-side.
- *
- * La DISTINCT la fa il database (`get_worked_with_waiters`). Prima scaricava
- * ogni candidatura accettata nella storia del locale, con profilo annidato, per
- * collassarla in JavaScript — e cresceva senza limite.
- */
-export async function getWorkedWithWaiters(
-  venueId: string
-): Promise<WorkedWaiter[]> {
-  const { data, error } = await supabase.rpc("get_worked_with_waiters", {
-    p_venue: venueId,
-  });
-  if (error) throw new Error(error.message);
-  return data ?? [];
 }
 
 export async function getStaffMember(id: string): Promise<StaffMember | null> {

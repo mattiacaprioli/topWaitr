@@ -9,7 +9,9 @@ import {
   useStaffWorkedShifts,
 } from "@/features/assignments/hooks";
 import { useWaiterPublicCard } from "@/features/reviews/hooks";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import { useSetStaffMemberRoles } from "@/features/roles/hooks";
+import { RoleCheckboxes } from "./RoleCheckboxes";
+import { DocumentsPanel } from "./DocumentsPanel";
 import { formatDate, formatHours, formatShiftRange } from "@/lib/format";
 import type { StaffMemberWithWaiter } from "@/features/staff/api";
 import type { Enums } from "@/types/database";
@@ -68,6 +70,7 @@ export function StaffDetail({
         </header>
 
         <Anagrafica member={member} />
+        <DocumentsPanel staffMemberId={member.id} />
         <Performance
           staffMemberId={member.id}
           waiterId={member.waiter_id ?? null}
@@ -80,9 +83,16 @@ export function StaffDetail({
 
 function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
   const update = useUpdateStaffMember();
+  const setRoles = useSetStaffMemberRoles();
   const toast = useToast();
   const [name, setName] = useState(member.display_name);
-  const [role, setRole] = useState(member.role ?? STAFF_ROLES[0]);
+  // La scheda arriva già con i suoi ruoli embeddati dall'organico: nessuna
+  // query in più, e nessuno stato da risincronizzare dopo il primo render.
+  const [roleIds, setRoleIds] = useState<string[]>(
+    member.staff_member_roles
+      .map((r) => r.role?.id)
+      .filter((id): id is string => !!id)
+  );
   const [empType, setEmpType] = useState<Enums<"employment_type">>(
     member.employment_type
   );
@@ -102,15 +112,6 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
         <Field label="Telefono">
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
         </Field>
-        <Field label="Ruolo">
-          <Select value={role} onChange={(e) => setRole(e.target.value)}>
-            {STAFF_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </Select>
-        </Field>
         <Field label="Impiego">
           <Select
             value={empType}
@@ -123,6 +124,14 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
           </Select>
         </Field>
       </div>
+
+      <Field label="Ruoli">
+        <RoleCheckboxes
+          venueId={member.venue_id}
+          value={roleIds}
+          onChange={setRoleIds}
+        />
+      </Field>
 
       <Field label="Note" hint="Private, visibili solo a te.">
         <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
@@ -138,14 +147,22 @@ function Anagrafica({ member }: { member: StaffMemberWithWaiter }) {
                 id: member.id,
                 fields: {
                   display_name: name.trim(),
-                  role,
                   employment_type: empType,
                   phone: phone.trim() || null,
                   note: notes.trim() || null,
                 },
               },
               {
-                onSuccess: () => toast.show("Scheda aggiornata"),
+                // Due scritture, un solo gesto: la scheda e poi i ruoli, che
+                // stanno in una tabella a parte.
+                onSuccess: () =>
+                  setRoles.mutate(
+                    { staffMemberId: member.id, roleIds },
+                    {
+                      onSuccess: () => toast.show("Scheda aggiornata"),
+                      onError: (e) => toast.show(e.message, "error"),
+                    }
+                  ),
                 onError: (e) => toast.show(e.message, "error"),
               }
             )

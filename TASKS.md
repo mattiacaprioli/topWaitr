@@ -1,9 +1,12 @@
 # topWaitr — Tasks & Roadmap
 
-Tracker delle attività. Aggiornato: **2026-09-09**.
+Tracker delle attività. Aggiornato: **2026-09-12**.
 
 > ⚠️ **Regola**: questo file è il tracker autorevole, ma il 2026-09-09 si è scoperto che tre voci del backlog erano già state implementate senza che nessuno le spuntasse (modifica turni interni, entry point chat da EmployerCard, paginazione candidature). **Aggiornare questo file nello stesso commit della feature**, altrimenti il backlog manda a lavorare su cose già fatte.
-Modello di prodotto (deciso): lato **ristoratore** l'app serve soprattutto a **organizzare i turni col proprio staff**; il **marketplace** ("cerco un extra") è secondario/occasionale. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — il marketplace/recensioni resta l'esca gratuita.
+
+> ⚠️ **2026-09-12 — il marketplace non esiste più.** Molte voci qui sotto lo danno per vivo: sono **storia**, non backlog. Vedi «Sessione 2026-09-12 — Rimozione marketplace».
+
+Modello di prodotto (deciso): il **locale** organizza i turni con il **proprio organico**; il **professionista** conferma i turni assegnati, tiene il conto delle ore e costruisce la propria reputazione. Il marketplace ("cerco un extra", candidature) è stato **rimosso** il 2026-09-12. **Nessuna parte economica nell'MVP** (pagamenti/commissioni = fuori scope, Stripe differito). Decisione 2026-07-15, ancora valida: le feature di **gestione del personale** (ore/presenze, export commercialista, performance, copertura) sono destinate al **futuro piano a pagamento** — le recensioni restano gratuite.
 
 ---
 
@@ -192,7 +195,51 @@ Il punto 6 dell'audit, metà (a). **Fatto**: `gh variable set` per `EXPO_PUBLIC_
 3. **Ripeti su più giorni** in creazione → N turni identici, uno per giorno spuntato.
 4. **Vista Persone** → le ore di una persona coincidono con la somma dei suoi turni, e chi ha rifiutato **non** somma ore.
 5. **Anteprima di stampa** (Cmd+P) sulle tre viste: impaginazione e nessuno sbordo, in particolare il mese su sei righe.
-6. **Profilo professionista** da una candidatura: recensioni, filtri, «Carica altre» e «Invia messaggio».
+6. **Profilo professionista** dall'organico: recensioni, filtri, «Carica altre» e «Invia messaggio».
+
+### Sessione 2026-09-12 — Rimozione marketplace ✅
+
+Riposizionamento: il prodotto è la **gestione dei turni col proprio organico**. La parte "professionista che cerca lavoro" è uscita dal codice. Decisione: **cancellare**, non nascondere dietro un flag — il valore di recupero fra anni è basso, il costo di portarsela dietro (tsc, lint, upgrade SDK) è continuo.
+
+**Cancellati** (10 file + 1 cartella): `src/features/applications/` (api+hooks+schema — verificato marketplace al 100%: ogni funzione leggeva `.from("applications")`), `src/app/(waiter)/candidature.tsx`, `src/features/shifts/{ExtraShiftForm.tsx,extraShiftOptions.ts,ShiftFormView.tsx,form.ts,schema.ts}`, `web/src/pages/Candidature.tsx`, `web/src/shifts/MarketplaceForm.tsx`.
+
+**Riscritti / ridotti**: la tab "Turni" del professionista è ora la sua **agenda personale** (`(waiter)/(tabs)/turni.tsx`: assegnati, "Da confermare" con conferma inline, card verso «Le mie ore») su `useMyAssignedUpcoming` + `useMyWorkHistoryTotals`, nessuna query nuova; nuova card condivisa `features/assignments/MyShiftCard.tsx`. `(waiter)/shift/[id]` e `(manager)/shift/[id]` ridotti al solo ramo interno. `(manager)/shift/new.tsx` senza bivio. `staff/new.tsx` e `AddStaffPanel.tsx` a due modi (⚠️ il default era `"storico"`: portato a `"manuale"`, o si aprivano su un ramo inesistente).
+
+**KPI ridisegnati** (app + web, definizioni allineate): "turni aperti"/"da valutare" → **"turni in programma"** e **"turni scoperti"**, quest'ultimo da `counts.filter(c => c.short)` già calcolato — zero query nuove. `StatCard` ha ora una prop `onPress`.
+
+**DB non toccato**, deliberatamente: `applications`, l'enum `shift_kind`, i tre `notification_type` `application_*`, `get_worked_with_waiters` e i trigger `applications_sync_positions`/`notify_on_shift_change` restano ma sono **inerti** (nessuno scrive più in `applications`). Il DDL sarebbe stato rischio senza beneficio.
+
+Due dettagli da ricordare: `NotificationList.TYPE_ICON` è un `Record` **esaustivo** sull'enum DB, le tre chiavi `application_*` **devono restare** o `tsc` cade; e `routing.ts` fa ora ritornare `null` su quei tipi, così una vecchia notifica non apre un dettaglio turno che parlerebbe solo di staff.
+
+### Sessione 2026-09-12 (2) — Ruoli personalizzati per locale ✅ (migration DA APPLICARE)
+
+I ruoli erano una **lista fissa di 15 stringhe** nel codice (`STAFF_ROLES`), uguale per tutti, e un dipendente poteva averne **uno solo**. Sbagliato per un prodotto che parla a hotel, catering e discoteche (nessun sommelier, ma il PR e il capo-partita), e sbagliato per la realtà: lo stesso nome fa il cameriere il venerdì e il barman il sabato. Ora l'elenco lo scrive il locale, a ogni persona si assegnano **uno o più** ruoli, e **sul turno si sceglie in quale lavora quel giorno**.
+
+- **DB** `20260912120000_venue_roles.sql`: tabelle `venue_roles` (per locale, con `archived_at`) e `staff_member_roles`; `shift_role_requirements.role` → `role_id`; **nuova** `shift_assignments.role_id`; drop di `staff_members.role`. Backfill da **due** sorgenti — l'organico *e* i fabbisogni dei turni: un ruolo può essere richiesto da un turno senza che nessuno in organico ce l'abbia (è anzi il caso tipico), e saltarlo avrebbe cancellato quel fabbisogno col `not null`.
+  - Trigger `default_assignment_role` (BEFORE INSERT): con **una** mansione sola il ruolo si compila da sé; con due resta null, perché sceglierne uno a caso direbbe «coperto» un turno che non lo è.
+  - Trigger `freeze_assignment_role` (BEFORE UPDATE): `"shift_assignments: linked waiter update"` non restringe le colonne, quindi il professionista avrebbe potuto cambiarsi il ruolo dal client. Ora il valore viene rimesso a posto in silenzio.
+  - ⚠️ `get_venue_hours_summary` ritornava `sm.role`: riscritta (ora `roles`, `string_agg`). **La versione viva era in `20260912090000`, non in `20260910120200`.** Serve `drop function` (si rinomina una colonna del record) e i grant vanno rifatti. L'aggregazione è una **sottoquery**: con un join, `count(*)`/`sum()` gonfiano turni e ore di chi ha due mansioni.
+  - `reassign_shift_assignment` porta il ruolo: quello di chi esce se chi entra lo sa fare, altrimenti il suo unico ruolo, altrimenti null. La stessa regola è ricopiata nella patch ottimistica del drag & drop, o la copertura sfarfallerebbe.
+  - RLS: nel `with check` di `staff_member_roles` e `shift_role_requirements` si verifica **anche** che il ruolo sia del locale giusto — `venue_id` non c'è in quelle tabelle, nessuna FK lo impone.
+- **App**: nuovo modulo `src/features/roles/` (api/hooks + `RoleMultiSelect`), schermata `(manager)/ruoli.tsx` (aggiungi/rinomina/archivia, 5 esempi tappabili nell'empty state), ingresso dalla tab Staff (**non** Pro: senza ruoli non si aggiunge nemmeno una persona). `StaffAssignPicker` estratto — «Chi chiami» era duplicato fra creazione e modifica turno, e la scelta del ruolo li avrebbe fatti divergere. `STAFF_ROLES` → `SUGGESTED_ROLES` (solo suggerimenti); `canonicalRole()` cancellata, non era chiamata da nessuna parte.
+- **Web**: pagina `/ruoli` (link dall'header di Staff, **niente voce di menu**: `NAV` ha già 10 voci ed è configurazione), `RoleCheckboxes` condivisa da `AddStaffPanel` e `StaffDetail`, fabbisogno e scelta del ruolo nel `ShiftPanel`.
+- **`primary_role` del professionista è ora testo libero**: è la sua vetrina, non l'organico di un locale, e nessuna lista fissa potrebbe descrivere tutti.
+- ⚠️ **DA FARE**: applicare la migration (`db push` o SQL editor → in quel caso **rinominare il file** al timestamp remoto). `src/types/database.ts` è stato **allineato a mano** (la rigenerazione alla cieca resta la trappola documentata sopra). Dopo il push serve un **rebuild** dei dev client: le build vecchie chiedono `role` a PostgREST e prendono 400.
+- Verificato: `tsc` root + `tsc -p web`, `expo lint`, `vite build web`, `expo export --platform ios`. **Non** verificato dal vivo: il backfill sui dati reali e i due trigger nuovi.
+
+### Sessione 2026-09-12 (3) — Onboarding a un passo + Documenti dello staff ✅ (3 migration DA APPLICARE)
+
+Partenza: «il passo 2 dell'onboarding (competenze + attestati) ha ancora senso?». No — ed era peggio di un residuo.
+
+- **Il passo 2 era write-only, dal giorno 1.** `waiter_profiles.skills` non era letta da **nessuna** riga di UI (non è nella vetrina `waiter_public_cards`, non la vede il gestore, non la vede nemmeno il professionista). Le 4 voci su 7 che contano erano le stesse dei tag delle recensioni: lo stesso vocabolario dichiarato da sé accanto a quello guadagnato dai clienti. Gli attestati finivano in un bucket che **solo chi li caricava** poteva leggere, e dopo l'onboarding sparivano per sempre: nessun modo di rivederli, sostituirli o cancellarli. La copy prometteva badge «confermati dalle recensioni verificate» e una «verifica identità entro 24h» che non esistono da nessuna parte.
+- **Onboarding → un passo** (nome, città, ruolo). Cancellati `SKILL_OPTIONS`, `CERTIFICATION_OPTIONS`, `uploadCertification`, `useUploadCertification`, il campo `skills` dallo schema. Corretto anche «Seleziona un ruolo» → «Inserisci» (il campo è testo libero dalla sessione precedente).
+- **Documenti dello staff** (`20260912130100`): tabella `staff_documents` ancorata alla **scheda** (`staff_members`), non alla persona. È l'unico modello in cui il gestore può caricare l'HACCP di chi **non ha l'app** — metà dell'organico — e in cui «accesso revocato quando se ne va» è automatico invece che una regola in più. ⚠️ **Prezzo accettato: i documenti non sono portabili** (chi lavora in due locali carica due volte; chi lascia un locale li perde). Il `ConfirmModal` di rimozione ora lo dice. Nome del documento **testo libero**, scadenza facoltativa, bucket privato `staff-documents` con limiti dichiarati **sul bucket**. Una sola funzione `can_access_staff_documents()` (DEFINER) usata sia dalla policy della tabella sia da quella su `storage.objects`: due copie della stessa frase divergono, e il sintomo sarebbe un documento in lista il cui file risponde 403. Apertura con `createSignedUrl` a **60 secondi**, chiesta al tap con una mutation — mai in cache, è un lasciapassare.
+- ⚠️ **BUG VIVO TROVATO E CHIUSO** (`20260912130000`): `"profiles: manager sees applicant profiles"` **e** `"waiter_profiles: manager reads applicants"` passano entrambe da `applications`, inerte dalla rimozione del marketplace. Dal 12/09 **ogni** lettura di quelle tabelle fatta da un gestore tornava vuota, in silenzio (PostgREST non distingue «filtrato da RLS» da «assente»): l'organico mostrava «Scheda senza account» a chi l'account ce l'ha, le foto dei dipendenti erano sparite ovunque lato gestore, il voto in «Chi lavora oggi» non compariva più, e Bio/Specializzazioni/Lingue non si vedevano mai. Riscritte su `staff_members`. La chat si era salvata solo perché passa da `get_chat_counterparts` (DEFINER).
+- **Cancellazione account** (`20260912130200`): `delete_account` non cancella la riga `profiles` (è una lapide), quindi nessuna cascata sarebbe mai scattata e i documenti caricati sarebbero rimasti nel bucket. Ora la RPC elimina le righe con `uploaded_by = p_user` e la Edge Function ne rimuove i blob **leggendo i path prima** della RPC. Restano di proposito i documenti caricati dal locale: sono registri suoi.
+- **Copy pre-login corretta**: la schermata di benvenuto prometteva ancora «recensioni verificate via scontrino, badge di eccellenza e **pagamenti sicuri**», e il signup «trova turni» / «trova talenti verificati» — tutta roba o mai esistita o rimossa col marketplace. Era la **prima** schermata dell'app.
+- `(manager)/ruoli` non era registrata in `_layout.tsx` (dalla sessione precedente): aggiunta.
+- ⚠️ **DA FARE**: applicare le 3 migration; **svuotare a mano il bucket `certifications`** e poi eliminarlo (la migration non lo fa: `delete from storage.buckets` fallisce se non è vuoto, e cancellare le righe di `storage.objects` lascerebbe i blob fatturati); ri-deployare la Edge Function `delete-account` (la CI non deploya le function). `src/types/database.ts` allineato **a mano**.
+- Verificato: `tsc` root + `tsc -p web`, `expo lint`, `vite build web`, `expo export --platform ios`. **Non** verificato dal vivo: upload/apertura reale di un PDF, le policy dello storage, e il fix delle due policy (che va guardato su un account gestore vero).
 
 ---
 

@@ -1,40 +1,35 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-} from "react-native";
+import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as DocumentPicker from "expo-document-picker";
-import { Pressable, ScrollView, Text, View } from "@/tw";
+import { ScrollView, Text, View } from "@/tw";
 import { Display } from "@/components/ui/Display";
 import { Mono } from "@/components/ui/Mono";
 import { Icon } from "@/components/ui/Icon";
 import { GoldButton } from "@/components/ui/GoldButton";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 import { ControlledInput } from "@/components/form/ControlledInput";
-import { ControlledChoiceChips } from "@/components/form/ControlledChoiceChips";
-import { ControlledMultiChips } from "@/components/form/ControlledMultiChips";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/lib/auth";
 import { useToast } from "@/providers/Toast";
-import {
-  useCompleteOnboarding,
-  useUploadCertification,
-} from "@/features/onboarding/hooks";
-import {
-  CERTIFICATION_OPTIONS,
-  PRIMARY_ROLE_OPTIONS,
-  SKILL_OPTIONS,
-} from "@/features/onboarding/api";
+import { useCompleteOnboarding } from "@/features/onboarding/hooks";
+import { PRIMARY_ROLE_EXAMPLES } from "@/features/onboarding/api";
 import {
   onboardingSchema,
   type OnboardingForm,
 } from "@/features/onboarding/schema";
 
-const TOTAL_STEPS = 2;
-type CertState = "idle" | "uploading" | "done";
+/**
+ * Setup del profilo professionista: **un passo solo**.
+ *
+ * Ce n'erano due: il secondo chiedeva competenze auto-dichiarate e attestati. Era
+ * roba da marketplace — servivano a farsi scegliere da un locale sconosciuto — e
+ * nessuna delle due veniva mai riletta: `waiter_profiles.skills` non compariva in
+ * una sola schermata, e gli attestati finivano in un bucket che solo chi li
+ * caricava poteva leggere. Chi viene invitato da un locale deve arrivare ai suoi
+ * turni, non compilare una vetrina che nessuno guarda. I documenti, che nel
+ * gestionale contano davvero, vivono ora sulla scheda staff con le scadenze.
+ */
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -42,29 +37,21 @@ export default function OnboardingScreen() {
   const { session, profile, refreshProfile } = useAuth();
   const userId = session!.user.id;
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [certStatus, setCertStatus] = useState<Record<string, CertState>>({});
+  const [done, setDone] = useState(false);
 
   const complete = useCompleteOnboarding(userId);
-  const uploadCert = useUploadCertification(userId);
 
-  const { control, handleSubmit, trigger } = useForm<OnboardingForm>({
+  const { control, handleSubmit } = useForm<OnboardingForm>({
     resolver: zodResolver(onboardingSchema),
     defaultValues: {
       full_name: profile?.full_name ?? "",
       city: "",
       primary_role: "",
-      skills: [],
     },
   });
 
   const firstName = (profile?.full_name ?? "").trim().split(" ")[0];
   const doneTitle = firstName ? `Tutto pronto, ${firstName}.` : "Tutto pronto!";
-
-  const onContinue = async () => {
-    const ok = await trigger(["full_name", "city", "primary_role"]);
-    if (ok) setStep(2);
-  };
 
   const onCreate = handleSubmit(async (values) => {
     try {
@@ -72,11 +59,10 @@ export default function OnboardingScreen() {
         full_name: values.full_name.trim(),
         city: values.city.trim() || null,
         primary_role: values.primary_role,
-        skills: values.skills,
       });
       // NON chiamiamo refreshProfile qui: il gate scatterebbe subito e la
       // schermata di successo non verrebbe mostrata. Rimane in (onboarding).
-      setStep(3);
+      setDone(true);
     } catch {
       toast.show("Impossibile creare il profilo. Riprova.", "error");
     }
@@ -87,29 +73,8 @@ export default function OnboardingScreen() {
     await refreshProfile();
   };
 
-  const onPickCert = async (certKey: string) => {
-    const res = await DocumentPicker.getDocumentAsync({
-      type: ["application/pdf", "image/*"],
-      copyToCacheDirectory: true,
-    });
-    const asset = res.canceled ? null : res.assets[0];
-    if (!asset) return;
-    setCertStatus((s) => ({ ...s, [certKey]: "uploading" }));
-    try {
-      await uploadCert.mutateAsync({
-        certKey,
-        file: { uri: asset.uri, name: asset.name, mimeType: asset.mimeType },
-      });
-      setCertStatus((s) => ({ ...s, [certKey]: "done" }));
-      toast.show("Certificazione caricata · in verifica");
-    } catch {
-      setCertStatus((s) => ({ ...s, [certKey]: "idle" }));
-      toast.show("Upload non riuscito. Riprova.", "error");
-    }
-  };
-
-  // Schermata di successo (step 3) — takeover a tutto schermo.
-  if (step === 3) {
+  // Schermata di successo — takeover a tutto schermo.
+  if (done) {
     return (
       <View
         className="flex-1 bg-bg-0 px-6"
@@ -132,15 +97,24 @@ export default function OnboardingScreen() {
           </Mono>
           <Display className="mt-2 text-center text-[30px]">{doneTitle}</Display>
           <Text className="mt-2 text-center font-sans text-[13.5px] leading-5 text-t3">
-            Verifica identità in corso (entro 24h). Inizia subito a costruire la
-            tua reputazione.
+            I locali per cui lavori ti assegneranno i turni: li trovi tutti qui.
           </Text>
 
+          {/* QR e recensioni **non** compaiono qui di proposito: è la prima cosa
+              che si vede dopo la registrazione, e chi arriva su invito di un
+              locale deve capire che il prodotto sono i suoi turni. La
+              reputazione la scopre dal profilo, quando ha qualcosa da mostrare.
+
+              Niente chevron: queste righe non sono tappabili, e non possono
+              esserlo — finché non si tocca «Inizia» il profilo in memoria non è
+              aggiornato e il guard tiene ancora l'utente in (onboarding). */}
           <View className="mt-8 w-full overflow-hidden rounded-3xl border border-border-2 bg-bg-card">
             {[
-              { icon: "qr" as const, label: "Mostra il QR al primo cliente" },
-              { icon: "upload" as const, label: "Carica altre certificazioni" },
-              { icon: "star" as const, label: "Raccogli le tue prime recensioni" },
+              {
+                icon: "calendar" as const,
+                label: "Conferma i turni che ti assegnano",
+              },
+              { icon: "clock" as const, label: "Tieni il conto delle tue ore" },
             ].map((row, i) => (
               <View
                 key={row.label}
@@ -153,7 +127,6 @@ export default function OnboardingScreen() {
                 <Text className="flex-1 font-sans text-[14px] text-t1">
                   {row.label}
                 </Text>
-                <Icon name="chevR" size={16} color="#6A6358" />
               </View>
             ))}
           </View>
@@ -169,23 +142,7 @@ export default function OnboardingScreen() {
       style={{ flex: 1 }}
       behavior="padding"
     >
-      <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 8 }}>
-        {/* Header: indietro + barra di avanzamento */}
-        <View className="flex-row items-center gap-4 px-5 py-3">
-          <Pressable
-            onPress={() => step === 2 && setStep(1)}
-            disabled={step === 1}
-            hitSlop={8}
-            className={cn(
-              "h-10 w-10 items-center justify-center rounded-full border border-border-2 bg-bg-1",
-              step === 1 && "opacity-0"
-            )}
-          >
-            <Icon name="chevL" size={18} color="#C2BBB0" />
-          </Pressable>
-          <ProgressBar progress={step / TOTAL_STEPS} className="flex-1" />
-        </View>
-
+      <View className="flex-1 bg-bg-0" style={{ paddingTop: insets.top + 24 }}>
         <ScrollView
           className="flex-1"
           contentContainerStyle={{
@@ -196,107 +153,32 @@ export default function OnboardingScreen() {
           }}
           keyboardShouldPersistTaps="handled"
         >
-          {step === 1 ? (
-            <>
-              <View>
-                <Mono gold>Passo 1 · Il tuo profilo</Mono>
-                <Display className="mt-2 text-[32px]">Chi sei?</Display>
-                <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
-                  Queste informazioni appariranno sul tuo profilo pubblico.
-                </Text>
-              </View>
-              <ControlledInput
-                control={control}
-                name="full_name"
-                label="Nome e cognome"
-                placeholder="Es. Marco Rossi"
-                autoCapitalize="words"
-              />
-              <ControlledInput
-                control={control}
-                name="city"
-                label="Città"
-                placeholder="Milano"
-              />
-              <ControlledChoiceChips
-                control={control}
-                name="primary_role"
-                label="Ruolo principale"
-                options={PRIMARY_ROLE_OPTIONS}
-              />
-            </>
-          ) : (
-            <>
-              <View>
-                <Mono gold>Passo 2 · Competenze</Mono>
-                <Display className="mt-2 text-[32px]">
-                  Cosa sai fare meglio?
-                </Display>
-                <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
-                  Seleziona le tue aree. I badge si confermeranno con le
-                  recensioni verificate o caricando un attestato.
-                </Text>
-              </View>
-              <ControlledMultiChips
-                control={control}
-                name="skills"
-                label="Le tue aree"
-                options={SKILL_OPTIONS}
-              />
-
-              <View className="gap-3">
-                <Mono>Hai certificazioni? · Facoltativo</Mono>
-                {CERTIFICATION_OPTIONS.map((cert) => {
-                  const state = certStatus[cert.key] ?? "idle";
-                  const done = state === "done";
-                  return (
-                    <Pressable
-                      key={cert.key}
-                      onPress={() => onPickCert(cert.key)}
-                      disabled={state === "uploading"}
-                      className={cn(
-                        "flex-row items-center gap-3 rounded-2xl border bg-bg-card p-4",
-                        !done && "border-border-2"
-                      )}
-                      style={
-                        done ? { borderColor: "rgba(79,201,125,0.45)" } : undefined
-                      }
-                    >
-                      <View className="h-11 w-11 items-center justify-center rounded-xl border border-border-2 bg-bg-1">
-                        <Icon
-                          name={done ? "verified" : "upload"}
-                          size={20}
-                          color={done ? "#4FC97D" : "#8C857A"}
-                        />
-                      </View>
-                      <View className="flex-1">
-                        <Text className="font-sans-semibold text-[15px] text-t1">
-                          {cert.title}
-                        </Text>
-                        <Text
-                          className={cn(
-                            "mt-0.5 font-sans text-[12.5px]",
-                            done ? "text-success" : "text-t3"
-                          )}
-                        >
-                          {done
-                            ? "Caricato · in verifica"
-                            : state === "uploading"
-                              ? "Caricamento…"
-                              : cert.sub}
-                        </Text>
-                      </View>
-                      {state === "uploading" ? (
-                        <ActivityIndicator color="#EAB54C" />
-                      ) : done ? (
-                        <Icon name="check" size={18} color="#4FC97D" />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </>
-          )}
+          <View>
+            <Mono gold>Il tuo profilo</Mono>
+            <Display className="mt-2 text-[32px]">Chi sei?</Display>
+            <Text className="mt-2 font-sans text-[13.5px] leading-5 text-t3">
+              Queste informazioni appariranno sul tuo profilo pubblico.
+            </Text>
+          </View>
+          <ControlledInput
+            control={control}
+            name="full_name"
+            label="Nome e cognome"
+            placeholder="Es. Marco Rossi"
+            autoCapitalize="words"
+          />
+          <ControlledInput
+            control={control}
+            name="city"
+            label="Città"
+            placeholder="Milano"
+          />
+          <ControlledInput
+            control={control}
+            name="primary_role"
+            label="Ruolo principale"
+            placeholder={PRIMARY_ROLE_EXAMPLES}
+          />
         </ScrollView>
 
         {/* Footer con CTA */}
@@ -304,16 +186,12 @@ export default function OnboardingScreen() {
           className="px-6 pt-2"
           style={{ paddingBottom: insets.bottom + 12 }}
         >
-          {step === 1 ? (
-            <GoldButton size="lg" label="Continua" onPress={onContinue} />
-          ) : (
-            <GoldButton
-              size="lg"
-              label={complete.isPending ? "Creazione…" : "Crea il mio profilo"}
-              disabled={complete.isPending}
-              onPress={onCreate}
-            />
-          )}
+          <GoldButton
+            size="lg"
+            label={complete.isPending ? "Creazione…" : "Crea il mio profilo"}
+            disabled={complete.isPending}
+            onPress={onCreate}
+          />
         </View>
       </View>
     </KeyboardAvoidingView>

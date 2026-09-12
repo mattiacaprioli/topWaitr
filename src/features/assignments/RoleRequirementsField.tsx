@@ -1,16 +1,19 @@
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "@/tw";
 import { Mono } from "@/components/ui/Mono";
 import { SelectChip } from "@/components/ui/SelectChip";
 import { cn } from "@/lib/cn";
-import { STAFF_ROLES } from "@/features/staff/roles";
+import type { VenueRole } from "@/features/roles/api";
 
 type Props = {
-  /** Fabbisogno corrente, per ruolo. Le voci a 0 valgono come "non richiesto". */
+  /** I ruoli del locale (già caricati da chi ospita il form). */
+  roles: VenueRole[];
+  /** Fabbisogno corrente, per id di ruolo. Le voci a 0 valgono "non richiesto". */
   targets: Record<string, number>;
-  onChange: (role: string, delta: number) => void;
-  /** Ruoli delle persone già selezionate, per il conteggio "assegnati". */
-  assignedRoles: (string | null | undefined)[];
+  onChange: (roleId: string, delta: number) => void;
+  /** Ruolo scelto per ciascuna persona selezionata, per il conteggio "assegnati". */
+  assignedRoleIds: (string | null)[];
 };
 
 /**
@@ -18,18 +21,35 @@ type Props = {
  *
  * È **additivo**: mostra solo i ruoli già richiesti, più un pulsante che rivela
  * i restanti. Prima disegnava una riga con +/− per OGNI ruolo esistente, il che
- * funzionava con sei ruoli ma diventa un muro di selettori quasi tutti a zero
- * ora che la lista copre anche hotel, catering ed eventi.
+ * funzionava con sei ruoli ma diventava un muro di selettori quasi tutti a zero
+ * appena la lista cresceva — e ora la lista la scrive il locale, quindi può
+ * essere lunga quanto vuole.
  */
 export function RoleRequirementsField({
+  roles,
   targets,
   onChange,
-  assignedRoles,
+  assignedRoleIds,
 }: Props) {
+  const router = useRouter();
   const [picking, setPicking] = useState(false);
 
-  const active = STAFF_ROLES.filter((r) => (targets[r] ?? 0) > 0);
-  const available = STAFF_ROLES.filter((r) => (targets[r] ?? 0) === 0);
+  const active = roles.filter((r) => (targets[r.id] ?? 0) > 0);
+  const available = roles.filter((r) => (targets[r.id] ?? 0) === 0);
+
+  if (roles.length === 0) {
+    return (
+      <View className="gap-2">
+        <Mono>Fabbisogno per ruolo · facoltativo</Mono>
+        <Pressable onPress={() => router.push("/(manager)/ruoli")} hitSlop={8}>
+          <Text className="text-[13px] leading-5 text-t3">
+            Per chiedere dei ruoli su un turno devi prima crearli.{" "}
+            <Text className="font-sans-semibold text-gold">Creali ora</Text>
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View className="gap-2">
@@ -44,15 +64,15 @@ export function RoleRequirementsField({
 
       <View>
         {active.map((role) => {
-          const target = targets[role] ?? 0;
-          const assigned = assignedRoles.filter((r) => r === role).length;
+          const target = targets[role.id] ?? 0;
+          const assigned = assignedRoleIds.filter((r) => r === role.id).length;
           return (
             <View
-              key={role}
+              key={role.id}
               className="flex-row items-center justify-between py-1.5"
             >
               <View className="flex-1">
-                <Text className="text-sm text-t1">{role}</Text>
+                <Text className="text-sm text-t1">{role.name}</Text>
                 <Text
                   className={cn(
                     "text-xs",
@@ -64,7 +84,7 @@ export function RoleRequirementsField({
               </View>
               <View className="flex-row items-center gap-4">
                 <Pressable
-                  onPress={() => onChange(role, -1)}
+                  onPress={() => onChange(role.id, -1)}
                   hitSlop={8}
                   className="h-8 w-8 items-center justify-center rounded-full border border-border-2 bg-bg-2"
                 >
@@ -74,7 +94,7 @@ export function RoleRequirementsField({
                   {target}
                 </Text>
                 <Pressable
-                  onPress={() => onChange(role, 1)}
+                  onPress={() => onChange(role.id, 1)}
                   hitSlop={8}
                   className="h-8 w-8 items-center justify-center rounded-full border border-border-2 bg-bg-2"
                 >
@@ -90,10 +110,10 @@ export function RoleRequirementsField({
         <View className="mt-1 flex-row flex-wrap gap-2">
           {available.map((role) => (
             <SelectChip
-              key={role}
-              label={role}
+              key={role.id}
+              label={role.name}
               onPress={() => {
-                onChange(role, 1);
+                onChange(role.id, 1);
                 if (available.length === 1) setPicking(false);
               }}
             />

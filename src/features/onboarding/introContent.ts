@@ -19,19 +19,19 @@ export type IntroSlide = {
 export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
   waiter: [
     {
-      icon: "star",
-      title: "La tua reputazione è il tuo capitale",
-      body: "Ogni cliente soddisfatto può recensirti. Le recensioni le porti con te, in ogni locale.",
+      icon: "calendar",
+      title: "I tuoi turni, sempre con te",
+      body: "I locali per cui lavori ti assegnano i turni: li confermi con un tocco e li hai tutti qui.",
     },
     {
-      icon: "search",
-      title: "Trova turni su misura",
-      body: "Sfoglia i turni dei locali vicini e candidati in un tap.",
+      icon: "clock",
+      title: "Le tue ore, già contate",
+      body: "Ogni turno svolto entra nel tuo monte ore. Sai quanto hai lavorato senza rifare i conti.",
     },
     {
-      icon: "qr",
-      title: "Fatti recensire col QR",
-      body: "A fine servizio mostra il tuo QR: il cliente ti lascia una recensione certificata.",
+      icon: "message",
+      title: "Nessuna sorpresa all'ultimo",
+      body: "Se un turno cambia o salta lo sai subito, e col locale ci parli direttamente da qui.",
     },
   ],
   manager: [
@@ -41,9 +41,9 @@ export const INTRO_SLIDES: Record<Role, IntroSlide[]> = {
       body: "Crea il tuo organico e assegna i turni in pochi tocchi.",
     },
     {
-      icon: "search",
-      title: "Serve un extra? Trovalo",
-      body: "Pubblica un turno sul marketplace e ricevi candidature dai professionisti.",
+      icon: "clipboard",
+      title: "Copertura sotto controllo",
+      body: "Fabbisogno per ruolo, turni scoperti e ore lavorate, turno per turno.",
     },
     {
       icon: "sparkle",

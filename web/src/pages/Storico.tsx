@@ -58,7 +58,6 @@ export function StoricoPage() {
                   <th className="px-5 py-3 font-semibold">Data</th>
                   <th className="px-5 py-3 font-semibold">Turno</th>
                   <th className="px-5 py-3 font-semibold">Orario</th>
-                  <th className="px-5 py-3 font-semibold">Tipo</th>
                   <th className="px-5 py-3 text-right font-semibold">Coperti</th>
                   <th className="px-5 py-3 font-semibold">Stato</th>
                 </tr>
@@ -76,11 +75,6 @@ export function StoricoPage() {
                     <td className="px-5 py-2.5 text-t1">{s.title}</td>
                     <td className="px-5 py-2.5 font-mono text-xs text-t3">
                       {formatShiftRange(s.start_time, s.end_time)}
-                    </td>
-                    <td className="px-5 py-2.5">
-                      <Pill tone={s.kind === "internal" ? "neutral" : "gold"}>
-                        {s.kind === "internal" ? "Staff" : "Extra"}
-                      </Pill>
                     </td>
                     <td className="px-5 py-2.5 text-right font-mono text-t2">
                       {counts.filled}/{counts.total}

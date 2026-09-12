@@ -82,7 +82,7 @@ export default function ManagerShiftsScreen() {
       {title}
 
       <GoldButton
-        label="Pubblica turno"
+        label="Nuovo turno"
         onPress={() => router.push("/(manager)/shift/new")}
       />
 
@@ -121,7 +121,7 @@ export default function ManagerShiftsScreen() {
       ) : upcoming.length === 0 ? (
         <EmptyState
           title="Nessun turno in programma"
-          subtitle="Tocca «Pubblica turno» per crearne uno."
+          subtitle="Tocca «Nuovo turno» per crearne uno."
         />
       ) : (
         <View className="gap-3">

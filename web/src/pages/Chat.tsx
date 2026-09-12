@@ -38,7 +38,7 @@ export function ChatPage() {
       {conversations.length === 0 ? (
         <Placeholder
           title="Nessuna conversazione"
-          detail="Le chat nascono dai turni: scrivi a un candidato dalle Candidature o a una persona del tuo staff."
+          detail="Le chat nascono dai turni: scrivi a una persona del tuo staff dall'organico o dal dettaglio di un turno."
         />
       ) : (
         <div className="grid h-[calc(100dvh-12rem)] grid-cols-[20rem_1fr] gap-6">

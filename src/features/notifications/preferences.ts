@@ -11,9 +11,11 @@ export const NOTIFICATION_CATEGORIES: {
 }[] = [
   { id: "messages", label: "Messaggi", description: "Nuovi messaggi in chat." },
   {
+    // ⚠️ L'id resta "shifts": è allineato a `notification_category()` in DB e
+    // alle preferenze di opt-out già salvate. Cambia solo l'etichetta.
     id: "shifts",
-    label: "Candidature e turni",
-    description: "Candidature, esiti e aggiornamenti dei turni.",
+    label: "Turni",
+    description: "Assegnazioni, modifiche e annullamenti dei turni.",
   },
   {
     id: "staff",

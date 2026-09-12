@@ -52,14 +52,30 @@ Deno.serve(async (req) => {
   const userId = userData.user.id;
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-  // 1) Dati: anonimizza il profilo, rimuove i dati personali, conserva lo
+  // 1) I path dei file che ha caricato, PRIMA di cancellarne le righe: dopo la
+  //    RPC non c'è più modo di sapere quali blob erano suoi, e resterebbero nel
+  //    bucket documenti d'identità di un account che non esiste più.
+  const { data: myDocs } = await admin
+    .from("staff_documents")
+    .select("storage_path")
+    .eq("uploaded_by", userId);
+
+  // 2) Dati: anonimizza il profilo, rimuove i dati personali, conserva lo
   //    storico che appartiene ad altri (ore dello staff, turni passati, thread).
   const { error: rpcErr } = await admin.rpc("delete_account", {
     p_user: userId,
   });
   if (rpcErr) return json({ error: rpcErr.message }, 500);
 
-  // 2) Identità: email e credenziali.
+  // 3) I blob. Dopo la RPC di proposito: se fallisse a metà, meglio un file
+  //    orfano che delle righe che puntano a file già spariti. Non blocca la
+  //    cancellazione — l'account va comunque chiuso.
+  const paths = (myDocs ?? []).map((d) => d.storage_path);
+  if (paths.length > 0) {
+    await admin.storage.from("staff-documents").remove(paths);
+  }
+
+  // 4) Identità: email e credenziali.
   const { error: delErr } = await admin.auth.admin.deleteUser(userId);
   if (delErr) return json({ error: delErr.message }, 500);
 

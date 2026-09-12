@@ -11,7 +11,6 @@ import type { Enums, TablesInsert, TablesUpdate } from "@/types/database";
 import {
   createShift,
   getMyShifts,
-  getOpenShifts,
   getShift,
   getShiftWithVenue,
   getVenuePastShiftsCount,
@@ -65,14 +64,6 @@ export function useVenuePastShiftsCount(venueId: string | undefined) {
     queryFn: () => getVenuePastShiftsCount(venueId as string),
     enabled: !!venueId,
     staleTime: BADGE_STALE_TIME,
-  });
-}
-
-/** Waiter feed: open, non-past shifts across all venues. */
-export function useOpenShifts() {
-  return useQuery({
-    queryKey: qk.shifts.open(),
-    queryFn: getOpenShifts,
   });
 }
 

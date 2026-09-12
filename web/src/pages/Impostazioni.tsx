@@ -53,8 +53,8 @@ export function ImpostazioniPage() {
 
 /**
  * Nome e foto del profilo. Fino a ieri si cambiavano solo dall'app: chi gestisce
- * il locale dalla dashboard si vedeva comparire il proprio nome in chat e nelle
- * candidature senza avere un posto dove sistemarlo.
+ * il locale dalla dashboard si vedeva comparire il proprio nome in chat e sui
+ * turni senza avere un posto dove sistemarlo.
  *
  * La foto viene ritagliata e ridimensionata dal browser prima di partire (vedi
  * `lib/avatarFile`), e finisce nel bucket pubblico `avatars`, una cartella per
@@ -191,8 +191,8 @@ function AccountSection() {
         </div>
       </Card>
       <p className="mt-2 px-1 text-xs text-t4">
-        È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sulle
-        candidature. Il locale — nome, indirizzo, logo — si modifica dalla scheda
+        È lo stesso profilo dell&apos;app: nome e foto si vedono in chat e sui
+        turni. Il locale — nome, indirizzo, logo — si modifica dalla scheda
         Locale.
       </p>
     </section>

@@ -3,7 +3,12 @@ import { Card } from "@/components/ui/Card";
 import { Pill } from "@/components/ui/Pill";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { cn } from "@/lib/cn";
-import { formatDate, formatRate, formatShiftRange } from "@/lib/format";
+import {
+  formatDate,
+  formatHours,
+  formatShiftRange,
+  shiftDurationHours,
+} from "@/lib/format";
 import { shiftCounts } from "@/features/assignments/coverage";
 import type { Enums } from "@/types/database";
 import type { ShiftWithCount } from "./types";
@@ -14,7 +19,7 @@ const STATUS_LABEL: Record<Enums<"shift_status">, string> = {
   cancelled: "Annullato",
 };
 
-/** Manager-facing shift row: status + slot + rate + applicant count. */
+/** Manager-facing shift row: stato, quando, durata e copertura dello staff. */
 export function ManagerShiftCard({
   shift,
   onPress,
@@ -22,9 +27,7 @@ export function ManagerShiftCard({
   shift: ShiftWithCount;
   onPress: () => void;
 }) {
-  const internal = shift.kind === "internal";
   const cancelled = shift.status === "cancelled";
-  const applicants = shift.applications[0]?.count ?? 0;
   const { filled: covered, total } = shiftCounts(shift);
   return (
     <Card
@@ -35,13 +38,7 @@ export function ManagerShiftCard({
         <Text className="flex-1 text-base font-sans-bold text-t1">
           {shift.title}
         </Text>
-        {/* Un turno annullato deve dirlo anche se è interno: la pill "Staff"
-            lo rendeva indistinguibile da uno attivo nella lista. */}
-        {cancelled || !internal ? (
-          <Pill label={STATUS_LABEL[shift.status]} variant={shift.status} />
-        ) : (
-          <Pill label="Staff" variant="tag" />
-        )}
+        <Pill label={STATUS_LABEL[shift.status]} variant={shift.status} />
       </View>
       <Text className="mt-1 text-sm text-t2">
         {formatDate(shift.date)} ·{" "}
@@ -49,16 +46,14 @@ export function ManagerShiftCard({
       </Text>
       <View className="mt-3 flex-row items-center justify-between">
         <Text className="text-sm text-t3">
-          {internal ? "Turno interno" : formatRate(shift.hourly_rate)}
+          {formatHours(shiftDurationHours(shift.start_time, shift.end_time))}
         </Text>
         <Text className="text-sm font-sans-semibold text-gold">
-          {internal
-            ? `${covered}/${total} coperti`
-            : `${applicants} candidatur${applicants === 1 ? "a" : "e"}`}
+          {covered}/{total} coperti
         </Text>
       </View>
       {/* Su un annullato la barra sembrerebbe un invito a coprire il turno. */}
-      {internal && !cancelled ? (
+      {!cancelled ? (
         <ProgressBar
           className="mt-2.5"
           progress={total > 0 ? Math.min(1, covered / total) : 0}

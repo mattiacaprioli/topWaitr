@@ -63,14 +63,9 @@ export default function WaiterHistoryScreen() {
                     {formatShiftRange(i.start_time, i.end_time)}
                   </Text>
                 </View>
-                <View className="items-end">
-                  <Text className="text-sm font-sans-bold text-gold">
-                    {formatHours(i.hours)}
-                  </Text>
-                  <Text className="text-[10px] text-t4">
-                    {i.kind === "staff" ? "Staff" : "Extra"}
-                  </Text>
-                </View>
+                <Text className="text-sm font-sans-bold text-gold">
+                  {formatHours(i.hours)}
+                </Text>
               </View>
             </Card>
           )}
