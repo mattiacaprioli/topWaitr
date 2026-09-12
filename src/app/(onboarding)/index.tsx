@@ -97,14 +97,24 @@ export default function OnboardingScreen() {
           </Mono>
           <Display className="mt-2 text-center text-[30px]">{doneTitle}</Display>
           <Text className="mt-2 text-center font-sans text-[13.5px] leading-5 text-t3">
-            Inizia subito a costruire la tua reputazione.
+            I locali per cui lavori ti assegneranno i turni: li trovi tutti qui.
           </Text>
 
+          {/* QR e recensioni **non** compaiono qui di proposito: è la prima cosa
+              che si vede dopo la registrazione, e chi arriva su invito di un
+              locale deve capire che il prodotto sono i suoi turni. La
+              reputazione la scopre dal profilo, quando ha qualcosa da mostrare.
+
+              Niente chevron: queste righe non sono tappabili, e non possono
+              esserlo — finché non si tocca «Inizia» il profilo in memoria non è
+              aggiornato e il guard tiene ancora l'utente in (onboarding). */}
           <View className="mt-8 w-full overflow-hidden rounded-3xl border border-border-2 bg-bg-card">
             {[
-              { icon: "qr" as const, label: "Mostra il QR al primo cliente" },
-              { icon: "star" as const, label: "Raccogli le tue prime recensioni" },
-              { icon: "calendar" as const, label: "Conferma i turni che ti assegnano" },
+              {
+                icon: "calendar" as const,
+                label: "Conferma i turni che ti assegnano",
+              },
+              { icon: "clock" as const, label: "Tieni il conto delle tue ore" },
             ].map((row, i) => (
               <View
                 key={row.label}
@@ -117,7 +127,6 @@ export default function OnboardingScreen() {
                 <Text className="flex-1 font-sans text-[14px] text-t1">
                   {row.label}
                 </Text>
-                <Icon name="chevR" size={16} color="#6A6358" />
               </View>
             ))}
           </View>

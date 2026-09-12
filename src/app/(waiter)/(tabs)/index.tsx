@@ -1,29 +1,22 @@
 import { Display } from "@/components/ui/Display";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { GhostButton } from "@/components/ui/GhostButton";
 import { Icon } from "@/components/ui/Icon";
 import { Mono } from "@/components/ui/Mono";
-import { NoReviews } from "@/components/ui/NoReviews";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { QueryError } from "@/components/ui/QueryError";
-import { ReviewCard } from "@/components/ui/ReviewCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { useMyAssignedUpcoming } from "@/features/assignments/hooks";
 import { useMyWorkHistoryTotals } from "@/features/assignments/history";
 import { MyShiftCard } from "@/features/assignments/MyShiftCard";
 import { useMyPendingInvites } from "@/features/staff/hooks";
-import { reviewUrlFor } from "@/features/reviews/config";
-import {
-  useWaiterPublicCard,
-  useWaiterReviewsPreview,
-} from "@/features/reviews/hooks";
 import { useUnreadCount } from "@/features/notifications/hooks";
 import { useAuth } from "@/lib/auth";
+import { formatHours } from "@/lib/format";
 import { usePullToRefresh } from "@/lib/usePullToRefresh";
 import { Pressable, ScrollView, Text, View } from "@/tw";
 import { useRouter } from "expo-router";
-import { ActivityIndicator, Linking, RefreshControl } from "react-native";
+import { ActivityIndicator, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function WaiterHomeScreen() {
@@ -35,8 +28,6 @@ export default function WaiterHomeScreen() {
   const assignedQuery = useMyAssignedUpcoming(waiterId);
   const pendingInvites = useMyPendingInvites(waiterId).data ?? [];
   const totals = useMyWorkHistoryTotals(waiterId);
-  const card = useWaiterPublicCard(waiterId).data;
-  const reviews = useWaiterReviewsPreview(waiterId, 1).data ?? [];
   const unread = useUnreadCount(waiterId).data ?? 0;
   const pull = usePullToRefresh(() =>
     Promise.all([assignedQuery.refetch(), totals.refetch()])
@@ -47,16 +38,11 @@ export default function WaiterHomeScreen() {
   );
   const firstName = (profile?.full_name ?? "").split(" ")[0] || "Cameriere";
 
-  // Reputazione (dati reali). "Servizi" = turni già lavorati, lo stesso totale
-  // che si legge in "Le mie ore": prima qui se ne contava un sottoinsieme e i
-  // due numeri non combaciavano.
-  const serviziCount = totals.count;
-  const reviewsCount = card?.rating_count ?? 0;
-  const ratingLabel =
-    reviewsCount > 0
-      ? (card?.rating_avg ?? 0).toFixed(1).replace(".", ",")
-      : "—";
-  const featured = reviews[0] ?? null;
+  // Quanti turni deve ancora confermare: è la sola cosa in questa schermata su
+  // cui c'è qualcosa da fare, quindi ha una cella sua.
+  const daConfermare = upcomingItems.filter(
+    (a) => a.status === "assigned"
+  ).length;
 
   return (
     <ScrollView
@@ -103,32 +89,45 @@ export default function WaiterHomeScreen() {
         </Pressable>
       ) : null}
 
-      {/* Reputazione */}
+      {/* Il lavoro, non la vetrina: i numeri che il professionista guarda ogni
+          giorno sono i suoi turni e le sue ore. Rating e recensioni restano nel
+          profilo, dove si va quando si ha qualcosa da mostrare. */}
       <View className="flex-row gap-2.5">
-        <StatCard value={ratingLabel} label="★ rating" />
-        <StatCard value={String(serviziCount)} label="servizi" />
-        <StatCard value={String(reviewsCount)} label="recensioni" />
+        <StatCard
+          value={String(upcomingItems.length)}
+          label="in programma"
+          onPress={() => router.push("/(waiter)/(tabs)/turni")}
+        />
+        <StatCard
+          value={String(totals.count)}
+          label="turni svolti"
+          onPress={() => router.push("/(waiter)/storico")}
+        />
+        <StatCard
+          value={formatHours(totals.totalHours)}
+          label="ore totali"
+          onPress={() => router.push("/(waiter)/storico")}
+        />
       </View>
 
-      <View className="gap-3">
-        <View className="flex-row items-center justify-between gap-3">
-          <View className="flex-1">
-            <Mono>Recensioni</Mono>
-            <Display className="mt-0.5 text-2xl">Cosa dicono di te</Display>
+      {daConfermare > 0 ? (
+        <Pressable onPress={() => router.push("/(waiter)/(tabs)/turni")}>
+          <View className="flex-row items-center gap-3 rounded-3xl border border-border-2 bg-bg-2 p-4">
+            <Icon name="alert" size={20} color="#EAB54C" />
+            <View className="flex-1">
+              <Text className="text-sm font-sans-bold text-t1">
+                {daConfermare === 1
+                  ? "1 turno da confermare"
+                  : `${daConfermare} turni da confermare`}
+              </Text>
+              <Text className="text-xs text-t3">
+                Il locale sta aspettando la tua risposta
+              </Text>
+            </View>
+            <Icon name="chevR" size={18} color="#8c857a" />
           </View>
-          <GhostButton
-            label="Anteprima"
-            onPress={() => Linking.openURL(reviewUrlFor(waiterId))}
-          />
-        </View>
-        {featured ? (
-          <Pressable onPress={() => router.push("/(waiter)/recensioni")}>
-            <ReviewCard review={featured} />
-          </Pressable>
-        ) : (
-          <NoReviews onOpenQR={() => router.push("/(waiter)/qr")} />
-        )}
-      </View>
+        </Pressable>
+      ) : null}
 
       <View>
         <SectionHeader
