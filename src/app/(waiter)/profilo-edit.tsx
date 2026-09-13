@@ -5,8 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Pressable, ScrollView, Text, View } from "@/tw";
-import { Avatar } from "@/components/ui/Avatar";
+import { ScrollView, Text, View } from "@/tw";
+import { AvatarPickerField } from "@/components/ui/AvatarPickerField";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { Icon } from "@/components/ui/Icon";
 import { QueryError } from "@/components/ui/QueryError";
@@ -190,51 +190,13 @@ export default function WaiterProfileEditScreen() {
             }}
             keyboardShouldPersistTaps="handled"
           >
-            <View className="items-center gap-2">
-              <View
-                style={{
-                  borderWidth: 2,
-                  borderColor: "rgba(234,181,76,0.5)",
-                  borderRadius: 999,
-                  padding: 3,
-                }}
-              >
-                <View>
-                  <Avatar
-                    uri={profile?.avatar_url}
-                    name={watchedName || "Professionista"}
-                    size={96}
-                  />
-                  <Pressable
-                    onPress={onPhoto}
-                    disabled={photoBusy}
-                    className="absolute -bottom-1 -right-1 h-9 w-9 items-center justify-center rounded-full border-2 border-bg-0 bg-bg-2"
-                  >
-                    {photoBusy ? (
-                      <ActivityIndicator size="small" color="#EAB54C" />
-                    ) : (
-                      <Icon name="camera" size={16} color="#EAB54C" />
-                    )}
-                  </Pressable>
-                </View>
-              </View>
-              <View className="flex-row items-center gap-4">
-                <Pressable onPress={onPhoto} hitSlop={6} disabled={photoBusy}>
-                  <Text className="font-sans-semibold text-sm text-gold">
-                    {photoBusy
-                      ? "Caricamento…"
-                      : profile?.avatar_url
-                        ? "Cambia foto"
-                        : "Aggiungi foto"}
-                  </Text>
-                </Pressable>
-                {profile?.avatar_url && !photoBusy ? (
-                  <Pressable onPress={onRemovePhoto} hitSlop={6}>
-                    <Text className="font-sans text-sm text-t3">Rimuovi</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            </View>
+            <AvatarPickerField
+              uri={profile?.avatar_url}
+              name={watchedName || "Professionista"}
+              busy={photoBusy}
+              onPick={onPhoto}
+              onRemove={onRemovePhoto}
+            />
 
             <View className="gap-4 rounded-3xl border border-border-2 bg-bg-card p-5">
               <ControlledInput

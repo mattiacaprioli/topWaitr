@@ -1,10 +1,15 @@
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { userErrorMessage } from "@/lib/errors";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/lib/auth";
-import { useSaveVenue } from "@/features/venues/hooks";
+import { deleteAvatarByUrl, uploadAvatar } from "@/features/account/api";
+import { useSaveVenue, useUpdateVenueLogo } from "@/features/venues/hooks";
 import { venueSchema, type VenueForm } from "@/features/venues/schema";
 import { useVenueOptional } from "../lib/venue";
+import { AVATAR_ACCEPT, prepareAvatar } from "../lib/avatarFile";
+import { Avatar } from "../ui/Avatar";
+import { useToast } from "../ui/Toast";
 import {
   Button,
   Card,
@@ -21,8 +26,55 @@ import {
  */
 export function LocalePage() {
   const { session } = useAuth();
+  const toast = useToast();
   const venue = useVenueOptional();
-  const save = useSaveVenue(session!.user.id);
+  const userId = session!.user.id;
+  const save = useSaveVenue(userId);
+  const saveLogo = useUpdateVenueLogo(userId);
+  const [logoBusy, setLogoBusy] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Stesso ordine della foto profilo in Impostazioni: prima il locale punta al
+   * file nuovo, poi si cancella il vecchio. Al contrario, un errore a metà
+   * lascerebbe il locale a puntare a un file che non c'è più.
+   *
+   * Il file va nella cartella dell'**utente** e non del locale: la policy del
+   * bucket `avatars` accetta scritture solo in `<auth.uid()>/…`.
+   */
+  async function onPickLogo(file: File | undefined) {
+    if (!file || !venue) return;
+    const previous = venue.logo_url ?? null;
+    setLogoBusy(true);
+    try {
+      const blob = await prepareAvatar(file);
+      const url = await uploadAvatar(userId, blob);
+      await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: url });
+      await deleteAvatarByUrl(previous);
+      toast.show("Logo aggiornato");
+    } catch (e) {
+      toast.show(userErrorMessage(e, "Caricamento non riuscito"), "error");
+    } finally {
+      setLogoBusy(false);
+      // Così riselezionare lo stesso file rilancia l'evento.
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function removeLogo() {
+    const previous = venue?.logo_url ?? null;
+    if (!venue || !previous) return;
+    setLogoBusy(true);
+    try {
+      await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: null });
+      await deleteAvatarByUrl(previous);
+      toast.show("Logo rimosso");
+    } catch (e) {
+      toast.show(userErrorMessage(e, "Operazione non riuscita"), "error");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
 
   const {
     register,
@@ -49,6 +101,51 @@ export function LocalePage() {
             : "Serve per pubblicare turni e gestire il personale."
         }
       />
+
+      {/* Il logo si carica solo su un locale già creato: prima non c'è una riga
+          su cui scriverlo. Sta fuori dal form perché si salva da sé — passarlo
+          dal modulo avrebbe voluto dire o salvare campi a metà, o perdere la
+          foto uscendo senza salvare. */}
+      {venue ? (
+        <Card className="mb-4 max-w-2xl">
+          <div className="flex items-center gap-4">
+            <Avatar url={venue.logo_url} name={venue.name} size={72} />
+            <div className="flex min-w-0 flex-col items-start gap-2">
+              <p className="text-xs text-t3">
+                Il logo compare ai professionisti sui turni del tuo locale.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => fileRef.current?.click()}
+                  disabled={logoBusy}
+                >
+                  {logoBusy
+                    ? "Caricamento…"
+                    : venue.logo_url
+                      ? "Cambia logo"
+                      : "Carica un logo"}
+                </Button>
+                {venue.logo_url ? (
+                  <Button
+                    variant="danger"
+                    disabled={logoBusy}
+                    onClick={() => void removeLogo()}
+                  >
+                    Rimuovi
+                  </Button>
+                ) : null}
+              </div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept={AVATAR_ACCEPT}
+                hidden
+                onChange={(e) => void onPickLogo(e.target.files?.[0])}
+              />
+            </div>
+          </div>
+        </Card>
+      ) : null}
 
       <Card className="max-w-2xl">
         <form

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
@@ -6,12 +6,23 @@ import { KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScrollView, Text, View } from "@/tw";
 import { ControlledInput } from "@/components/form/ControlledInput";
+import { AvatarPickerField } from "@/components/ui/AvatarPickerField";
 import { GoldButton } from "@/components/ui/GoldButton";
 import { QueryError } from "@/components/ui/QueryError";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import {
+  deleteAvatarByUrl,
+  uploadAvatar,
+} from "@/features/account/api";
+import { pickAvatar } from "@/features/account/avatarPicker";
 import { useAuth } from "@/lib/auth";
+import { userErrorMessage } from "@/lib/errors";
 import { useToast } from "@/providers/Toast";
-import { useMyVenue, useSaveVenue } from "@/features/venues/hooks";
+import {
+  useMyVenue,
+  useSaveVenue,
+  useUpdateVenueLogo,
+} from "@/features/venues/hooks";
 import { venueSchema, type VenueForm } from "@/features/venues/schema";
 
 export default function VenueScreen() {
@@ -24,6 +35,8 @@ export default function VenueScreen() {
   const venueQuery = useMyVenue(userId);
   const venue = venueQuery.data ?? null;
   const save = useSaveVenue(userId);
+  const saveLogo = useUpdateVenueLogo(userId);
+  const [logoBusy, setLogoBusy] = useState(false);
 
   const { control, handleSubmit, reset } = useForm<VenueForm>({
     resolver: zodResolver(venueSchema),
@@ -61,6 +74,54 @@ export default function VenueScreen() {
     }
   });
 
+  /**
+   * Stesso ordine della foto profilo: prima il locale punta al file nuovo, poi
+   * si cancella il vecchio. Al contrario, un errore a metà lascerebbe il
+   * locale a puntare a un file che non c'è più.
+   *
+   * Il file va sotto la cartella dell'**utente** e non del locale: la policy
+   * del bucket `avatars` accetta scritture solo in `<auth.uid()>/…`, e il
+   * titolare è comunque l'unico che può caricarlo.
+   */
+  async function onLogo() {
+    if (logoBusy) return;
+    if (!venue) {
+      toast.show("Salva prima il nome del locale.", "error");
+      return;
+    }
+    const previous = venue.logo_url ?? null;
+    try {
+      const picked = await pickAvatar();
+      if (!picked) return; // annullato
+      setLogoBusy(true);
+      const url = await uploadAvatar(userId, picked.bytes, {
+        contentType: picked.contentType,
+      });
+      await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: url });
+      await deleteAvatarByUrl(previous);
+      toast.show("Logo aggiornato");
+    } catch (e) {
+      toast.show(userErrorMessage(e, "Caricamento non riuscito"), "error");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
+  async function onRemoveLogo() {
+    const previous = venue?.logo_url ?? null;
+    if (!venue || !previous || logoBusy) return;
+    setLogoBusy(true);
+    try {
+      await saveLogo.mutateAsync({ venueId: venue.id, logoUrl: null });
+      await deleteAvatarByUrl(previous);
+      toast.show("Logo rimosso");
+    } catch (e) {
+      toast.show(userErrorMessage(e, "Operazione non riuscita"), "error");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
   if (venueQuery.isLoading) return <View className="flex-1 bg-bg-0" />;
 
   if (venueQuery.isError) {
@@ -91,6 +152,21 @@ export default function VenueScreen() {
         <Text className="text-base text-t2">
           Queste informazioni saranno visibili ai professionisti sui tuoi turni.
         </Text>
+
+        {/* Il logo si può caricare solo su un locale già creato: prima non c'è
+            una riga su cui scriverlo. Chi sta compilando il modulo per la prima
+            volta lo trova qui appena salva il nome. */}
+        {venue ? (
+          <AvatarPickerField
+            uri={venue.logo_url}
+            name={venue.name}
+            busy={logoBusy}
+            onPick={onLogo}
+            onRemove={onRemoveLogo}
+            addLabel="Aggiungi logo"
+            changeLabel="Cambia logo"
+          />
+        ) : null}
 
         <ControlledInput
           control={control}
